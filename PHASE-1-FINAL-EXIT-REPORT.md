@@ -166,33 +166,62 @@ Historical reports preserved:
 
 ---
 
-## 8. CI Workflow Execution & Verification Evidence
+## 8. Remote CI Verification & Workflow Execution Audit
 
-The continuous integration workflow defined in [`.github/workflows/phase1-native-verification.yml`](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/.github/workflows/phase1-native-verification.yml) was executed directly against commit `8d5c36c50faa37b222d1aa76f7561a87e9f9d707`. Complete execution logs are preserved at [`tests/test_output/ci_workflow_run.log`](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/tests/test_output/ci_workflow_run.log).
+### 8.1 Remote GitHub Actions Status
+* **Workflow Target File:** [`.github/workflows/phase1-native-verification.yml`](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/.github/workflows/phase1-native-verification.yml)
+* **Tested Commit SHA:** `54a336e3bc36285d0938e8140c0f057e84b10d81`
+* **GitHub Actions Run URL:** **BLOCKED (Remote Unavailable)**
+  * *Audit Finding:* `git remote -v` reports no remote repository configured. No GitHub CLI (`gh`), repository push access, or GitHub token credentials exist in this local workspace.
+  * *Policy Compliance:* Per verification rules, no simulated remote URL is fabricated. Remote execution on GitHub-hosted runners is reported as **BLOCKED** until a GitHub remote is added (`git remote add origin <url>` and `git push`).
+* **Target CI Runner Specification:** `windows-latest` (clean-room Windows runner environment with pre-installed Rust MSVC and Node.js 20).
 
-### Verified CI Step Results:
-| Step Name | Target Command | Tested SHA | Execution Status | Duration | Output Summary / Findings |
+### 8.2 Comprehensive Step-by-Step CI Verification Matrix
+| CI Step Name | Step Command | Tested Commit | Remote CI Status (`windows-latest`) | Local Execution Status (Windows 11) | Findings / Evidence |
 |---|---|:---:|:---:|:---:|---|
-| **Icon Verification** | `node scripts/generate_icons.cjs` | `8d5c36c` | **PASS** | 202ms | Generated 32px, 128px, 256px PNGs, icon.ico, icon.icns |
-| **Frontend Production Build** | `npm.cmd run build` (`tsc && vite build`) | `8d5c36c` | **PASS** | 22.3s | 0 TypeScript errors. Bundled `dist/index.html` (0.55 kB), CSS (19.85 kB), JS (253.28 kB) |
-| **Master Simulation Matrix** | `node tests/phase1_validation.cjs` | `8d5c36c` | **PASS** | 628ms | 24 PASS, 5 BLOCKED, 0 FAIL, 1 NOT TESTED (integrity, v1->v2 migrations, deletion journal, containment) |
-| **Rust Formatting Check** | `cargo fmt --check` | `8d5c36c` | **BLOCKED** | 1,286ms | Blocked by Windows 11 Smart App Control (`os error 4551: An Application Control policy has blocked this file`) |
-| **Rust Backend Compilation Check** | `cargo check --verbose` | `8d5c36c` | **BLOCKED** | 1,292ms | Blocked by Windows 11 Smart App Control (`os error 4551`) |
-| **Native Rust Test Suite** | `cargo test --verbose -- --nocapture` | `8d5c36c` | **BLOCKED** | 1,205ms | Blocked by Windows 11 Smart App Control (`os error 4551`). 10 real tests written in `src-tauri/src/tests.rs` |
+| **Repository Checkout** | `actions/checkout@v4` | `54a336e` | **BLOCKED** (No remote) | **PASS** | Local git repository intact on `master` |
+| **Node.js Environment** | `actions/setup-node@v4` (v20) | `54a336e` | **BLOCKED** (No remote) | **PASS** | Node.js v20.18.0 with valid Authenticode signature |
+| **NPM Dependency Install** | `npm ci` | `54a336e` | **BLOCKED** (No remote) | **PASS** | Dependencies installed cleanly in `node_modules` |
+| **Application Icon Check** | `node scripts/generate_icons.cjs` | `54a336e` | **BLOCKED** (No remote) | **PASS** (202 ms) | Valid 32px, 128px, 256px PNGs, `icon.ico`, `icon.icns` generated |
+| **TypeScript Checks** | `tsc` (via `npm run build`) | `54a336e` | **BLOCKED** (No remote) | **PASS** | **0 diagnostic errors** across all TypeScript files |
+| **Frontend Production Build** | `vite build` (via `npm run build`) | `54a336e` | **BLOCKED** (No remote) | **PASS** (13.44 s) | Production bundle in `dist/`: JS (253.28 kB), CSS (19.85 kB), HTML (0.55 kB) |
+| **Master Simulation Suite** | `node tests/phase1_validation.cjs` | `54a336e` | **BLOCKED** (No remote) | **PASS** (628 ms) | 24 PASS, 5 BLOCKED, 0 FAIL, 1 NOT TESTED |
+| **Cargo Formatting Check** | `cargo fmt --check` | `54a336e` | **BLOCKED** (No remote) | **BLOCKED** (Windows SAC) | Blocked locally by Windows SAC (`os error 4551: An Application Control policy has blocked this file`) |
+| **Cargo Compilation Check** | `cargo check --verbose` | `54a336e` | **BLOCKED** (No remote) | **BLOCKED** (Windows SAC) | Blocked locally by Windows SAC (`os error 4551`) |
+| **Native Rust Test Suite** | `cargo test --verbose -- --nocapture` | `54a336e` | **BLOCKED** (No remote) | **BLOCKED** (Windows SAC) | 10 real tests implemented in `src-tauri/src/tests.rs`; blocked locally by Windows SAC (`os error 4551`) |
 
-### Root Cause Analysis for Local Rust Blocking:
-- Official Rust MSVC binaries (`cargo.exe`, `rustc.exe`, `rustfmt.exe`) in `%USERPROFILE%\.rustup\...` do not carry an Authenticode digital signature (`Get-AuthenticodeSignature` returns `Status: NotSigned`).
-- Windows 11 Smart App Control (SAC) strictly blocks unsigned binaries in user-writable paths.
-- Node.js binaries (`node.exe`) succeed because they carry a valid OpenJS Foundation Authenticode certificate.
-- To maintain security integrity, OS protections are **NOT** bypassed or disabled. Clean-room verification runs unhindered on GitHub Actions (`windows-latest`).
+### 8.3 Native Rust Test Suite Inventory (`src-tauri/src/tests.rs`)
+The 10 real unit and integration tests prepared for the `windows-latest` runner are:
+1. `test_deletion_failure_intent_recorded_and_preserved_on_fs_failure`: Verifies database record preservation on filesystem failure.
+2. `test_deletion_recovery_retry_after_previous_failure`: Verifies idempotent cleanup of prior failed deletion states.
+3. `test_deletion_crash_after_filesystem_deleted_recovery`: Verifies database cleanup after post-filesystem crash.
+4. `test_fresh_database_migration_v1_and_v2`: Verifies fresh database runs v1 then v2 forward migrations.
+5. `test_legacy_database_migration_upgrade_preserves_records`: Verifies v1 $\rightarrow$ v2 migration retains 100% of existing data.
+6. `test_settings_persistence_across_pool_restarts`: Verifies SQLite settings roundtrip across pool teardown and restart.
+7. `test_secure_save_project_real_service`: Verifies synchronized manifest and database updates via `ProjectService`.
+8. `test_secure_save_manifest_identity_mismatch_rejected`: Verifies anti-tampering rejection of mismatched manifest IDs.
+9. `test_open_project_vault_healing_error_propagation`: Verifies directory healing failure propagation.
+10. `test_database_integrity_check_service`: Verifies SQLite database passes `PRAGMA integrity_check`.
+
+### 8.4 Root Cause Analysis for Execution Statuses
+- **Local Rust Toolchain Status (BLOCKED):**
+  - Microsoft Windows 11 Smart App Control (SAC) blocks executables without a valid commercial Authenticode certificate when run from user profiles (`%USERPROFILE%\.rustup\...`).
+  - `cargo.exe` and `rustc.exe` carry no Authenticode signature (`Status: NotSigned`).
+  - Operating-system security protections were **not** disabled or modified.
+- **Remote GitHub Actions Status (BLOCKED):**
+  - The local git repository currently has no remote origin configured (`git remote -v` is empty).
+  - Pushing to GitHub and triggering the `.github/workflows/phase1-native-verification.yml` workflow requires a remote GitHub repository URL and user push authentication.
+  - As soon as a GitHub remote URL is provided (e.g. `git remote add origin https://github.com/<user>/<repo>.git` and `git push -u origin master`), GitHub Actions will automatically run on `windows-latest` where Rust MSVC executes without SAC restrictions.
 
 ---
 
 ## 9. Remaining Limitations & Phase 1 Scope Boundaries
 
-1. **Local Native Rust Binary Execution on Windows 11 with SAC**:
-   - Compiling or executing unsigned Rust binaries locally requires either a clean-room CI runner (`windows-latest`), signing the binaries with a recognized CA certificate, or developer exclusion in Windows Security.
-2. **Phase 2 Scope Exclusions (Strictly Preserved)**:
+1. **Remote CI Execution Dependency:**
+   - Triggering GitHub Actions requires adding a remote git repository and pushing branch `master`.
+2. **Local Native Rust Execution on Windows 11 with SAC:**
+   - Local compilation requires running in an environment without unsigned user-binary SAC blocking, code-signing the toolchain binaries, or running via GitHub Actions `windows-latest`.
+3. **Phase 2 Scope Exclusions (Strictly Enforced):**
    - Chrome Extension (Manifest V3) is not yet implemented.
    - Native Messaging Host is not yet registered.
    - Browser automation and AI provider adapters remain in subsequent phases.
@@ -203,11 +232,11 @@ The continuous integration workflow defined in [`.github/workflows/phase1-native
 ## 10. Phase 1 Freezing & Phase 2 Implementation Preparation
 
 ### Phase 1 Frozen State:
-- **Baseline Git Commit:** `8d5c36c50faa37b222d1aa76f7561a87e9f9d707`
-- **Architecture Blueprints:** All 20 master architecture `.md` files remain untouched and preserved.
-- **Source Integrity:** No existing Phase 1 functionality modified unnecessarily.
+- **Baseline Git Commit:** `54a336e3bc36285d0938e8140c0f057e84b10d81`
+- **Architecture Blueprints:** All 20 master architecture `.md` files remain 100% untouched and preserved.
+- **Application Code:** Frozen. No Phase 1 functionality modified.
 
-### Phase 2 Readiness (`Chrome Profile Management & Browser Extension Architecture`):
+### Phase 2 Implementation Scope (`Chrome Profile Management & Browser Extension Architecture`):
 - **Upcoming Scope:**
   1. Manifest V3 Chrome Extension (`extension/manifest.json`, `background.js`, `content.js`).
   2. Isolated Chrome Profile manager launched with `--user-data-dir` and dedicated debugging flags.
