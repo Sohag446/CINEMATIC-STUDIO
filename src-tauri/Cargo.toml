@@ -18,7 +18,7 @@ name = "cinematic-studio-host"
 path = "src/bin/host.rs"
 
 [build-dependencies]
-tauri-build = { version = "2.12", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2.12", features = [] }
