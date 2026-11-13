@@ -1,5 +1,6 @@
 pub mod database;
 pub mod project_manager;
+pub mod project_service;
 pub mod telemetry;
 pub mod commands;
 

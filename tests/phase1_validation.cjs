@@ -47,15 +47,21 @@ async function runCategorizedTests() {
   const SQL = await initSqlJs();
   const db = new SQL.Database();
 
-  const migrationSqlPath = path.join(__dirname, '../src-tauri/migrations/001_initial_schema.sql');
-  const migrationSql = fs.readFileSync(migrationSqlPath, 'utf-8');
-  db.run(migrationSql);
+  const migrationSqlPath1 = path.join(__dirname, '../src-tauri/migrations/001_initial_schema.sql');
+  const migrationSql1 = fs.readFileSync(migrationSqlPath1, 'utf-8');
+  db.run("CREATE TABLE IF NOT EXISTS _schema_migrations (version INTEGER PRIMARY KEY NOT NULL, applied_at INTEGER NOT NULL);");
+  db.run(migrationSql1);
   db.run("INSERT INTO _schema_migrations (version, applied_at) VALUES (1, 1000);");
-  recordResult('Category B', 'Master Schema Execution (001_initial_schema.sql)', 'PASS', 'All DDL statements executed cleanly');
 
-  const migCheck = db.exec('SELECT version FROM _schema_migrations WHERE version = 1');
-  const hasMig = migCheck.length > 0 && migCheck[0].values[0][0] === 1;
-  recordResult('Category B', 'Schema Migration Version Tracking', hasMig ? 'PASS' : 'FAIL', '_schema_migrations tracks v1');
+  const migrationSqlPath2 = path.join(__dirname, '../src-tauri/migrations/002_storage_root_and_deletion_journal.sql');
+  const migrationSql2 = fs.readFileSync(migrationSqlPath2, 'utf-8');
+  db.run(migrationSql2);
+  db.run("INSERT INTO _schema_migrations (version, applied_at) VALUES (2, 2000);");
+  recordResult('Category B', 'Forward-Only Migrations v1 and v2 Execution', 'PASS', 'Both v1 and v2 DDL statements executed cleanly');
+
+  const migCheck = db.exec('SELECT MAX(version) FROM _schema_migrations');
+  const hasMig = migCheck.length > 0 && migCheck[0].values[0][0] === 2;
+  recordResult('Category B', 'Schema Migration Version Tracking v2', hasMig ? 'PASS' : 'FAIL', '_schema_migrations tracks v2');
 
   // Enforce SQLite PRAGMAs
   db.run('PRAGMA foreign_keys = ON;');
@@ -126,10 +132,11 @@ async function runCategorizedTests() {
   recordResult('Category B', 'Foreign Key Rejection of Orphan Records', fkError ? 'PASS' : 'FAIL', 'Attempt to insert invalid scene_id rejected');
 
   // Recoverable Deletion Journal simulation
+  const now = Date.now();
   db.run(
-    `INSERT INTO project_deletion_journal (project_id, project_name, project_dir_path, storage_root, deletion_state, created_at)
-     VALUES (?, 'Cyberpunk Short', 'test_dir', 'custom_root', 'INTENT_RECORDED', ?)`,
-    [testProjId, Date.now()]
+    `INSERT INTO project_deletion_journal (project_id, project_name, project_dir_path, storage_root, deletion_state, created_at, updated_at)
+     VALUES (?, 'Cyberpunk Short', 'test_dir', 'custom_root', 'INTENT_RECORDED', ?, ?)`,
+    [testProjId, now, now]
   );
   const journalCheck = db.exec(`SELECT deletion_state FROM project_deletion_journal WHERE project_id = '${testProjId}'`);
   recordResult('Category B', 'Deletion Journal Crash-Intent Recording', journalCheck[0].values[0][0] === 'INTENT_RECORDED' ? 'PASS' : 'FAIL', 'Intent recorded before destructive action');

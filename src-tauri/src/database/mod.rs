@@ -55,6 +55,12 @@ impl AppSettings {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct RecoveryReport {
+    pub successful_recoveries: Vec<String>,
+    pub pending_failures: Vec<String>,
+}
+
 pub fn init_db<P: AsRef<Path>>(db_path: P) -> Result<DbPool, Box<dyn std::error::Error>> {
     let manager = SqliteConnectionManager::file(db_path)
         .with_init(|conn: &mut Connection| {
@@ -74,12 +80,20 @@ pub fn init_db<P: AsRef<Path>>(db_path: P) -> Result<DbPool, Box<dyn std::error:
         .max_size(4) // 1 write + 3 read connections max to bound RAM
         .build(manager)?;
 
-    // Run atomic migrations and startup recovery
+    // 1. Run forward-only atomic migrations (v1 and v2)
     let mut conn = pool.get()?;
-    apply_migrations(&mut conn)?;
-    let _ = recover_interrupted_deletions(&mut conn);
+    apply_all_migrations(&mut conn)?;
 
-    // Verify integrity on startup
+    // 2. Run startup deletion recovery
+    let recovery_report = recover_interrupted_deletions(&mut conn)?;
+    if !recovery_report.pending_failures.is_empty() {
+        eprintln!(
+            "[WARN] Project deletion recovery has unresolved failures: {:?}",
+            recovery_report.pending_failures
+        );
+    }
+
+    // 3. Verify SQLite integrity on startup
     let integrity_ok: String = conn.query_row("PRAGMA integrity_check", [], |r| r.get(0))?;
     if integrity_ok != "ok" {
         return Err(format!("SQLite database integrity check failed: {}", integrity_ok).into());
@@ -89,8 +103,8 @@ pub fn init_db<P: AsRef<Path>>(db_path: P) -> Result<DbPool, Box<dyn std::error:
 }
 
 /// Applies all pending database migrations inside explicit atomic transactions
-pub fn apply_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Ensure migrations table exists
+pub fn apply_all_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Ensure migrations tracking table exists
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS _schema_migrations (
             version INTEGER PRIMARY KEY NOT NULL,
@@ -98,18 +112,18 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::error:
         );"
     )?;
 
-    // 2. Query current migration version - propagate any unexpected database error
+    // 2. Query current migration version without silently suppressing database errors
     let current_version: i32 = conn.query_row(
         "SELECT COALESCE(MAX(version), 0) FROM _schema_migrations",
         [],
         |r| r.get(0),
     )?;
 
-    // 3. Migration v1: Atomic execution
+    // 3. Migration v1: Immutable initial schema
     if current_version < 1 {
         let tx = conn.transaction()?;
-        let migration_sql = include_str!("../../migrations/001_initial_schema.sql");
-        tx.execute_batch(migration_sql)?;
+        let migration_v1 = include_str!("../../migrations/001_initial_schema.sql");
+        tx.execute_batch(migration_v1)?;
 
         let now = chrono::Utc::now().timestamp_millis();
         tx.execute(
@@ -119,20 +133,37 @@ pub fn apply_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::error:
         tx.commit()?;
     }
 
+    // 4. Migration v2: storage_root and deletion journal
+    if current_version < 2 {
+        let tx = conn.transaction()?;
+        let migration_v2 = include_str!("../../migrations/002_storage_root_and_deletion_journal.sql");
+        tx.execute_batch(migration_v2)?;
+
+        let now = chrono::Utc::now().timestamp_millis();
+        tx.execute(
+            "INSERT INTO _schema_migrations (version, applied_at) VALUES (?1, ?2)",
+            (2, now),
+        )?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
 /// Recovers any interrupted project deletions recorded in the deletion journal
-pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<RecoveryReport, Box<dyn std::error::Error>> {
     // Check if table exists
     let table_exists: bool = conn.query_row(
         "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='project_deletion_journal'",
         [],
         |r| r.get::<_, i64>(0),
-    ).map(|c| c > 0).unwrap_or(false);
+    ).map(|c| c > 0)?;
 
     if !table_exists {
-        return Ok(Vec::new());
+        return Ok(RecoveryReport {
+            successful_recoveries: Vec::new(),
+            pending_failures: Vec::new(),
+        });
     }
 
     let mut stmt = conn.prepare(
@@ -155,21 +186,78 @@ pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<Vec<String
     }
     drop(stmt);
 
-    let mut recovered = Vec::new();
-    for (project_id, name, dir_path, storage_root, _state) in pending {
-        // Idempotent filesystem removal
-        let _ = ProjectManager::safe_delete_vault(&dir_path, &storage_root);
+    let mut report = RecoveryReport {
+        successful_recoveries: Vec::new(),
+        pending_failures: Vec::new(),
+    };
 
-        // Idempotent database deletion inside a transaction
-        let tx = conn.transaction()?;
-        tx.execute("DELETE FROM projects WHERE id = ?1", [&project_id])?;
-        tx.execute("DELETE FROM project_deletion_journal WHERE project_id = ?1", [&project_id])?;
-        tx.commit()?;
+    let now = chrono::Utc::now().timestamp_millis();
 
-        recovered.push(format!("{}: {}", project_id, name));
+    for (project_id, name, dir_path, storage_root, mut deletion_state) in pending {
+        // Resolve trusted storage root
+        let authorized_root = match ProjectManager::resolve_trusted_storage_root(&dir_path, &storage_root) {
+            Ok(root) => root,
+            Err(e) => {
+                let err_msg = format!("Unauthorized storage root on recovery: {}", e);
+                conn.execute(
+                    "UPDATE project_deletion_journal SET error_details = ?1, retry_count = retry_count + 1, updated_at = ?2 WHERE project_id = ?3",
+                    (&err_msg, now, &project_id),
+                )?;
+                report.pending_failures.push(format!("{}: {}", project_id, err_msg));
+                continue;
+            }
+        };
+
+        // Step A: If state is INTENT_RECORDED, execute physical filesystem deletion
+        if deletion_state == "INTENT_RECORDED" {
+            match ProjectManager::safe_delete_vault(&dir_path, &authorized_root) {
+                Ok(_) => {
+                    deletion_state = "DATABASE_CLEANUP_PENDING".to_string();
+                    conn.execute(
+                        "UPDATE project_deletion_journal SET deletion_state = 'DATABASE_CLEANUP_PENDING', updated_at = ?1 WHERE project_id = ?2",
+                        (now, &project_id),
+                    )?;
+                }
+                Err(e) => {
+                    let err_msg = format!("Filesystem deletion failed during recovery: {}", e);
+                    conn.execute(
+                        "UPDATE project_deletion_journal SET error_details = ?1, retry_count = retry_count + 1, updated_at = ?2 WHERE project_id = ?3",
+                        (&err_msg, now, &project_id),
+                    )?;
+                    report.pending_failures.push(format!("{}: {}", project_id, err_msg));
+                    // Preserve journal and database record for later retry!
+                    continue;
+                }
+            }
+        }
+
+        // Step B: If state is DATABASE_CLEANUP_PENDING or FILESYSTEM_DELETED, execute atomic database cleanup
+        if deletion_state == "DATABASE_CLEANUP_PENDING" || deletion_state == "FILESYSTEM_DELETED" {
+            let db_cleanup = (|| -> Result<(), rusqlite::Error> {
+                let tx = conn.transaction()?;
+                tx.execute("DELETE FROM projects WHERE id = ?1", [&project_id])?;
+                tx.execute("DELETE FROM project_deletion_journal WHERE project_id = ?1", [&project_id])?;
+                tx.commit()?;
+                Ok(())
+            })();
+
+            match db_cleanup {
+                Ok(_) => {
+                    report.successful_recoveries.push(format!("{}: {}", project_id, name));
+                }
+                Err(e) => {
+                    let err_msg = format!("Database cleanup failed during recovery: {}", e);
+                    conn.execute(
+                        "UPDATE project_deletion_journal SET error_details = ?1, retry_count = retry_count + 1, updated_at = ?2 WHERE project_id = ?3",
+                        (&err_msg, now, &project_id),
+                    )?;
+                    report.pending_failures.push(format!("{}: {}", project_id, err_msg));
+                }
+            }
+        }
     }
 
-    Ok(recovered)
+    Ok(report)
 }
 
 /// Retrieves typed application settings from SQLite app_settings table

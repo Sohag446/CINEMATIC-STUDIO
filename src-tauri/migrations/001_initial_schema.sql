@@ -1,4 +1,4 @@
--- CINEMATIC STUDIO Master Database Schema v1
+-- CINEMATIC STUDIO Master Database Schema v1 (Immutable Historical Migration)
 -- Low-RAM Profile: WAL mode, temp_store = FILE, cache_size = -8000 (8 MB cap)
 
 PRAGMA journal_mode = WAL;
@@ -7,12 +7,6 @@ PRAGMA foreign_keys = ON;
 PRAGMA cache_size = -8000;
 PRAGMA temp_store = FILE;
 PRAGMA mmap_size = 0;
-
--- 0. SCHEMA MIGRATIONS TRACKING
-CREATE TABLE IF NOT EXISTS _schema_migrations (
-    version INTEGER PRIMARY KEY NOT NULL,
-    applied_at INTEGER NOT NULL
-);
 
 -- 1. PROJECTS TABLE
 CREATE TABLE IF NOT EXISTS projects (
@@ -24,7 +18,6 @@ CREATE TABLE IF NOT EXISTS projects (
     target_fps REAL NOT NULL DEFAULT 24.0,
     target_duration_seconds INTEGER DEFAULT 600,
     project_dir_path TEXT NOT NULL,
-    storage_root TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'PLANNING',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
@@ -100,14 +93,4 @@ CREATE INDEX IF NOT EXISTS idx_tasks_queue ON tasks(state, priority DESC, create
 CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL
-);
-
--- 6. PROJECT DELETION JOURNAL (CRASH RECOVERY)
-CREATE TABLE IF NOT EXISTS project_deletion_journal (
-    project_id TEXT PRIMARY KEY NOT NULL,
-    project_name TEXT NOT NULL,
-    project_dir_path TEXT NOT NULL,
-    storage_root TEXT NOT NULL,
-    deletion_state TEXT NOT NULL DEFAULT 'INTENT_RECORDED',
-    created_at INTEGER NOT NULL
 );

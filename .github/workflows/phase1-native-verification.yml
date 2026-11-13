@@ -1,0 +1,66 @@
+name: Phase 1 Native Verification & CI Suite
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  verify-phase-1:
+    name: Windows Native Desktop & Core Verification
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust Toolchain (Stable MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Verify Application Icons Exist
+        run: node scripts/generate_icons.cjs
+
+      - name: Frontend TypeScript & Lint Checks
+        run: npm run build
+
+      - name: Run Master Verification Simulation Suite
+        run: node tests/phase1_validation.cjs
+
+      - name: Rust Formatting Check
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+      - name: Rust Backend Cargo Check
+        working-directory: src-tauri
+        run: cargo check --verbose
+
+      - name: Execute Native Rust Unit & Integration Test Suite
+        working-directory: src-tauri
+        run: cargo test --verbose -- --nocapture
+
+      - name: Upload Test & Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-build-artifacts
+          path: |
+            dist/
+            tests/test_output/

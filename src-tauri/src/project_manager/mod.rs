@@ -127,6 +127,32 @@ impl ProjectManager {
         Ok(validated)
     }
 
+    /// Resolves the trusted authorized storage root for a project.
+    /// If storage_root is non-empty, validates it.
+    /// If storage_root is empty (legacy project), validates that project_dir_path is inside default_authorized_root.
+    pub fn resolve_trusted_storage_root<P: AsRef<Path>>(
+        project_dir_path: P,
+        storage_root: &str,
+    ) -> Result<PathBuf, std::io::Error> {
+        let p_dir = project_dir_path.as_ref();
+        if !storage_root.trim().is_empty() {
+            let root_path = PathBuf::from(storage_root);
+            Self::validate_storage_root(&root_path)
+        } else {
+            // Legacy record fallback: only allow if project_dir_path is actually inside default_authorized_root
+            let default_root = Self::default_authorized_root();
+            fs::create_dir_all(&default_root)?;
+            let (canon_target, canon_root) = Self::verify_containment(p_dir, &default_root)?;
+            if canon_target.starts_with(&canon_root) {
+                return Ok(default_root);
+            }
+            Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Legacy project has unverified storage root and does not reside within default storage root",
+            ))
+        }
+    }
+
     /// Verifies that target_dir is strictly contained within authorized_root and not the root itself
     pub fn verify_containment<P: AsRef<Path>, R: AsRef<Path>>(target_dir: P, authorized_root: R) -> Result<(PathBuf, PathBuf), std::io::Error> {
         let target = target_dir.as_ref();
@@ -347,7 +373,8 @@ impl ProjectManager {
         Ok(count)
     }
 
-    /// Safely deletes a project vault folder within an authorized root directory
+    /// Safely deletes a project vault folder within an authorized root directory.
+    /// Handles symlinks, dangling symlinks, and verified missing directories.
     pub fn safe_delete_vault<P: AsRef<Path>, R: AsRef<Path>>(
         project_dir: P,
         authorized_root: R,
@@ -355,24 +382,40 @@ impl ProjectManager {
         let raw_target = project_dir.as_ref();
         let raw_root = authorized_root.as_ref();
 
-        // 1. If folder does not exist on disk, return AlreadyMissing cleanly
-        if !raw_target.exists() {
-            return Ok(VaultDeletionOutcome::AlreadyMissing);
+        // 1. Inspect symlink status using symlink_metadata to catch dangling symlinks
+        match fs::symlink_metadata(raw_target) {
+            Ok(meta) => {
+                if meta.file_type().is_symlink() {
+                    // It is a symlink (dangling or pointing to target).
+                    // Strictly remove ONLY the symlink itself; never recursively remove the target!
+                    if raw_target.is_dir() {
+                        let _ = fs::remove_dir(raw_target);
+                    } else {
+                        let _ = fs::remove_file(raw_target);
+                    }
+                    return Ok(VaultDeletionOutcome::Deleted);
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // Directory is truly missing on disk.
+                // Verify that the registered target was legitimately within the authorized root
+                if let Ok((canon_target, canon_root)) = Self::verify_containment(raw_target, raw_root) {
+                    if canon_target.starts_with(&canon_root) {
+                        return Ok(VaultDeletionOutcome::AlreadyMissing);
+                    }
+                }
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::PermissionDenied,
+                    "Missing project directory was registered outside authorized storage root",
+                ));
+            }
+            Err(e) => return Err(e),
         }
 
-        // 2. Reject symlinks to prevent symlink redirection outside authorized root
-        if raw_target.is_symlink() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::PermissionDenied,
-                "Refusing to recursively delete a symlinked project directory",
-            ));
-        }
-
-        // 3. Verify target is strictly within authorized root
+        // 2. Target exists as a normal directory. Verify containment strictly within authorized root.
         let (canonical_target, _) = Self::verify_containment(raw_target, raw_root)?;
 
-        // 4. Verify the folder actually contains project.manifest.json or project markers
-        // This prevents deleting an arbitrary non-project directory even if inside root
+        // 3. Verify project.manifest.json exists inside to prevent deleting arbitrary directories
         let manifest_path = canonical_target.join("project.manifest.json");
         if !manifest_path.exists() {
             return Err(std::io::Error::new(
@@ -381,7 +424,7 @@ impl ProjectManager {
             ));
         }
 
-        // 5. Execute recursive removal
+        // 4. Perform recursive removal
         fs::remove_dir_all(&canonical_target)?;
 
         Ok(VaultDeletionOutcome::Deleted)

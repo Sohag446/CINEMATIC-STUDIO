@@ -132,3 +132,4 @@ The Rust test suite has been expanded in [src-tauri/src/tests.rs](file:///c:/Use
 7. `src/types/index.ts` — Added `storage_root?: string;` to `Project`.
 8. `src/services/api.ts` — Updated `getActiveProject()` to call `invoke('get_active_project')`.
 9. `tests/phase1_validation.cjs` — Updated simulation matrix with atomic migrations, custom root, deletion journal, and settings.
+
