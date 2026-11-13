@@ -385,7 +385,9 @@ pub async fn get_telemetry(state: State<'_, AppState>) -> Result<TelemetryData, 
         0
     };
 
-    Ok(state.telemetry.sample(project_id, project_name, active_tasks))
+    Ok(state
+        .telemetry
+        .sample(project_id, project_name, active_tasks))
 }
 
 // ============================================================================

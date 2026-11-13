@@ -126,10 +126,8 @@ impl MediaEngineResolver {
                 ));
                 let ffmpeg_integrity =
                     Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
-                let ffprobe_integrity = Self::probe_binary_integrity(
-                    &ffprobe,
-                    Some(EXPECTED_FFPROBE_SHA256),
-                );
+                let ffprobe_integrity =
+                    Self::probe_binary_integrity(&ffprobe, Some(EXPECTED_FFPROBE_SHA256));
 
                 return MediaEngineResolutionReport {
                     resolution_source: ResolutionSource::TauriProductionResource,
@@ -155,10 +153,8 @@ impl MediaEngineResolver {
                 ));
                 let ffmpeg_integrity =
                     Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
-                let ffprobe_integrity = Self::probe_binary_integrity(
-                    &ffprobe,
-                    Some(EXPECTED_FFPROBE_SHA256),
-                );
+                let ffprobe_integrity =
+                    Self::probe_binary_integrity(&ffprobe, Some(EXPECTED_FFPROBE_SHA256));
 
                 return MediaEngineResolutionReport {
                     resolution_source: ResolutionSource::DevelopmentResource,
