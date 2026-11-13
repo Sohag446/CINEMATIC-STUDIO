@@ -6,6 +6,7 @@ import { BottomProductionPanel } from './features/production/BottomProductionPan
 import { NewProjectModal } from './features/projects/NewProjectModal';
 import { OpenProjectModal } from './features/projects/OpenProjectModal';
 import { RenameProjectModal } from './features/projects/RenameProjectModal';
+import { DeleteProjectModal } from './features/projects/DeleteProjectModal';
 import { SettingsModal } from './features/settings/SettingsModal';
 import { useStudioStore } from './stores/useStudioStore';
 
@@ -46,9 +47,11 @@ export const App: React.FC = () => {
       <NewProjectModal />
       <OpenProjectModal />
       <RenameProjectModal />
+      <DeleteProjectModal />
       <SettingsModal />
     </div>
   );
 };
 
 export default App;
+

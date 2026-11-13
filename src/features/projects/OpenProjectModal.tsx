@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, FolderOpen, Film, Calendar } from 'lucide-react';
+import { X, FolderOpen, Film, Calendar, Trash2 } from 'lucide-react';
 import { useStudioStore } from '../../stores/useStudioStore';
 
 export const OpenProjectModal: React.FC = () => {
@@ -8,7 +8,8 @@ export const OpenProjectModal: React.FC = () => {
     setOpenProjectModalOpen, 
     projects, 
     openProject, 
-    activeProject 
+    activeProject,
+    setDeleteModalOpen
   } = useStudioStore();
 
   if (!isOpenProjectModalOpen) return null;
@@ -69,15 +70,27 @@ export const OpenProjectModal: React.FC = () => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openProject(p.id);
-                    }}
-                    className="px-3 py-1 bg-studio-800 hover:bg-studio-750 text-slate-200 rounded font-mono text-xs border border-studio-700"
-                  >
-                    Open
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openProject(p.id);
+                      }}
+                      className="px-3 py-1 bg-studio-800 hover:bg-studio-750 text-slate-200 rounded font-mono text-xs border border-studio-700"
+                    >
+                      Open
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteModalOpen(true, p);
+                      }}
+                      title="Delete Project Vault"
+                      className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-red-950/40 border border-transparent hover:border-red-900/50 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               );
             })

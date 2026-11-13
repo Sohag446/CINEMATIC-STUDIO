@@ -20,6 +20,8 @@ interface StudioState {
   isOpenProjectModalOpen: boolean;
   isSettingsModalOpen: boolean;
   isRenameModalOpen: boolean;
+  isDeleteModalOpen: boolean;
+  projectToDelete: Project | null;
   
   // Telemetry & Settings
   telemetry: SystemTelemetry | null;
@@ -31,6 +33,7 @@ interface StudioState {
   openProject: (projectId: string) => Promise<void>;
   closeProject: () => Promise<void>;
   renameProject: (newName: string) => Promise<void>;
+  deleteProject: (projectId: string, confirmName: string) => Promise<void>;
   saveCurrentProject: () => Promise<void>;
   
   fetchWorkspaceData: (projectId: string) => Promise<void>;
@@ -46,6 +49,7 @@ interface StudioState {
   setOpenProjectModalOpen: (open: boolean) => void;
   setSettingsModalOpen: (open: boolean) => void;
   setRenameModalOpen: (open: boolean) => void;
+  setDeleteModalOpen: (open: boolean, project?: Project | null) => void;
 }
 
 export const useStudioStore = create<StudioState>((set, get) => ({
@@ -63,6 +67,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   isOpenProjectModalOpen: false,
   isSettingsModalOpen: false,
   isRenameModalOpen: false,
+  isDeleteModalOpen: false,
+  projectToDelete: null,
 
   telemetry: null,
   settings: null,
@@ -118,6 +124,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       activeProject: updated,
       projects: state.projects.map(p => p.id === updated.id ? updated : p),
       isRenameModalOpen: false,
+    }));
+  },
+
+  deleteProject: async (projectId: string, confirmName: string) => {
+    await apiService.deleteProject(projectId, confirmName);
+    const { activeProject } = get();
+    set(state => ({
+      projects: state.projects.filter(p => p.id !== projectId),
+      activeProject: activeProject?.id === projectId ? null : activeProject,
+      scenes: activeProject?.id === projectId ? [] : state.scenes,
+      clips: activeProject?.id === projectId ? [] : state.clips,
+      selectedClipId: activeProject?.id === projectId ? null : state.selectedClipId,
+      selectedSceneId: activeProject?.id === projectId ? null : state.selectedSceneId,
+      isDeleteModalOpen: false,
+      projectToDelete: null,
     }));
   },
 
@@ -181,4 +202,6 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   setOpenProjectModalOpen: (open) => set({ isOpenProjectModalOpen: open }),
   setSettingsModalOpen: (open) => set({ isSettingsModalOpen: open }),
   setRenameModalOpen: (open) => set({ isRenameModalOpen: open }),
+  setDeleteModalOpen: (open, project = null) => set({ isDeleteModalOpen: open, projectToDelete: project }),
 }));
+

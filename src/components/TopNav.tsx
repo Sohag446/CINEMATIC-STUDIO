@@ -10,7 +10,8 @@ import {
   CheckCircle2, 
   Edit3, 
   XSquare,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { useStudioStore } from '../stores/useStudioStore';
 
@@ -24,6 +25,7 @@ export const TopNav: React.FC = () => {
     setOpenProjectModalOpen, 
     setSettingsModalOpen,
     setRenameModalOpen,
+    setDeleteModalOpen,
     seed360Clips,
     clips
   } = useStudioStore();
@@ -68,9 +70,16 @@ export const TopNav: React.FC = () => {
             <button
               onClick={closeProject}
               title="Close Project"
-              className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+              className="text-slate-400 hover:text-amber-400 transition-colors p-0.5"
             >
               <XSquare className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setDeleteModalOpen(true, activeProject)}
+              title="Delete Project Vault"
+              className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : (
@@ -166,3 +175,4 @@ export const TopNav: React.FC = () => {
     </header>
   );
 };
+

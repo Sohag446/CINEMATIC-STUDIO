@@ -109,3 +109,4 @@ export interface AppSettings {
   theme: 'dark' | 'cinematic';
   hardware_thread_cap: number;
 }
+

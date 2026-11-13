@@ -63,3 +63,4 @@ export const RenameProjectModal: React.FC = () => {
     </div>
   );
 };
+

@@ -159,3 +159,4 @@ node tests/phase1_validation.cjs
 - **Phase 3**: AI Director & Story Engine, live DOM content script adapters for ChatGPT, Claude, and Gemini.
 - **Phase 4**: Video Generation Workspace, live DOM content script adapters for Google Veo, Runway, and Luma, FFmpeg end-frame handover ($T_{end}$).
 - **Phase 5**: Media Manager, FFmpeg concat demuxer & normalizing transcode, multi-track audio mixdown, portable `.csproj.zip` export.
+

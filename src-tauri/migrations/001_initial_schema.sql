@@ -8,6 +8,16 @@ PRAGMA cache_size = -8000;
 PRAGMA temp_store = FILE;
 PRAGMA mmap_size = 0;
 
+-- 0. SCHEMA MIGRATIONS TRACKING
+CREATE TABLE IF NOT EXISTS _schema_migrations (
+    version INTEGER PRIMARY KEY NOT NULL,
+    applied_at INTEGER NOT NULL
+);
+
+INSERT OR IGNORE INTO _schema_migrations (version, applied_at) 
+VALUES (1, 1731499200000);
+
+-- 1. PROJECTS TABLE
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
@@ -25,6 +35,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 
+-- 2. SCENES TABLE
 CREATE TABLE IF NOT EXISTS scenes (
     id TEXT PRIMARY KEY NOT NULL,
     project_id TEXT NOT NULL,
@@ -40,6 +51,7 @@ CREATE TABLE IF NOT EXISTS scenes (
 
 CREATE INDEX IF NOT EXISTS idx_scenes_project_order ON scenes(project_id, sequence_number);
 
+-- 3. CLIPS TABLE
 CREATE TABLE IF NOT EXISTS clips (
     id TEXT PRIMARY KEY NOT NULL,
     scene_id TEXT NOT NULL,
@@ -65,6 +77,7 @@ CREATE TABLE IF NOT EXISTS clips (
 CREATE INDEX IF NOT EXISTS idx_clips_scene_order ON clips(scene_id, clip_number);
 CREATE INDEX IF NOT EXISTS idx_clips_project_status ON clips(project_id, status);
 
+-- 4. TASKS TABLE
 CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY NOT NULL,
     project_id TEXT NOT NULL,
@@ -85,6 +98,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 CREATE INDEX IF NOT EXISTS idx_tasks_queue ON tasks(state, priority DESC, created_at ASC);
 
+-- 5. APP SETTINGS TABLE
 CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL

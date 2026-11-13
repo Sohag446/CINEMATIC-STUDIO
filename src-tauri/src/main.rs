@@ -40,9 +40,11 @@ fn main() {
             commands::rename_project,
             commands::save_project,
             commands::close_project,
+            commands::delete_project,
             commands::get_scenes,
             commands::get_clips,
             commands::seed_test_clips,
+            commands::check_database_integrity,
             commands::get_telemetry,
         ])
         .run(tauri::generate_context!())

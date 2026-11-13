@@ -50,7 +50,10 @@ export const apiService = {
     const projects = await this.listProjects();
     const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     
-    // Check if slug already exists
+    if (!slug) {
+      throw new Error('Project name must contain alphanumeric characters.');
+    }
+
     if (projects.some(p => p.slug === slug)) {
       throw new Error(`A project with slug "${slug}" already exists.`);
     }
@@ -73,7 +76,7 @@ export const apiService = {
     localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(projects));
     localStorage.setItem(STORAGE_ACTIVE_PROJECT_KEY, newProject.id);
 
-    // Seed default Scene 1 and Clip 1
+    // Seed default Scene 1
     const defaultScene: Scene = {
       id: crypto.randomUUID(),
       project_id: newProject.id,
@@ -104,6 +107,7 @@ export const apiService = {
   },
 
   async renameProject(projectId: string, newName: string): Promise<Project> {
+    if (!newName.trim()) throw new Error('Project title cannot be empty.');
     if (isTauriEnvironment()) {
       const { invoke } = await import('@tauri-apps/api/core');
       return invoke<Project>('rename_project', { projectId, newName });
@@ -111,7 +115,7 @@ export const apiService = {
     const projects = await this.listProjects();
     const project = projects.find(p => p.id === projectId);
     if (!project) throw new Error('Project not found');
-    project.name = newName;
+    project.name = newName.trim();
     project.updated_at = Date.now();
     localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(projects));
     return project;
@@ -137,6 +141,36 @@ export const apiService = {
       return invoke<void>('close_project');
     }
     localStorage.removeItem(STORAGE_ACTIVE_PROJECT_KEY);
+  },
+
+  async deleteProject(projectId: string, confirmationName: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('delete_project', { projectId, confirmationName });
+    }
+
+    const projects = await this.listProjects();
+    const project = projects.find(p => p.id === projectId);
+    if (!project) throw new Error('Project not found.');
+
+    if (confirmationName.trim() !== project.name.trim()) {
+      throw new Error(`Confirmation name "${confirmationName}" does not match project name "${project.name}".`);
+    }
+
+    const filtered = projects.filter(p => p.id !== projectId);
+    localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(filtered));
+
+    // Clear active if currently active
+    if (localStorage.getItem(STORAGE_ACTIVE_PROJECT_KEY) === projectId) {
+      localStorage.removeItem(STORAGE_ACTIVE_PROJECT_KEY);
+    }
+
+    // Cascade delete scenes and clips
+    const scenes = this.getLocalScenes().filter(s => s.project_id !== projectId);
+    localStorage.setItem(STORAGE_SCENES_KEY, JSON.stringify(scenes));
+
+    const clips = this.getLocalClips().filter(c => c.project_id !== projectId);
+    localStorage.setItem(STORAGE_CLIPS_KEY, JSON.stringify(clips));
   },
 
   async getActiveProject(): Promise<Project | null> {
