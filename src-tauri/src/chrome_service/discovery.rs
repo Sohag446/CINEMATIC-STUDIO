@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use sysinfo::{ProcessExt, System, SystemExt};
+use sysinfo::System;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiscoveredChromeProfile {
@@ -109,7 +109,7 @@ impl ChromeDiscoveryService {
                     if path.is_dir() {
                         if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                             if name == "Default" || name.starts_with("Profile ") {
-                                let is_running = running_profiles.contains(name);
+                                let is_running = running_profiles.iter().any(|p| p == name);
                                 discovered.push(DiscoveredChromeProfile {
                                     profile_dir_key: name.to_string(),
                                     display_name: if name == "Default" {
@@ -154,13 +154,15 @@ impl ChromeDiscoveryService {
         let target_bin = "chrome.exe";
 
         for process in sys.processes().values() {
-            if process.name().to_lowercase().contains(target_bin) {
+            let proc_name = process.name().to_string_lossy().to_lowercase();
+            if proc_name.contains(target_bin) {
                 for arg in process.cmd() {
-                    if arg.starts_with("--profile-directory=") {
-                        let key = arg
+                    let arg_str = arg.to_string_lossy();
+                    if arg_str.starts_with("--profile-directory=") {
+                        let key = arg_str
                             .trim_start_matches("--profile-directory=")
                             .trim_matches('"');
-                        if !active_keys.contains(&key.to_string()) {
+                        if !active_keys.iter().any(|k| k == key) {
                             active_keys.push(key.to_string());
                         }
                     }

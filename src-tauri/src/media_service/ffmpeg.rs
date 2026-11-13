@@ -88,7 +88,7 @@ impl MediaEngineResolver {
 
                         let ffmpeg_integrity =
                             Self::probe_binary_integrity(&path, Some(EXPECTED_FFMPEG_SHA256));
-                        let ffprobe_integrity = ffprobe_path.as_ref().map(|p| {
+                        let ffprobe_integrity = ffprobe_path.as_ref().and_then(|p| {
                             Self::probe_binary_integrity(p, Some(EXPECTED_FFPROBE_SHA256))
                         });
 
@@ -126,10 +126,10 @@ impl MediaEngineResolver {
                 ));
                 let ffmpeg_integrity =
                     Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
-                let ffprobe_integrity = Some(Self::probe_binary_integrity(
+                let ffprobe_integrity = Self::probe_binary_integrity(
                     &ffprobe,
                     Some(EXPECTED_FFPROBE_SHA256),
-                ));
+                );
 
                 return MediaEngineResolutionReport {
                     resolution_source: ResolutionSource::TauriProductionResource,
@@ -155,10 +155,10 @@ impl MediaEngineResolver {
                 ));
                 let ffmpeg_integrity =
                     Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
-                let ffprobe_integrity = Some(Self::probe_binary_integrity(
+                let ffprobe_integrity = Self::probe_binary_integrity(
                     &ffprobe,
                     Some(EXPECTED_FFPROBE_SHA256),
-                ));
+                );
 
                 return MediaEngineResolutionReport {
                     resolution_source: ResolutionSource::DevelopmentResource,
@@ -183,7 +183,7 @@ impl MediaEngineResolver {
                     local_bin.display()
                 ));
                 let ffmpeg_integrity = Self::probe_binary_integrity(&ffmpeg, None);
-                let ffprobe_integrity = Some(Self::probe_binary_integrity(&ffprobe, None));
+                let ffprobe_integrity = Self::probe_binary_integrity(&ffprobe, None);
 
                 return MediaEngineResolutionReport {
                     resolution_source: ResolutionSource::LocalFallback,
@@ -207,10 +207,10 @@ impl MediaEngineResolver {
             diagnostics.push("Found ffmpeg executable in system PATH".to_string());
             let ffmpeg_integrity = ffmpeg_sys
                 .as_ref()
-                .map(|p| Self::probe_binary_integrity(p, None));
+                .and_then(|p| Self::probe_binary_integrity(p, None));
             let ffprobe_integrity = ffprobe_sys
                 .as_ref()
-                .map(|p| Self::probe_binary_integrity(p, None));
+                .and_then(|p| Self::probe_binary_integrity(p, None));
 
             return MediaEngineResolutionReport {
                 resolution_source: ResolutionSource::SystemPath,

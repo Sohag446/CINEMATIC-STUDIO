@@ -306,7 +306,6 @@ pub async fn seed_test_clips(
     count: i32,
     state: State<'_, AppState>,
 ) -> Result<Vec<ClipDto>, String> {
-    let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let scenes = get_scenes(project_id.clone(), state.clone()).await?;
     let scene_id = if let Some(s) = scenes.first() {
         s.id.clone()
@@ -330,23 +329,26 @@ pub async fn seed_test_clips(
         "EXTREME_CLOSE_UP",
     ];
 
-    let tx = conn.transaction().map_err(|e| e.to_string())?;
-    for i in 1..=count {
-        let clip_id = uuid::Uuid::new_v4().to_string();
-        let provider = providers[(i as usize) % providers.len()];
-        let framing = framings[(i as usize) % framings.len()];
-        let action = format!(
-            "Cinematic narrative sequence beat {} with photorealistic lighting",
-            i
-        );
+    {
+        let mut conn = state.db.get().map_err(|e| e.to_string())?;
+        let tx = conn.transaction().map_err(|e| e.to_string())?;
+        for i in 1..=count {
+            let clip_id = uuid::Uuid::new_v4().to_string();
+            let provider = providers[(i as usize) % providers.len()];
+            let framing = framings[(i as usize) % framings.len()];
+            let action = format!(
+                "Cinematic narrative sequence beat {} with photorealistic lighting",
+                i
+            );
 
-        tx.execute(
-            "INSERT INTO clips (id, scene_id, project_id, clip_number, target_duration_seconds, camera_framing, camera_angle, camera_movement, subject_action, status, assigned_provider, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, 10.0, ?5, 'EYE_LEVEL', 'TRACKING', ?6, 'PLANNED', ?7, ?8, ?9)",
-            (&clip_id, &scene_id, &project_id, i, framing, &action, provider, now, now),
-        ).map_err(|e| e.to_string())?;
+            tx.execute(
+                "INSERT INTO clips (id, scene_id, project_id, clip_number, target_duration_seconds, camera_framing, camera_angle, camera_movement, subject_action, status, assigned_provider, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, 10.0, ?5, 'EYE_LEVEL', 'TRACKING', ?6, 'PLANNED', ?7, ?8, ?9)",
+                (&clip_id, &scene_id, &project_id, i, framing, &action, provider, now, now),
+            ).map_err(|e| e.to_string())?;
+        }
+        tx.commit().map_err(|e| e.to_string())?;
     }
-    tx.commit().map_err(|e| e.to_string())?;
 
     get_clips(project_id, state).await
 }
@@ -359,7 +361,31 @@ pub async fn check_database_integrity(state: State<'_, AppState>) -> Result<bool
 
 #[tauri::command]
 pub async fn get_telemetry(state: State<'_, AppState>) -> Result<TelemetryData, String> {
-    Ok(state.telemetry.sample())
+    let (project_id, project_name) = {
+        let active = state.active_project.lock().unwrap();
+        if let Some(ref p) = *active {
+            (Some(p.id.clone()), Some(p.name.clone()))
+        } else {
+            (None, None)
+        }
+    };
+
+    let active_tasks = if let Some(ref pid) = project_id {
+        if let Ok(conn) = state.db.get() {
+            conn.query_row(
+                "SELECT count(*) FROM tasks WHERE project_id = ?1 AND state IN ('QUEUED', 'RUNNING')",
+                [pid],
+                |r| r.get::<_, i64>(0),
+            )
+            .unwrap_or(0) as usize
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    Ok(state.telemetry.sample(project_id, project_name, active_tasks))
 }
 
 // ============================================================================
