@@ -103,6 +103,8 @@ pub fn init_db<P: AsRef<Path>>(db_path: P) -> Result<DbPool, Box<dyn std::error:
 
 /// Applies all pending database migrations inside explicit atomic transactions
 pub fn apply_all_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
+    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+
     // 1. Ensure migrations tracking table exists
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS _schema_migrations (

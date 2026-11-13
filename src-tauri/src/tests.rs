@@ -188,13 +188,13 @@ fn test_fresh_database_migration_v1_and_v2() {
     // Run migrations
     apply_all_migrations(&mut conn).expect("Fresh migration execution failed");
 
-    // Check version 2 is recorded
+    // Check version 5 is recorded
     let version: i32 = conn
         .query_row("SELECT MAX(version) FROM _schema_migrations", [], |r| {
             r.get(0)
         })
         .unwrap();
-    assert_eq!(version, 2, "Database must upgrade to version 2");
+    assert_eq!(version, 5, "Database must upgrade to version 5");
 
     // Verify projects table has storage_root column
     let col_count: i64 = conn
@@ -258,13 +258,13 @@ fn test_legacy_database_migration_upgrade_preserves_records() {
     // 3. Now run the real forward-only migration runner
     apply_all_migrations(&mut conn).expect("Upgrade from v1 to v2 failed");
 
-    // 4. Verify version 2 recorded
+    // 4. Verify version 5 recorded
     let max_v: i32 = conn
         .query_row("SELECT MAX(version) FROM _schema_migrations", [], |r| {
             r.get(0)
         })
         .unwrap();
-    assert_eq!(max_v, 2);
+    assert_eq!(max_v, 5);
 
     // 5. CRITICAL: Verify all representative records are 100% intact!
     let (p_name, p_root): (String, String) = conn
@@ -515,13 +515,13 @@ fn test_migration_v3_creates_chrome_tables() {
     let mut conn = Connection::open_in_memory().unwrap();
     apply_all_migrations(&mut conn).expect("Fresh migration execution failed");
 
-    // Version 3 recorded
+    // Version 5 recorded
     let version: i32 = conn
         .query_row("SELECT MAX(version) FROM _schema_migrations", [], |r| {
             r.get(0)
         })
         .unwrap();
-    assert_eq!(version, 3, "Database must upgrade to version 3");
+    assert_eq!(version, 5, "Database must upgrade to version 5");
 
     // Tables exist
     let profiles_count: i64 = conn

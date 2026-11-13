@@ -1,13 +1,6 @@
 -- CINEMATIC STUDIO Master Database Schema v1 (Immutable Historical Migration)
 -- Low-RAM Profile: WAL mode, temp_store = FILE, cache_size = -8000 (8 MB cap)
 
-PRAGMA journal_mode = WAL;
-PRAGMA synchronous = NORMAL;
-PRAGMA foreign_keys = ON;
-PRAGMA cache_size = -8000;
-PRAGMA temp_store = FILE;
-PRAGMA mmap_size = 0;
-
 -- 1. PROJECTS TABLE
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY NOT NULL,
