@@ -154,12 +154,11 @@ impl ChromeDiscoveryService {
         let target_bin = "chrome.exe";
 
         for process in sys.processes().values() {
-            let proc_name = process.name().to_string_lossy().to_lowercase();
+            let proc_name = process.name().to_lowercase();
             if proc_name.contains(target_bin) {
                 for arg in process.cmd() {
-                    let arg_str = arg.to_string_lossy();
-                    if arg_str.starts_with("--profile-directory=") {
-                        let key = arg_str
+                    if arg.starts_with("--profile-directory=") {
+                        let key = arg
                             .trim_start_matches("--profile-directory=")
                             .trim_matches('"');
                         if !active_keys.iter().any(|k| k == key) {
