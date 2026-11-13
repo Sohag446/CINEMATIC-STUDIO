@@ -385,7 +385,7 @@ impl ProjectManager {
 
         for req in required.iter() {
             let path = project_dir.as_ref().join(req);
-            if !path.exists() {
+            if !path.is_dir() {
                 missing.push(req.to_string());
             }
         }
