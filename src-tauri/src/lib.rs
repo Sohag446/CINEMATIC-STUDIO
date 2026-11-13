@@ -38,6 +38,7 @@ pub fn run() {
             commands::create_project,
             commands::list_projects,
             commands::open_project,
+            commands::get_active_project,
             commands::rename_project,
             commands::save_project,
             commands::close_project,
@@ -47,6 +48,9 @@ pub fn run() {
             commands::seed_test_clips,
             commands::check_database_integrity,
             commands::get_telemetry,
+            commands::get_settings,
+            commands::update_settings,
+            commands::recover_pending_deletions,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running CINEMATIC STUDIO application");
@@ -55,3 +59,4 @@ pub fn run() {
 fn dirs_fallback() -> Option<std::path::PathBuf> {
     std::env::var_os("LOCALAPPDATA").map(std::path::PathBuf::from)
 }
+

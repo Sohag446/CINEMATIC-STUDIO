@@ -10,6 +10,7 @@ export interface Project {
   target_fps: number;
   target_duration_seconds: number;
   project_dir_path: string;
+  storage_root?: string;
   status: ProjectStatus;
   created_at: number;
   updated_at: number;

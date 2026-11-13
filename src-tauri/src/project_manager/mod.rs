@@ -13,6 +13,7 @@ pub struct ProjectMetadata {
     pub target_fps: f64,
     pub target_duration_seconds: i64,
     pub project_dir_path: String,
+    pub storage_root: String,
     pub status: String,
     pub created_at: i64,
     pub updated_at: i64,
@@ -132,7 +133,12 @@ impl ProjectManager {
         let root = authorized_root.as_ref();
 
         let clean_root = Self::validate_storage_root(root)?;
-        fs::create_dir_all(&clean_root)?;
+        if !clean_root.exists() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Authorized storage root does not exist: {:?}", clean_root),
+            ));
+        }
         let canonical_root = Self::strip_unc_prefix(&fs::canonicalize(&clean_root)?);
 
         let clean_target = Self::validate_path(target)?;
@@ -179,8 +185,8 @@ impl ProjectManager {
         Ok((canonical_target, canonical_root))
     }
 
-    /// Scaffolds the complete physical directory vault for a project
-    pub fn create_project_vault<P: AsRef<Path>>(base_dir: P, slug: &str) -> Result<PathBuf, std::io::Error> {
+    /// Scaffolds the complete physical directory vault for a project. Returns (project_dir, canonical_storage_root).
+    pub fn create_project_vault<P: AsRef<Path>>(base_dir: P, slug: &str) -> Result<(PathBuf, PathBuf), std::io::Error> {
         let clean_slug = slug.trim();
         if clean_slug.is_empty() {
             return Err(std::io::Error::new(
@@ -238,7 +244,7 @@ impl ProjectManager {
             fs::create_dir_all(&path)?;
         }
 
-        Ok(project_dir)
+        Ok((project_dir, canonical_base))
     }
 
     /// Atomically writes project metadata: writes to .tmp, flushes to disk, and renames atomically
@@ -347,6 +353,7 @@ impl ProjectManager {
         authorized_root: R,
     ) -> Result<VaultDeletionOutcome, std::io::Error> {
         let raw_target = project_dir.as_ref();
+        let raw_root = authorized_root.as_ref();
 
         // 1. If folder does not exist on disk, return AlreadyMissing cleanly
         if !raw_target.exists() {
@@ -362,7 +369,7 @@ impl ProjectManager {
         }
 
         // 3. Verify target is strictly within authorized root
-        let (canonical_target, _) = Self::verify_containment(raw_target, authorized_root)?;
+        let (canonical_target, _) = Self::verify_containment(raw_target, raw_root)?;
 
         // 4. Verify the folder actually contains project.manifest.json or project markers
         // This prevents deleting an arbitrary non-project directory even if inside root

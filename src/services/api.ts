@@ -174,6 +174,10 @@ export const apiService = {
   },
 
   async getActiveProject(): Promise<Project | null> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<Project | null>('get_active_project');
+    }
     const activeId = localStorage.getItem(STORAGE_ACTIVE_PROJECT_KEY);
     if (!activeId) return null;
     const projects = await this.listProjects();

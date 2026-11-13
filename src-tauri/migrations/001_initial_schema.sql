@@ -14,9 +14,6 @@ CREATE TABLE IF NOT EXISTS _schema_migrations (
     applied_at INTEGER NOT NULL
 );
 
-INSERT OR IGNORE INTO _schema_migrations (version, applied_at) 
-VALUES (1, 1731499200000);
-
 -- 1. PROJECTS TABLE
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY NOT NULL,
@@ -27,6 +24,7 @@ CREATE TABLE IF NOT EXISTS projects (
     target_fps REAL NOT NULL DEFAULT 24.0,
     target_duration_seconds INTEGER DEFAULT 600,
     project_dir_path TEXT NOT NULL,
+    storage_root TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'PLANNING',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
@@ -102,4 +100,14 @@ CREATE INDEX IF NOT EXISTS idx_tasks_queue ON tasks(state, priority DESC, create
 CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL
+);
+
+-- 6. PROJECT DELETION JOURNAL (CRASH RECOVERY)
+CREATE TABLE IF NOT EXISTS project_deletion_journal (
+    project_id TEXT PRIMARY KEY NOT NULL,
+    project_name TEXT NOT NULL,
+    project_dir_path TEXT NOT NULL,
+    storage_root TEXT NOT NULL,
+    deletion_state TEXT NOT NULL DEFAULT 'INTENT_RECORDED',
+    created_at INTEGER NOT NULL
 );
