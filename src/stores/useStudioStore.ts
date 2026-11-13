@@ -1,5 +1,16 @@
 import { create } from 'zustand';
-import { Project, Scene, Clip, SystemTelemetry, AppSettings } from '../types';
+import { 
+  Project, 
+  Scene, 
+  Clip, 
+  SystemTelemetry, 
+  AppSettings,
+  DiscoveredChromeProfile,
+  RegisteredChromeProfile,
+  RegisterProfileInput,
+  UpdateProfileInput,
+  PairingChallenge
+} from '../types';
 import { apiService } from '../services/api';
 
 interface StudioState {
@@ -21,11 +32,18 @@ interface StudioState {
   isSettingsModalOpen: boolean;
   isRenameModalOpen: boolean;
   isDeleteModalOpen: boolean;
+  isChromeProfileModalOpen: boolean;
   projectToDelete: Project | null;
   
   // Telemetry & Settings
   telemetry: SystemTelemetry | null;
   settings: AppSettings | null;
+
+  // Phase 2 Chrome Profiles
+  discoveredProfiles: DiscoveredChromeProfile[];
+  registeredProfiles: RegisteredChromeProfile[];
+  isDiscoveringProfiles: boolean;
+  activePairingChallenge: PairingChallenge | null;
 
   // Actions
   fetchProjects: () => Promise<void>;
@@ -45,11 +63,24 @@ interface StudioState {
   fetchSettings: () => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
 
+  // Phase 2 Actions
+  discoverProfiles: () => Promise<void>;
+  fetchRegisteredProfiles: () => Promise<void>;
+  registerProfile: (input: RegisterProfileInput) => Promise<void>;
+  updateProfile: (input: UpdateProfileInput) => Promise<void>;
+  unregisterProfile: (profileId: string) => Promise<void>;
+  launchProfile: (userDataDir: string, profileDirKey: string) => Promise<void>;
+  initiatePairing: (profileId: string) => Promise<PairingChallenge>;
+  revokePairing: (profileId: string) => Promise<void>;
+  installNativeHost: () => Promise<string>;
+
   setNewProjectModalOpen: (open: boolean) => void;
   setOpenProjectModalOpen: (open: boolean) => void;
   setSettingsModalOpen: (open: boolean) => void;
   setRenameModalOpen: (open: boolean) => void;
   setDeleteModalOpen: (open: boolean, project?: Project | null) => void;
+  setChromeProfileModalOpen: (open: boolean) => void;
+  clearActivePairingChallenge: () => void;
 }
 
 export const useStudioStore = create<StudioState>((set, get) => ({
@@ -68,10 +99,16 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   isSettingsModalOpen: false,
   isRenameModalOpen: false,
   isDeleteModalOpen: false,
+  isChromeProfileModalOpen: false,
   projectToDelete: null,
 
   telemetry: null,
   settings: null,
+
+  discoveredProfiles: [],
+  registeredProfiles: [],
+  isDiscoveringProfiles: false,
+  activePairingChallenge: null,
 
   fetchProjects: async () => {
     set({ isLoadingProjects: true });
@@ -198,10 +235,74 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     set({ settings, isSettingsModalOpen: false });
   },
 
+  discoverProfiles: async () => {
+    set({ isDiscoveringProfiles: true });
+    try {
+      const discovered = await apiService.discoverChromeProfiles();
+      set({ discoveredProfiles: discovered, isDiscoveringProfiles: false });
+    } catch (err) {
+      console.error('Failed to discover Chrome profiles:', err);
+      set({ isDiscoveringProfiles: false });
+    }
+  },
+
+  fetchRegisteredProfiles: async () => {
+    try {
+      const registered = await apiService.getRegisteredChromeProfiles();
+      set({ registeredProfiles: registered });
+    } catch (err) {
+      console.error('Failed to fetch registered profiles:', err);
+    }
+  },
+
+  registerProfile: async (input) => {
+    const profile = await apiService.registerChromeProfile(input);
+    const { registeredProfiles } = get();
+    set({ registeredProfiles: [...registeredProfiles, profile] });
+  },
+
+  updateProfile: async (input) => {
+    const updated = await apiService.updateChromeProfile(input);
+    const { registeredProfiles } = get();
+    set({
+      registeredProfiles: registeredProfiles.map(p => p.id === updated.id ? updated : p)
+    });
+  },
+
+  unregisterProfile: async (profileId) => {
+    await apiService.unregisterChromeProfile(profileId);
+    const { registeredProfiles } = get();
+    set({
+      registeredProfiles: registeredProfiles.filter(p => p.id !== profileId)
+    });
+  },
+
+  launchProfile: async (userDataDir, profileDirKey) => {
+    await apiService.launchChromeProfile(userDataDir, profileDirKey);
+  },
+
+  initiatePairing: async (profileId) => {
+    const challenge = await apiService.initiateProfilePairing(profileId);
+    set({ activePairingChallenge: challenge });
+    await get().fetchRegisteredProfiles();
+    return challenge;
+  },
+
+  revokePairing: async (profileId) => {
+    await apiService.revokeProfilePairing(profileId);
+    await get().fetchRegisteredProfiles();
+  },
+
+  installNativeHost: async () => {
+    return apiService.installNativeHost();
+  },
+
   setNewProjectModalOpen: (open) => set({ isNewProjectModalOpen: open }),
   setOpenProjectModalOpen: (open) => set({ isOpenProjectModalOpen: open }),
   setSettingsModalOpen: (open) => set({ isSettingsModalOpen: open }),
   setRenameModalOpen: (open) => set({ isRenameModalOpen: open }),
   setDeleteModalOpen: (open, project = null) => set({ isDeleteModalOpen: open, projectToDelete: project }),
+  setChromeProfileModalOpen: (open) => set({ isChromeProfileModalOpen: open }),
+  clearActivePairingChallenge: () => set({ activePairingChallenge: null }),
 }));
 

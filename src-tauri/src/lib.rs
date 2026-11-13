@@ -1,6 +1,7 @@
 pub mod database;
 pub mod project_manager;
 pub mod project_service;
+pub mod chrome_service;
 pub mod telemetry;
 pub mod commands;
 
@@ -52,6 +53,16 @@ pub fn run() {
             commands::get_settings,
             commands::update_settings,
             commands::recover_pending_deletions,
+            commands::discover_chrome_profiles,
+            commands::get_registered_chrome_profiles,
+            commands::register_chrome_profile,
+            commands::update_chrome_profile,
+            commands::unregister_chrome_profile,
+            commands::launch_chrome_profile,
+            commands::initiate_profile_pairing,
+            commands::verify_profile_pairing,
+            commands::revoke_profile_pairing,
+            commands::install_native_host,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running CINEMATIC STUDIO application");

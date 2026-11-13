@@ -27,7 +27,9 @@ export const TopNav: React.FC = () => {
     setRenameModalOpen,
     setDeleteModalOpen,
     seed360Clips,
-    clips
+    clips,
+    registeredProfiles,
+    setChromeProfileModalOpen
   } = useStudioStore();
 
   const [isSavedRecently, setIsSavedRecently] = React.useState(false);
@@ -45,8 +47,8 @@ export const TopNav: React.FC = () => {
         <div className="flex items-center space-x-2 text-studio-accent font-bold tracking-wider text-base">
           <Film className="w-5 h-5 text-studio-accent animate-pulse" />
           <span className="text-slate-100 font-mono">CINEMATIC<span className="text-studio-accent">STUDIO</span></span>
-          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-studio-800 text-slate-400 border border-studio-700">
-            Phase 1
+          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-studio-800 text-slate-300 border border-studio-700">
+            Phase 1+2
           </span>
         </div>
 
@@ -137,15 +139,18 @@ export const TopNav: React.FC = () => {
 
       {/* Right Status, Telemetry & Settings */}
       <div className="flex items-center space-x-3 text-xs font-mono">
-        {/* Phase 2 Browser Profile Indicator */}
-        <div 
-          className="flex items-center space-x-1.5 bg-studio-850 border border-studio-800 px-2.5 py-1 rounded text-slate-400"
-          title="Chrome Profiles integration unlocks in Phase 2"
+        {/* Chrome Profile Manager Button */}
+        <button 
+          onClick={() => setChromeProfileModalOpen(true)}
+          className="flex items-center space-x-1.5 bg-studio-850 hover:bg-studio-800 border border-studio-800 hover:border-studio-700 px-2.5 py-1 rounded text-slate-300 transition-colors cursor-pointer"
+          title="Open Chrome Profiles & Extension Pairing Manager"
         >
-          <Layers className="w-3.5 h-3.5 text-slate-500" />
-          <span className="text-[11px]">Profiles:</span>
-          <span className="text-[10px] text-amber-400 bg-studio-800 px-1 rounded">Standby (Phase 2)</span>
-        </div>
+          <Layers className="w-3.5 h-3.5 text-studio-cyan" />
+          <span className="text-[11px] font-mono">Profiles:</span>
+          <span className="text-[10px] text-studio-cyan bg-studio-900 border border-studio-750 px-1.5 py-0.5 rounded font-mono font-semibold">
+            {registeredProfiles.length} Registered
+          </span>
+        </button>
 
         {/* Telemetry Pill */}
         {telemetry && (

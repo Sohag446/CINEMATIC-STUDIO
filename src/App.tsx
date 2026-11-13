@@ -8,15 +8,17 @@ import { OpenProjectModal } from './features/projects/OpenProjectModal';
 import { RenameProjectModal } from './features/projects/RenameProjectModal';
 import { DeleteProjectModal } from './features/projects/DeleteProjectModal';
 import { SettingsModal } from './features/settings/SettingsModal';
+import { ChromeProfileManagerModal } from './features/profiles/ChromeProfileManagerModal';
 import { useStudioStore } from './stores/useStudioStore';
 
 export const App: React.FC = () => {
-  const { fetchProjects, fetchSettings, refreshTelemetry } = useStudioStore();
+  const { fetchProjects, fetchSettings, refreshTelemetry, fetchRegisteredProfiles } = useStudioStore();
 
   useEffect(() => {
     fetchProjects();
     fetchSettings();
     refreshTelemetry();
+    fetchRegisteredProfiles();
 
     // Low-frequency telemetry interval (5 seconds - low CPU/memory impact)
     const interval = setInterval(() => {
@@ -24,7 +26,7 @@ export const App: React.FC = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [fetchProjects, fetchSettings, refreshTelemetry]);
+  }, [fetchProjects, fetchSettings, refreshTelemetry, fetchRegisteredProfiles]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-studio-950 text-slate-100 overflow-hidden font-sans">
@@ -49,6 +51,7 @@ export const App: React.FC = () => {
       <RenameProjectModal />
       <DeleteProjectModal />
       <SettingsModal />
+      <ChromeProfileManagerModal />
     </div>
   );
 };

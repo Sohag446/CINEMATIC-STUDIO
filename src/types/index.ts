@@ -111,3 +111,83 @@ export interface AppSettings {
   hardware_thread_cap: number;
 }
 
+// ==========================================
+// PHASE 2: CHROME PROFILES & PAIRING TYPES
+// ==========================================
+
+export type ProfileConnectionState = 
+  | 'DISCOVERED'
+  | 'CHROME_RUNNING'
+  | 'EXTENSION_INSTALLED'
+  | 'EXTENSION_CONNECTED'
+  | 'PROVIDER_READY'
+  | 'DISCONNECTED'
+  | 'HIBERNATED'
+  | 'PAIRING_REQUIRED'
+  | 'SESSION_EXPIRED'
+  | 'ERROR';
+
+export interface DiscoveredChromeProfile {
+  profile_dir_key: string;
+  display_name: string;
+  google_account_label?: string | null;
+  avatar_icon?: string | null;
+  profile_dir_path: string;
+  user_data_dir: string;
+  profile_exists: boolean;
+  is_chrome_running: boolean;
+}
+
+export interface RegisteredChromeProfile {
+  id: string;
+  profile_dir_key: string;
+  display_name: string;
+  user_data_dir: string;
+  assigned_purpose: 'STORY_GENERATION' | 'VIDEO_GENERATION' | 'GENERAL';
+  assigned_provider?: string | null;
+  extension_installed: boolean;
+  pairing_state: 'UNPAIRED' | 'PAIRING_PENDING' | 'PAIRED' | 'REVOKED';
+  connection_state: ProfileConnectionState;
+  last_seen_at?: number | null;
+  last_error?: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface RegisterProfileInput {
+  profile_dir_key: string;
+  display_name: string;
+  user_data_dir?: string;
+  assigned_purpose?: 'STORY_GENERATION' | 'VIDEO_GENERATION' | 'GENERAL';
+  assigned_provider?: string;
+}
+
+export interface UpdateProfileInput {
+  id: string;
+  display_name?: string;
+  assigned_purpose?: 'STORY_GENERATION' | 'VIDEO_GENERATION' | 'GENERAL';
+  assigned_provider?: string;
+}
+
+export interface PairingChallenge {
+  session_id: string;
+  profile_id: string;
+  pairing_secret: string;
+  server_nonce: string;
+  expires_at: number;
+  pairing_url: string;
+}
+
+export interface VerifyPairingInput {
+  session_id: string;
+  profile_id: string;
+  client_nonce: string;
+  client_signature_hex: string;
+}
+
+export interface PairingVerificationResult {
+  success: boolean;
+  profile_id: string;
+  message: string;
+}
+

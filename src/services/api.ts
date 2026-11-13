@@ -4,7 +4,14 @@ import {
   Scene, 
   Clip, 
   SystemTelemetry, 
-  AppSettings 
+  AppSettings,
+  DiscoveredChromeProfile,
+  RegisteredChromeProfile,
+  RegisterProfileInput,
+  UpdateProfileInput,
+  PairingChallenge,
+  VerifyPairingInput,
+  PairingVerificationResult
 } from '../types';
 
 // Detect if running inside a Tauri native desktop context
@@ -289,6 +296,206 @@ export const apiService = {
       return invoke<void>('update_settings', { settings });
     }
     localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(settings));
+  },
+
+  // ==========================================
+  // PHASE 2: CHROME PROFILE MANAGEMENT & PAIRING
+  // ==========================================
+  async discoverChromeProfiles(): Promise<DiscoveredChromeProfile[]> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<DiscoveredChromeProfile[]>('discover_chrome_profiles');
+    }
+    // Browser mock simulation for preview
+    return [
+      {
+        profile_dir_key: 'Default',
+        display_name: 'Default Profile (Personal)',
+        google_account_label: 'director@cinematic.studio',
+        avatar_icon: 'avatar_generic',
+        profile_dir_path: 'C:\\Users\\Default\\AppData\\Local\\Google\\Chrome\\User Data\\Default',
+        user_data_dir: 'C:\\Users\\Default\\AppData\\Local\\Google\\Chrome\\User Data',
+        profile_exists: true,
+        is_chrome_running: true,
+      },
+      {
+        profile_dir_key: 'Profile 1',
+        display_name: 'Veo Video Studio',
+        google_account_label: 'veo-producer@cinematic.studio',
+        avatar_icon: 'avatar_filmmaker',
+        profile_dir_path: 'C:\\Users\\Default\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 1',
+        user_data_dir: 'C:\\Users\\Default\\AppData\\Local\\Google\\Chrome\\User Data',
+        profile_exists: true,
+        is_chrome_running: false,
+      },
+      {
+        profile_dir_key: 'Profile 2',
+        display_name: 'ChatGPT Narrative Agent',
+        google_account_label: null,
+        avatar_icon: null,
+        profile_dir_path: 'C:\\Users\\Default\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 2',
+        user_data_dir: 'C:\\Users\\Default\\AppData\\Local\\Google\\Chrome\\User Data',
+        profile_exists: true,
+        is_chrome_running: false,
+      }
+    ];
+  },
+
+  async getRegisteredChromeProfiles(): Promise<RegisteredChromeProfile[]> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<RegisteredChromeProfile[]>('get_registered_chrome_profiles');
+    }
+    const raw = localStorage.getItem('cinematic_studio_chrome_profiles');
+    return raw ? JSON.parse(raw) : [];
+  },
+
+  async registerChromeProfile(input: RegisterProfileInput): Promise<RegisteredChromeProfile> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<RegisteredChromeProfile>('register_chrome_profile', { input });
+    }
+
+    const profiles = await this.getRegisteredChromeProfiles();
+    if (profiles.some(p => p.profile_dir_key === input.profile_dir_key)) {
+      throw new Error(`Profile with key "${input.profile_dir_key}" is already registered.`);
+    }
+
+    const newProfile: RegisteredChromeProfile = {
+      id: crypto.randomUUID(),
+      profile_dir_key: input.profile_dir_key,
+      display_name: input.display_name,
+      user_data_dir: input.user_data_dir || 'C:\\Users\\Default\\AppData\\Local\\Google\\Chrome\\User Data',
+      assigned_purpose: input.assigned_purpose || 'GENERAL',
+      assigned_provider: input.assigned_provider || null,
+      extension_installed: false,
+      pairing_state: 'UNPAIRED',
+      connection_state: 'DISCONNECTED',
+      last_seen_at: null,
+      last_error: null,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+
+    profiles.push(newProfile);
+    localStorage.setItem('cinematic_studio_chrome_profiles', JSON.stringify(profiles));
+    return newProfile;
+  },
+
+  async updateChromeProfile(input: UpdateProfileInput): Promise<RegisteredChromeProfile> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<RegisteredChromeProfile>('update_chrome_profile', { input });
+    }
+
+    const profiles = await this.getRegisteredChromeProfiles();
+    const idx = profiles.findIndex(p => p.id === input.id);
+    if (idx === -1) throw new Error('Profile not found');
+
+    if (input.display_name) profiles[idx].display_name = input.display_name;
+    if (input.assigned_purpose) profiles[idx].assigned_purpose = input.assigned_purpose;
+    if (input.assigned_provider !== undefined) profiles[idx].assigned_provider = input.assigned_provider;
+    profiles[idx].updated_at = Date.now();
+
+    localStorage.setItem('cinematic_studio_chrome_profiles', JSON.stringify(profiles));
+    return profiles[idx];
+  },
+
+  async unregisterChromeProfile(profileId: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('unregister_chrome_profile', { profileId });
+    }
+    const profiles = await this.getRegisteredChromeProfiles();
+    const filtered = profiles.filter(p => p.id !== profileId);
+    localStorage.setItem('cinematic_studio_chrome_profiles', JSON.stringify(filtered));
+  },
+
+  async launchChromeProfile(userDataDir: string, profileDirKey: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('launch_chrome_profile', { userDataDir, profileDirKey });
+    }
+    console.log(`[Browser Simulation] Launching Chrome profile ${profileDirKey} from ${userDataDir}`);
+  },
+
+  async initiateProfilePairing(profileId: string): Promise<PairingChallenge> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<PairingChallenge>('initiate_profile_pairing', { profileId });
+    }
+
+    const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    const sessionId = crypto.randomUUID();
+    const serverNonce = crypto.randomUUID();
+    const expiresAt = Date.now() + (5 * 60 * 1000);
+
+    const challenge: PairingChallenge = {
+      session_id: sessionId,
+      profile_id: profileId,
+      pairing_secret: secret,
+      server_nonce: serverNonce,
+      expires_at: expiresAt,
+      pairing_url: `cinematic://pair?profile=${profileId}&secret=${secret}&session=${sessionId}`
+    };
+
+    const profiles = await this.getRegisteredChromeProfiles();
+    const p = profiles.find(item => item.id === profileId);
+    if (p) {
+      p.pairing_state = 'PAIRING_PENDING';
+      p.updated_at = Date.now();
+      localStorage.setItem('cinematic_studio_chrome_profiles', JSON.stringify(profiles));
+    }
+
+    return challenge;
+  },
+
+  async verifyProfilePairing(input: VerifyPairingInput): Promise<PairingVerificationResult> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<PairingVerificationResult>('verify_profile_pairing', { input });
+    }
+
+    const profiles = await this.getRegisteredChromeProfiles();
+    const p = profiles.find(item => item.id === input.profile_id);
+    if (p) {
+      p.pairing_state = 'PAIRED';
+      p.connection_state = 'EXTENSION_CONNECTED';
+      p.extension_installed = true;
+      p.last_seen_at = Date.now();
+      p.updated_at = Date.now();
+      localStorage.setItem('cinematic_studio_chrome_profiles', JSON.stringify(profiles));
+    }
+
+    return {
+      success: true,
+      profile_id: input.profile_id,
+      message: 'Profile paired successfully'
+    };
+  },
+
+  async revokeProfilePairing(profileId: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('revoke_profile_pairing', { profileId });
+    }
+    const profiles = await this.getRegisteredChromeProfiles();
+    const p = profiles.find(item => item.id === profileId);
+    if (p) {
+      p.pairing_state = 'REVOKED';
+      p.connection_state = 'PAIRING_REQUIRED';
+      p.updated_at = Date.now();
+      localStorage.setItem('cinematic_studio_chrome_profiles', JSON.stringify(profiles));
+    }
+  },
+
+  async installNativeHost(): Promise<string> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<string>('install_native_host');
+    }
+    return 'C:\\Users\\Default\\AppData\\Local\\CinematicStudio\\NativeMessaging\\com.cinematic.studio.json';
   },
 
   // Local helper utilities

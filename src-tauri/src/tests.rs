@@ -14,6 +14,11 @@ use crate::database::{
 use crate::project_manager::{ProjectManager, ProjectMetadata, VaultDeletionOutcome};
 use crate::project_service::ProjectService;
 use crate::commands::{CreateProjectDto, SaveProjectDto};
+use crate::chrome_service::crypto::{sha256_digest, hmac_sha256, to_hex, constant_time_eq};
+use crate::chrome_service::profile_manager::{ProfileManager, RegisterProfileDto};
+use crate::chrome_service::pairing::{PairingService, VerifyPairingDto};
+use crate::chrome_service::ipc::{NativeMessagingIpc, IpcMessage, MAX_MESSAGE_SIZE};
+use crate::chrome_service::discovery::ChromeDiscoveryService;
 
 fn setup_test_db() -> (tempfile::TempDir, crate::database::DbPool) {
     let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory for test DB");
@@ -394,4 +399,332 @@ fn test_database_integrity_check_service() {
     let (_temp_dir, pool) = setup_test_db();
     let conn = pool.get().unwrap();
     assert!(run_integrity_check(&conn).unwrap());
+}
+
+// ============================================================================
+// PHASE 2: CHROME PROFILE DISCOVERY, REGISTRATION, PAIRING & IPC TESTS
+// ============================================================================
+
+#[test]
+fn test_crypto_sha256_and_hmac_sha256_known_vectors() {
+    // 1. SHA-256 standard vector: empty string
+    let empty_digest = sha256_digest(b"");
+    assert_eq!(
+        to_hex(&empty_digest),
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+
+    // 2. SHA-256 standard vector: "abc"
+    let abc_digest = sha256_digest(b"abc");
+    assert_eq!(
+        to_hex(&abc_digest),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+
+    // 3. HMAC-SHA256 vector: "key" + "The quick brown fox jumps over the lazy dog"
+    let key = b"key";
+    let data = b"The quick brown fox jumps over the lazy dog";
+    let hmac = hmac_sha256(key, data);
+    assert_eq!(
+        to_hex(&hmac),
+        "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
+    );
+
+    // 4. Constant time equality check
+    assert!(constant_time_eq(b"secret_signature_123", b"secret_signature_123"));
+    assert!(!constant_time_eq(b"secret_signature_123", b"secret_signature_124"));
+    assert!(!constant_time_eq(b"short", b"longer_string"));
+}
+
+#[test]
+fn test_migration_v3_creates_chrome_tables() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    apply_all_migrations(&mut conn).expect("Fresh migration execution failed");
+
+    // Version 3 recorded
+    let version: i32 = conn.query_row(
+        "SELECT MAX(version) FROM _schema_migrations",
+        [],
+        |r| r.get(0),
+    ).unwrap();
+    assert_eq!(version, 3, "Database must upgrade to version 3");
+
+    // Tables exist
+    let profiles_count: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='chrome_profiles'",
+        [],
+        |r| r.get(0),
+    ).unwrap();
+    assert_eq!(profiles_count, 1, "chrome_profiles table must exist in v3");
+
+    let sessions_count: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='chrome_pairing_sessions'",
+        [],
+        |r| r.get(0),
+    ).unwrap();
+    assert_eq!(sessions_count, 1, "chrome_pairing_sessions table must exist in v3");
+}
+
+#[test]
+fn test_profile_registration_and_duplicate_prevention() {
+    let (_db_temp, pool) = setup_test_db();
+    let mut conn = pool.get().unwrap();
+
+    let input = RegisterProfileDto {
+        profile_dir_key: "Profile 1".to_string(),
+        display_name: "Veo Studio 1".to_string(),
+        user_data_dir: None,
+        assigned_purpose: Some("VIDEO_GENERATION".to_string()),
+        assigned_provider: Some("Google Veo".to_string()),
+    };
+
+    let registered = ProfileManager::register_profile(&mut conn, input).unwrap();
+    assert_eq!(registered.profile_dir_key, "Profile 1");
+    assert_eq!(registered.display_name, "Veo Studio 1");
+    assert_eq!(registered.assigned_provider.as_deref(), Some("Google Veo"));
+    assert_eq!(registered.connection_state, "DISCONNECTED");
+
+    // Attempting to register the exact same profile_dir_key must be rejected
+    let duplicate_input = RegisterProfileDto {
+        profile_dir_key: "Profile 1".to_string(),
+        display_name: "Duplicate Veo".to_string(),
+        user_data_dir: None,
+        assigned_purpose: None,
+        assigned_provider: None,
+    };
+    let duplicate_res = ProfileManager::register_profile(&mut conn, duplicate_input);
+    assert!(duplicate_res.is_err(), "Duplicate profile directory key registration must be rejected");
+}
+
+#[test]
+fn test_profile_unregister_behavior() {
+    let (_db_temp, pool) = setup_test_db();
+    let mut conn = pool.get().unwrap();
+
+    let input = RegisterProfileDto {
+        profile_dir_key: "Profile 2".to_string(),
+        display_name: "ChatGPT Agent".to_string(),
+        user_data_dir: None,
+        assigned_purpose: Some("STORY_GENERATION".to_string()),
+        assigned_provider: Some("ChatGPT".to_string()),
+    };
+
+    let registered = ProfileManager::register_profile(&mut conn, input).unwrap();
+    let count: i64 = conn.query_row("SELECT count(*) FROM chrome_profiles WHERE id = ?1", [&registered.id], |r| r.get(0)).unwrap();
+    assert_eq!(count, 1);
+
+    ProfileManager::unregister_profile(&mut conn, &registered.id).unwrap();
+    let after_count: i64 = conn.query_row("SELECT count(*) FROM chrome_profiles WHERE id = ?1", [&registered.id], |r| r.get(0)).unwrap();
+    assert_eq!(after_count, 0, "Unregistering profile must delete database record");
+}
+
+#[test]
+fn test_pairing_handshake_success() {
+    let (_db_temp, pool) = setup_test_db();
+    let mut conn = pool.get().unwrap();
+
+    let reg = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
+        profile_dir_key: "Profile 3".to_string(),
+        display_name: "Handshake Test".to_string(),
+        user_data_dir: None,
+        assigned_purpose: None,
+        assigned_provider: None,
+    }).unwrap();
+
+    // 1. Initiate pairing
+    let challenge = PairingService::initiate_pairing(&mut conn, &reg.id).unwrap();
+    assert_eq!(challenge.profile_id, reg.id);
+    assert!(!challenge.pairing_secret.is_empty());
+    assert!(!challenge.server_nonce.is_empty());
+
+    // 2. Extension computes HMAC-SHA256 signature
+    let client_nonce = "client_nonce_xyz123";
+    let message = format!("{}:{}", challenge.server_nonce, client_nonce);
+    let hmac = hmac_sha256(challenge.pairing_secret.as_bytes(), message.as_bytes());
+    let client_sig = to_hex(&hmac);
+
+    // 3. Desktop verifies response
+    let verify_dto = VerifyPairingDto {
+        session_id: challenge.session_id,
+        profile_id: reg.id.clone(),
+        client_nonce: client_nonce.to_string(),
+        client_signature_hex: client_sig,
+    };
+
+    let result = PairingService::verify_pairing(&mut conn, verify_dto).unwrap();
+    assert!(result.success);
+
+    // 4. Check profile updated to PAIRED & EXTENSION_CONNECTED
+    let (pairing_state, conn_state): (String, String) = conn.query_row(
+        "SELECT pairing_state, connection_state FROM chrome_profiles WHERE id = ?1",
+        [&reg.id],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    ).unwrap();
+    assert_eq!(pairing_state, "PAIRED");
+    assert_eq!(conn_state, "EXTENSION_CONNECTED");
+}
+
+#[test]
+fn test_pairing_wrong_profile_identity_rejected() {
+    let (_db_temp, pool) = setup_test_db();
+    let mut conn = pool.get().unwrap();
+
+    let reg1 = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
+        profile_dir_key: "Profile A".to_string(),
+        display_name: "Profile A".to_string(),
+        user_data_dir: None,
+        assigned_purpose: None,
+        assigned_provider: None,
+    }).unwrap();
+
+    let challenge = PairingService::initiate_pairing(&mut conn, &reg1.id).unwrap();
+
+    // Attacker sends verify request for a different profile ID
+    let verify_dto = VerifyPairingDto {
+        session_id: challenge.session_id,
+        profile_id: "attacker_profile_id".to_string(),
+        client_nonce: "nonce".to_string(),
+        client_signature_hex: "sig".to_string(),
+    };
+
+    let res = PairingService::verify_pairing(&mut conn, verify_dto);
+    assert!(res.is_err(), "Mismatched profile ID in pairing must be rejected");
+}
+
+#[test]
+fn test_pairing_replay_attack_rejected() {
+    let (_db_temp, pool) = setup_test_db();
+    let mut conn = pool.get().unwrap();
+
+    let reg = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
+        profile_dir_key: "Profile Replay".to_string(),
+        display_name: "Replay Test".to_string(),
+        user_data_dir: None,
+        assigned_purpose: None,
+        assigned_provider: None,
+    }).unwrap();
+
+    let challenge = PairingService::initiate_pairing(&mut conn, &reg.id).unwrap();
+    let client_nonce = "client_nonce_replay";
+    let message = format!("{}:{}", challenge.server_nonce, client_nonce);
+    let sig = to_hex(&hmac_sha256(challenge.pairing_secret.as_bytes(), message.as_bytes()));
+
+    let dto1 = VerifyPairingDto {
+        session_id: challenge.session_id.clone(),
+        profile_id: reg.id.clone(),
+        client_nonce: client_nonce.to_string(),
+        client_signature_hex: sig.clone(),
+    };
+    assert!(PairingService::verify_pairing(&mut conn, dto1).unwrap().success);
+
+    // Second attempt with exact same session ID must fail as a replay attack!
+    let dto2 = VerifyPairingDto {
+        session_id: challenge.session_id,
+        profile_id: reg.id,
+        client_nonce: client_nonce.to_string(),
+        client_signature_hex: sig,
+    };
+    let res = PairingService::verify_pairing(&mut conn, dto2);
+    assert!(res.is_err(), "Replay attack using consumed pairing session must be rejected");
+}
+
+#[test]
+fn test_pairing_expiration_enforced() {
+    let (_db_temp, pool) = setup_test_db();
+    let mut conn = pool.get().unwrap();
+
+    let reg = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
+        profile_dir_key: "Profile Expired".to_string(),
+        display_name: "Expired Test".to_string(),
+        user_data_dir: None,
+        assigned_purpose: None,
+        assigned_provider: None,
+    }).unwrap();
+
+    let challenge = PairingService::initiate_pairing(&mut conn, &reg.id).unwrap();
+
+    // Manually expire session in DB
+    let past = chrono::Utc::now().timestamp_millis() - 10000;
+    conn.execute("UPDATE chrome_pairing_sessions SET expires_at = ?1 WHERE id = ?2", (past, &challenge.session_id)).unwrap();
+
+    let client_nonce = "nonce_expired";
+    let message = format!("{}:{}", challenge.server_nonce, client_nonce);
+    let sig = to_hex(&hmac_sha256(challenge.pairing_secret.as_bytes(), message.as_bytes()));
+
+    let dto = VerifyPairingDto {
+        session_id: challenge.session_id,
+        profile_id: reg.id,
+        client_nonce: client_nonce.to_string(),
+        client_signature_hex: sig,
+    };
+
+    let res = PairingService::verify_pairing(&mut conn, dto);
+    assert!(res.is_err(), "Expired pairing challenge must be rejected");
+}
+
+#[test]
+fn test_ipc_packet_framing_and_size_bounds() {
+    let msg = IpcMessage {
+        id: "msg_123".to_string(),
+        msg_type: "PING".to_string(),
+        profile_id: Some("prof_456".to_string()),
+        payload: serde_json::json!({ "status": "OK" }),
+        timestamp: 1000,
+    };
+
+    let mut buffer = Vec::new();
+    NativeMessagingIpc::write_packet(&mut buffer, &msg).unwrap();
+
+    // Verify 4-byte length prefix
+    assert!(buffer.len() > 4);
+    let mut len_bytes = [0u8; 4];
+    len_bytes.copy_from_slice(&buffer[..4]);
+    let len = u32::from_le_bytes(len_bytes) as usize;
+    assert_eq!(len, buffer.len() - 4);
+
+    // Read back packet
+    let mut cursor = std::io::Cursor::new(buffer);
+    let decoded = NativeMessagingIpc::read_packet(&mut cursor).unwrap();
+    assert_eq!(decoded.id, "msg_123");
+    assert_eq!(decoded.msg_type, "PING");
+    assert_eq!(decoded.profile_id.as_deref(), Some("prof_456"));
+
+    // Test rejecting oversized packet (> 1 MB)
+    let fake_len = (MAX_MESSAGE_SIZE as u32 + 10).to_le_bytes();
+    let mut oversized = std::io::Cursor::new(fake_len);
+    assert!(NativeMessagingIpc::read_packet(&mut oversized).is_err(), "Packets exceeding 1MB must be rejected");
+}
+
+#[test]
+fn test_chrome_discovery_local_state_parsing() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let local_state_content = r#"{
+        "profile": {
+            "info_cache": {
+                "Default": {
+                    "name": "Main Personal Account",
+                    "gaia_name": "director@cinematic.studio",
+                    "avatar_icon": "chrome://theme/IDR_PROFILE_AVATAR_0"
+                },
+                "Profile 1": {
+                    "name": "Veo Video Account",
+                    "user_name": "veo-producer@cinematic.studio",
+                    "avatar_icon": "chrome://theme/IDR_PROFILE_AVATAR_1"
+                }
+            }
+        }
+    }"#;
+
+    fs::write(temp_dir.path().join("Local State"), local_state_content).unwrap();
+
+    let profiles = ChromeDiscoveryService::discover_profiles(Some(temp_dir.path())).unwrap();
+    assert_eq!(profiles.len(), 2);
+
+    let default_prof = profiles.iter().find(|p| p.profile_dir_key == "Default").unwrap();
+    assert_eq!(default_prof.display_name, "Main Personal Account");
+    assert_eq!(default_prof.google_account_label.as_deref(), Some("director@cinematic.studio"));
+
+    let prof1 = profiles.iter().find(|p| p.profile_dir_key == "Profile 1").unwrap();
+    assert_eq!(prof1.display_name, "Veo Video Account");
+    assert_eq!(prof1.google_account_label.as_deref(), Some("veo-producer@cinematic.studio"));
 }

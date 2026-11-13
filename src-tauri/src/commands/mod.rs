@@ -5,6 +5,12 @@ use crate::database::{DbPool, run_integrity_check, AppSettings, RecoveryReport};
 use crate::project_manager::ProjectMetadata;
 use crate::telemetry::{TelemetryCollector, TelemetryData};
 use crate::project_service::ProjectService;
+use crate::chrome_service::{
+    ChromeDiscoveryService, DiscoveredChromeProfile,
+    ProfileManager, RegisteredProfile, RegisterProfileDto, UpdateProfileDto,
+    PairingService, PairingChallengeDto, VerifyPairingDto, PairingVerificationResult,
+    NativeMessagingIpc,
+};
 
 pub struct AppState {
     pub db: DbPool,
@@ -287,4 +293,66 @@ pub async fn check_database_integrity(state: State<'_, AppState>) -> Result<bool
 #[tauri::command]
 pub async fn get_telemetry(state: State<'_, AppState>) -> Result<TelemetryData, String> {
     Ok(state.telemetry.sample())
+}
+
+// ============================================================================
+// PHASE 2: CHROME PROFILE MANAGEMENT & EXTENSION PAIRING COMMANDS
+// ============================================================================
+
+#[tauri::command]
+pub async fn discover_chrome_profiles() -> Result<Vec<DiscoveredChromeProfile>, String> {
+    ChromeDiscoveryService::discover_profiles(None)
+}
+
+#[tauri::command]
+pub async fn get_registered_chrome_profiles(state: State<'_, AppState>) -> Result<Vec<RegisteredProfile>, String> {
+    let conn = state.db.get().map_err(|e| e.to_string())?;
+    ProfileManager::list_registered(&conn)
+}
+
+#[tauri::command]
+pub async fn register_chrome_profile(input: RegisterProfileDto, state: State<'_, AppState>) -> Result<RegisteredProfile, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    ProfileManager::register_profile(&mut conn, input)
+}
+
+#[tauri::command]
+pub async fn update_chrome_profile(input: UpdateProfileDto, state: State<'_, AppState>) -> Result<RegisteredProfile, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    ProfileManager::update_profile(&mut conn, input)
+}
+
+#[tauri::command]
+pub async fn unregister_chrome_profile(profile_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    ProfileManager::unregister_profile(&mut conn, &profile_id)
+}
+
+#[tauri::command]
+pub async fn launch_chrome_profile(user_data_dir: String, profile_dir_key: String) -> Result<(), String> {
+    ProfileManager::launch_profile(&user_data_dir, &profile_dir_key)
+}
+
+#[tauri::command]
+pub async fn initiate_profile_pairing(profile_id: String, state: State<'_, AppState>) -> Result<PairingChallengeDto, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    PairingService::initiate_pairing(&mut conn, &profile_id)
+}
+
+#[tauri::command]
+pub async fn verify_profile_pairing(input: VerifyPairingDto, state: State<'_, AppState>) -> Result<PairingVerificationResult, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    PairingService::verify_pairing(&mut conn, input)
+}
+
+#[tauri::command]
+pub async fn revoke_profile_pairing(profile_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    PairingService::revoke_pairing(&mut conn, &profile_id)
+}
+
+#[tauri::command]
+pub async fn install_native_host() -> Result<String, String> {
+    let path = NativeMessagingIpc::install_host_manifest(None, None)?;
+    Ok(path.to_string_lossy().to_string())
 }

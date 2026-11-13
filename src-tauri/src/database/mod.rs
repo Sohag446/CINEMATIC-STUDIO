@@ -147,6 +147,20 @@ pub fn apply_all_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::er
         tx.commit()?;
     }
 
+    // 5. Migration v3: Chrome profiles registry and extension pairing
+    if current_version < 3 {
+        let tx = conn.transaction()?;
+        let migration_v3 = include_str!("../../migrations/003_chrome_profiles_and_pairing.sql");
+        tx.execute_batch(migration_v3)?;
+
+        let now = chrono::Utc::now().timestamp_millis();
+        tx.execute(
+            "INSERT INTO _schema_migrations (version, applied_at) VALUES (?1, ?2)",
+            (3, now),
+        )?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
