@@ -119,3 +119,4 @@ export const DeleteProjectModal: React.FC = () => {
     </div>
   );
 };
+

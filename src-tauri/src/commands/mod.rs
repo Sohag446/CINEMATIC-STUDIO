@@ -1,6 +1,7 @@
 use tauri::State;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use std::path::PathBuf;
 use crate::database::{DbPool, run_integrity_check};
 use crate::project_manager::{ProjectManager, ProjectMetadata};
 use crate::telemetry::{TelemetryCollector, TelemetryData};
@@ -57,20 +58,45 @@ pub struct ClipDto {
 
 #[tauri::command]
 pub async fn create_project(input: CreateProjectDto, state: State<'_, AppState>) -> Result<ProjectMetadata, String> {
-    let slug = input.name.to_lowercase().replace(|c: char| !c.is_alphanumeric(), "-").trim_matches('-').to_string();
+    let clean_name = input.name.trim();
+    if clean_name.is_empty() {
+        return Err("Project name cannot be empty".to_string());
+    }
+
+    let slug = clean_name.to_lowercase().replace(|c: char| !c.is_alphanumeric(), "-").trim_matches('-').to_string();
     if slug.is_empty() {
         return Err("Invalid project name resulting in empty slug".to_string());
     }
 
-    let base_dir = input.custom_directory.unwrap_or_else(|| "C:\\CinematicStudio\\Projects".to_string());
+    let base_dir = match input.custom_directory {
+        Some(custom) => {
+            let p = PathBuf::from(custom);
+            ProjectManager::validate_storage_root(&p)
+                .map_err(|e| format!("Invalid custom project storage directory: {}", e))?
+        }
+        None => ProjectManager::default_authorized_root(),
+    };
 
+    // Verify project does not already exist in DB
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    let slug_exists: bool = conn.query_row(
+        "SELECT count(*) FROM projects WHERE slug = ?1",
+        [&slug],
+        |r| r.get::<_, i64>(0),
+    ).map(|count| count > 0).unwrap_or(false);
+
+    if slug_exists {
+        return Err(format!("A project with slug '{}' already exists in the database", slug));
+    }
+
+    // 1. Scaffold filesystem vault
     let vault_path = ProjectManager::create_project_vault(&base_dir, &slug)
         .map_err(|e| format!("Failed to create project filesystem vault: {}", e))?;
 
     let now = chrono::Utc::now().timestamp_millis();
     let project = ProjectMetadata {
         id: uuid::Uuid::new_v4().to_string(),
-        name: input.name,
+        name: clean_name.to_string(),
         slug: slug.clone(),
         synopsis: input.synopsis.unwrap_or_default(),
         target_aspect_ratio: input.target_aspect_ratio.unwrap_or_else(|| "16:9".to_string()),
@@ -82,37 +108,49 @@ pub async fn create_project(input: CreateProjectDto, state: State<'_, AppState>)
         updated_at: now,
     };
 
-    // Save atomic manifest with sync
-    ProjectManager::save_metadata_atomic(&vault_path, &project)
-        .map_err(|e| format!("Failed to write manifest: {}", e))?;
+    // 2. Save atomic manifest
+    if let Err(e) = ProjectManager::save_metadata_atomic(&vault_path, &project) {
+        let _ = std::fs::remove_dir_all(&vault_path);
+        return Err(format!("Failed to write manifest: {}", e));
+    }
 
-    // Persist in SQLite
-    let conn = state.db.get().map_err(|e| e.to_string())?;
-    conn.execute(
-        "INSERT INTO projects (id, name, slug, synopsis, target_aspect_ratio, target_fps, target_duration_seconds, project_dir_path, status, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        (
-            &project.id,
-            &project.name,
-            &project.slug,
-            &project.synopsis,
-            &project.target_aspect_ratio,
-            project.target_fps,
-            project.target_duration_seconds,
-            &project.project_dir_path,
-            &project.status,
-            project.created_at,
-            project.updated_at,
-        ),
-    ).map_err(|e| format!("SQLite insert error: {}", e))?;
+    // 3. Atomically persist in SQLite within a transaction
+    let insert_result = (|| -> Result<(), rusqlite::Error> {
+        let tx = conn.transaction()?;
+        tx.execute(
+            "INSERT INTO projects (id, name, slug, synopsis, target_aspect_ratio, target_fps, target_duration_seconds, project_dir_path, status, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            (
+                &project.id,
+                &project.name,
+                &project.slug,
+                &project.synopsis,
+                &project.target_aspect_ratio,
+                project.target_fps,
+                project.target_duration_seconds,
+                &project.project_dir_path,
+                &project.status,
+                project.created_at,
+                project.updated_at,
+            ),
+        )?;
 
-    // Seed default Scene 1
-    let default_scene_id = uuid::Uuid::new_v4().to_string();
-    conn.execute(
-        "INSERT INTO scenes (id, project_id, sequence_number, title, dramatic_beat, estimated_duration_seconds, created_at, updated_at)
-         VALUES (?1, ?2, 1, 'Scene 01: Opening Sequence', 'Establish world and hero motivation', 60, ?3, ?4)",
-        (&default_scene_id, &project.id, now, now),
-    ).map_err(|e| format!("SQLite scene insert error: {}", e))?;
+        let default_scene_id = uuid::Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO scenes (id, project_id, sequence_number, title, dramatic_beat, estimated_duration_seconds, created_at, updated_at)
+             VALUES (?1, ?2, 1, 'Scene 01: Opening Sequence', 'Establish world and hero motivation', 60, ?3, ?4)",
+            (&default_scene_id, &project.id, now, now),
+        )?;
+
+        tx.commit()?;
+        Ok(())
+    })();
+
+    if let Err(e) = insert_result {
+        // Rollback filesystem changes if database transaction failed
+        let _ = std::fs::remove_dir_all(&vault_path);
+        return Err(format!("Database transaction failed; rolled back project: {}", e));
+    }
 
     // Set active project in state
     let mut active = state.active_project.lock().unwrap();
@@ -183,32 +221,65 @@ pub async fn open_project(project_id: String, state: State<'_, AppState>) -> Res
 
 #[tauri::command]
 pub async fn rename_project(project_id: String, new_name: String, state: State<'_, AppState>) -> Result<ProjectMetadata, String> {
-    if new_name.trim().is_empty() {
+    let clean_name = new_name.trim();
+    if clean_name.is_empty() {
         return Err("Project name cannot be empty".to_string());
     }
-    let conn = state.db.get().map_err(|e| e.to_string())?;
-    let now = chrono::Utc::now().timestamp_millis();
-    conn.execute(
-        "UPDATE projects SET name = ?1, updated_at = ?2 WHERE id = ?3",
-        (&new_name, now, &project_id),
-    ).map_err(|e| e.to_string())?;
 
-    let updated = open_project(project_id, state.clone()).await?;
-    let _ = ProjectManager::save_metadata_atomic(&updated.project_dir_path, &updated);
-    Ok(updated)
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    let mut current = open_project(project_id.clone(), state.clone()).await?;
+
+    let now = chrono::Utc::now().timestamp_millis();
+    let old_name = current.name.clone();
+    current.name = clean_name.to_string();
+    current.updated_at = now;
+
+    // 1. Update manifest atomically first
+    if let Err(e) = ProjectManager::save_metadata_atomic(&current.project_dir_path, &current) {
+        return Err(format!("Failed to update project manifest on disk: {}", e));
+    }
+
+    // 2. Update database record in transaction
+    let db_update = (|| -> Result<(), rusqlite::Error> {
+        let tx = conn.transaction()?;
+        tx.execute(
+            "UPDATE projects SET name = ?1, updated_at = ?2 WHERE id = ?3",
+            (&current.name, now, &project_id),
+        )?;
+        tx.commit()?;
+        Ok(())
+    })();
+
+    if let Err(e) = db_update {
+        // Revert manifest change on DB failure
+        current.name = old_name;
+        let _ = ProjectManager::save_metadata_atomic(&current.project_dir_path, &current);
+        return Err(format!("Database rename failed; reverted manifest: {}", e));
+    }
+
+    let mut active = state.active_project.lock().unwrap();
+    *active = Some(current.clone());
+
+    Ok(current)
 }
 
 #[tauri::command]
 pub async fn save_project(project: ProjectMetadata, state: State<'_, AppState>) -> Result<(), String> {
-    let conn = state.db.get().map_err(|e| e.to_string())?;
+    // 1. Save manifest on disk atomically first
+    ProjectManager::save_metadata_atomic(&project.project_dir_path, &project)
+        .map_err(|e| format!("Failed to save manifest file to disk: {}", e))?;
+
+    // 2. Persist in database within a transaction
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let now = chrono::Utc::now().timestamp_millis();
-    conn.execute(
+
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute(
         "UPDATE projects SET name = ?1, synopsis = ?2, target_aspect_ratio = ?3, target_fps = ?4, updated_at = ?5 WHERE id = ?6",
         (&project.name, &project.synopsis, &project.target_aspect_ratio, project.target_fps, now, &project.id),
     ).map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
 
-    ProjectManager::save_metadata_atomic(&project.project_dir_path, &project)
-        .map_err(|e| format!("Failed to save manifest file: {}", e))?;
     Ok(())
 }
 
@@ -221,24 +292,44 @@ pub async fn close_project(state: State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn delete_project(project_id: String, confirmation_name: String, state: State<'_, AppState>) -> Result<(), String> {
-    let conn = state.db.get().map_err(|e| e.to_string())?;
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
     
-    // 1. Verify project exists and confirmation name matches
+    // 1. Retrieve project record
     let (name, dir_path): (String, String) = conn.query_row(
         "SELECT name, project_dir_path FROM projects WHERE id = ?1",
         [&project_id],
         |r| Ok((r.get(0)?, r.get(1)?)),
-    ).map_err(|_| "Project not found".to_string())?;
+    ).map_err(|_| "Project not found in database".to_string())?;
 
+    // 2. Verify exact confirmation name match
     if confirmation_name.trim() != name.trim() {
         return Err("Confirmation name does not match project name. Deletion aborted.".to_string());
     }
 
-    // 2. Cascade delete in SQLite (foreign keys delete scenes, clips, tasks)
-    conn.execute("DELETE FROM projects WHERE id = ?1", [&project_id])
-        .map_err(|e| format!("Failed to delete database record: {}", e))?;
+    // 3. Resolve authorized storage root
+    let authorized_root = ProjectManager::default_authorized_root();
 
-    // 3. Clear active project if matching
+    // 4. Safely delete physical vault directory FIRST (enforcing canonical root containment)
+    // If filesystem deletion fails (e.g. file lock or permissions), DB records are preserved!
+    ProjectManager::safe_delete_vault(&dir_path, &authorized_root)
+        .map_err(|e| format!("Filesystem deletion failed: {}. Database records have been preserved.", e))?;
+
+    // 5. Delete database record in a transaction (cascading to scenes, clips, and tasks)
+    let db_delete_result = (|| -> Result<(), rusqlite::Error> {
+        let tx = conn.transaction()?;
+        tx.execute("DELETE FROM projects WHERE id = ?1", [&project_id])?;
+        tx.commit()?;
+        Ok(())
+    })();
+
+    if let Err(e) = db_delete_result {
+        return Err(format!(
+            "Critical partial state: Vault directory was deleted, but database cleanup failed: {}. Run database integrity check to purge orphaned records.",
+            e
+        ));
+    }
+
+    // 6. Clear active project if matching
     {
         let mut active = state.active_project.lock().unwrap();
         if let Some(ref p) = *active {
@@ -247,9 +338,6 @@ pub async fn delete_project(project_id: String, confirmation_name: String, state
             }
         }
     }
-
-    // 4. Safely delete physical vault directory
-    let _ = ProjectManager::delete_project_vault(&dir_path);
 
     Ok(())
 }
@@ -294,13 +382,13 @@ pub async fn get_clips(project_id: String, state: State<'_, AppState>) -> Result
             project_id: row.get(2)?,
             clip_number: row.get(3)?,
             target_duration_seconds: row.get(4)?,
-            camera_framing: row.get(5)?,
-            camera_angle: row.get(6)?,
-            camera_movement: row.get(7)?,
+            camera_framing: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "MEDIUM".to_string()),
+            camera_angle: row.get::<_, Option<String>>(6)?.unwrap_or_else(|| "EYE_LEVEL".to_string()),
+            camera_movement: row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "STATIC".to_string()),
             subject_action: row.get(8)?,
             lighting_setup: row.get(9)?,
-            status: row.get(10)?,
-            assigned_provider: row.get(11)?,
+            status: row.get::<_, Option<String>>(10)?.unwrap_or_else(|| "PLANNED".to_string()),
+            assigned_provider: row.get::<_, Option<String>>(11)?.unwrap_or_else(|| "Google Veo".to_string()),
             thumbnail_path: row.get(12)?,
             proxy_path: row.get(13)?,
             output_video_path: row.get(14)?,
@@ -318,45 +406,32 @@ pub async fn get_clips(project_id: String, state: State<'_, AppState>) -> Result
 
 #[tauri::command]
 pub async fn seed_test_clips(project_id: String, count: i32, state: State<'_, AppState>) -> Result<Vec<ClipDto>, String> {
-    let conn = state.db.get().map_err(|e| e.to_string())?;
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let scenes = get_scenes(project_id.clone(), state.clone()).await?;
-    let scene_id = scenes.first().map(|s| s.id.clone()).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let scene_id = if let Some(s) = scenes.first() {
+        s.id.clone()
+    } else {
+        return Err("Cannot seed clips: no scene exists in this project".to_string());
+    };
 
     let now = chrono::Utc::now().timestamp_millis();
+    let providers = ["Google Veo", "Luma Dream Machine", "Runway Gen-3", "Kling AI", "Minimax Hailuo"];
+    let framings = ["EXTREME_WIDE", "WIDE", "MEDIUM", "CLOSE_UP", "EXTREME_CLOSE_UP"];
 
-    // Use an explicit transaction for fast multi-row insertion
-    conn.execute("BEGIN TRANSACTION", []).map_err(|e| e.to_string())?;
-
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
     for i in 1..=count {
         let clip_id = uuid::Uuid::new_v4().to_string();
-        let framing = match i % 5 {
-            0 => "WIDE",
-            1 => "MEDIUM",
-            2 => "CLOSE_UP",
-            3 => "EXTREME_CLOSE_UP",
-            _ => "OVER_THE_SHOULDER",
-        };
+        let provider = providers[(i as usize) % providers.len()];
+        let framing = framings[(i as usize) % framings.len()];
+        let action = format!("Cinematic narrative sequence beat {} with photorealistic lighting", i);
 
-        if let Err(e) = conn.execute(
+        tx.execute(
             "INSERT INTO clips (id, scene_id, project_id, clip_number, target_duration_seconds, camera_framing, camera_angle, camera_movement, subject_action, status, assigned_provider, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, 10.0, ?5, 'EYE_LEVEL', 'TRACKING', ?6, 'PLANNED', 'Google Veo', ?7, ?8)",
-            (
-                &clip_id,
-                &scene_id,
-                &project_id,
-                i,
-                framing,
-                format!("Cinematic shot directive {} demonstrating 60-minute timeline virtualization", i),
-                now,
-                now,
-            ),
-        ) {
-            let _ = conn.execute("ROLLBACK", []);
-            return Err(e.to_string());
-        }
+             VALUES (?1, ?2, ?3, ?4, 10.0, ?5, 'EYE_LEVEL', 'TRACKING', ?6, 'PLANNED', ?7, ?8, ?9)",
+            (&clip_id, &scene_id, &project_id, i, framing, &action, provider, now, now),
+        ).map_err(|e| e.to_string())?;
     }
-
-    conn.execute("COMMIT", []).map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
 
     get_clips(project_id, state).await
 }
@@ -369,12 +444,5 @@ pub async fn check_database_integrity(state: State<'_, AppState>) -> Result<bool
 
 #[tauri::command]
 pub async fn get_telemetry(state: State<'_, AppState>) -> Result<TelemetryData, String> {
-    let (pid, name) = {
-        let active = state.active_project.lock().unwrap();
-        match &*active {
-            Some(p) => (Some(p.id.clone()), Some(p.name.clone())),
-            None => (None, None),
-        }
-    };
-    Ok(state.telemetry.sample(pid, name, 0))
+    Ok(state.telemetry.sample())
 }

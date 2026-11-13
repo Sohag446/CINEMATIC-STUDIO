@@ -18,13 +18,69 @@ pub struct ProjectMetadata {
     pub updated_at: i64,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum VaultDeletionOutcome {
+    Deleted,
+    AlreadyMissing,
+}
+
 pub struct ProjectManager;
 
 impl ProjectManager {
+    /// Returns default authorized projects directory in AppData / LocalAppData
+    pub fn default_authorized_root() -> PathBuf {
+        if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
+            PathBuf::from(local_app_data).join("CinematicStudio").join("Projects")
+        } else if let Some(user_profile) = std::env::var_os("USERPROFILE") {
+            PathBuf::from(user_profile).join("CinematicStudio").join("Projects")
+        } else {
+            PathBuf::from("./projects")
+        }
+    }
+
+    /// Strips Windows extended-length prefix (\\?\) for cross-platform comparison
+    pub fn strip_unc_prefix(path: &Path) -> PathBuf {
+        let s = path.to_string_lossy();
+        if s.starts_with(r"\\?\") {
+            PathBuf::from(&s[4..])
+        } else {
+            path.to_path_buf()
+        }
+    }
+
+    /// Checks if a path represents a root of a volume or filesystem (e.g. C:\ or /)
+    pub fn is_filesystem_root(path: &Path) -> bool {
+        let clean = Self::strip_unc_prefix(path);
+        let components: Vec<_> = clean.components().collect();
+        if components.is_empty() {
+            return true;
+        }
+        if components.len() == 1 {
+            match components[0] {
+                std::path::Component::RootDir | std::path::Component::Prefix(_) => return true,
+                _ => {}
+            }
+        }
+        if components.len() == 2 {
+            if matches!(components[0], std::path::Component::Prefix(_)) 
+                && matches!(components[1], std::path::Component::RootDir) {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Validates path strings against directory traversal attacks and invalid characters
     pub fn validate_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, std::io::Error> {
         let p = path.as_ref();
         let path_str = p.to_string_lossy();
+
+        if path_str.trim().is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Path cannot be empty",
+            ));
+        }
 
         if path_str.contains("..") || path_str.contains("../") || path_str.contains("..\\") {
             return Err(std::io::Error::new(
@@ -36,7 +92,8 @@ impl ProjectManager {
         // Check for forbidden characters in filename components
         for component in p.components() {
             let comp_str = component.as_os_str().to_string_lossy();
-            if comp_str.contains('<') || comp_str.contains('>') || comp_str.contains('|') || comp_str.contains('?') || comp_str.contains('*') {
+            if comp_str.contains('<') || comp_str.contains('>') || comp_str.contains('|') 
+                || comp_str.contains('?') || comp_str.contains('*') {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     "Path contains illegal filesystem characters",
@@ -47,15 +104,114 @@ impl ProjectManager {
         Ok(p.to_path_buf())
     }
 
+    /// Validates that a storage root directory is safe, non-root, and accessible
+    pub fn validate_storage_root<P: AsRef<Path>>(root: P) -> Result<PathBuf, std::io::Error> {
+        let validated = Self::validate_path(root)?;
+
+        if Self::is_filesystem_root(&validated) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Filesystem root cannot be used as project storage root",
+            ));
+        }
+
+        let s = validated.to_string_lossy().to_lowercase();
+        if s.contains(r"windows\system32") || s.contains(r"windows/system32") || s == "c:\\windows" {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "System directories are strictly prohibited as storage roots",
+            ));
+        }
+
+        Ok(validated)
+    }
+
+    /// Verifies that target_dir is strictly contained within authorized_root and not the root itself
+    pub fn verify_containment<P: AsRef<Path>, R: AsRef<Path>>(target_dir: P, authorized_root: R) -> Result<(PathBuf, PathBuf), std::io::Error> {
+        let target = target_dir.as_ref();
+        let root = authorized_root.as_ref();
+
+        let clean_root = Self::validate_storage_root(root)?;
+        fs::create_dir_all(&clean_root)?;
+        let canonical_root = Self::strip_unc_prefix(&fs::canonicalize(&clean_root)?);
+
+        let clean_target = Self::validate_path(target)?;
+        let canonical_target = if clean_target.exists() {
+            Self::strip_unc_prefix(&fs::canonicalize(&clean_target)?)
+        } else {
+            // If target does not exist yet, canonicalize parent and join filename
+            if let Some(parent) = clean_target.parent() {
+                if parent.exists() {
+                    let canon_parent = Self::strip_unc_prefix(&fs::canonicalize(parent)?);
+                    canon_parent.join(clean_target.file_name().unwrap_or_default())
+                } else {
+                    clean_target.clone()
+                }
+            } else {
+                clean_target.clone()
+            }
+        };
+
+        if Self::is_filesystem_root(&canonical_target) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Target path cannot be a filesystem root",
+            ));
+        }
+
+        let target_str = canonical_target.to_string_lossy().to_lowercase();
+        let root_str = canonical_root.to_string_lossy().to_lowercase();
+
+        if target_str == root_str {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Target path cannot be identical to authorized root directory",
+            ));
+        }
+
+        if !canonical_target.starts_with(&canonical_root) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                format!("Target path {:?} escapes authorized root {:?}", canonical_target, canonical_root),
+            ));
+        }
+
+        Ok((canonical_target, canonical_root))
+    }
+
     /// Scaffolds the complete physical directory vault for a project
     pub fn create_project_vault<P: AsRef<Path>>(base_dir: P, slug: &str) -> Result<PathBuf, std::io::Error> {
-        let clean_base = Self::validate_path(base_dir)?;
-        let project_dir = clean_base.join(slug);
+        let clean_slug = slug.trim();
+        if clean_slug.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Project slug cannot be empty",
+            ));
+        }
 
-        if project_dir.exists() && project_dir.join("project.manifest.json").exists() {
+        if clean_slug.contains('/') || clean_slug.contains('\\') || clean_slug.contains("..") {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Project slug cannot contain path separator or traversal characters",
+            ));
+        }
+
+        if !clean_slug.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Project slug must only contain alphanumeric characters and hyphens",
+            ));
+        }
+
+        let clean_base = Self::validate_storage_root(base_dir)?;
+        fs::create_dir_all(&clean_base)?;
+        let canonical_base = Self::strip_unc_prefix(&fs::canonicalize(&clean_base)?);
+        let project_dir = canonical_base.join(clean_slug);
+
+        if project_dir.exists() && (project_dir.join("project.manifest.json").exists() || fs::read_dir(&project_dir)?.next().is_some()) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
-                format!("A project already exists at {:?}", project_dir),
+                format!("A project directory already exists at {:?}", project_dir),
             ));
         }
 
@@ -110,7 +266,6 @@ impl ProjectManager {
 
         // Atomic replace
         if let Err(e) = fs::rename(&temp_path, &manifest_path) {
-            // Clean up temporary file on failure
             let _ = fs::remove_file(&temp_path);
             return Err(e);
         }
@@ -186,12 +341,42 @@ impl ProjectManager {
         Ok(count)
     }
 
-    /// Safely deletes a project directory if explicit confirmation matches
-    pub fn delete_project_vault<P: AsRef<Path>>(project_dir: P) -> Result<(), std::io::Error> {
-        let p = project_dir.as_ref();
-        if p.exists() {
-            fs::remove_dir_all(p)?;
+    /// Safely deletes a project vault folder within an authorized root directory
+    pub fn safe_delete_vault<P: AsRef<Path>, R: AsRef<Path>>(
+        project_dir: P,
+        authorized_root: R,
+    ) -> Result<VaultDeletionOutcome, std::io::Error> {
+        let raw_target = project_dir.as_ref();
+
+        // 1. If folder does not exist on disk, return AlreadyMissing cleanly
+        if !raw_target.exists() {
+            return Ok(VaultDeletionOutcome::AlreadyMissing);
         }
-        Ok(())
+
+        // 2. Reject symlinks to prevent symlink redirection outside authorized root
+        if raw_target.is_symlink() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Refusing to recursively delete a symlinked project directory",
+            ));
+        }
+
+        // 3. Verify target is strictly within authorized root
+        let (canonical_target, _) = Self::verify_containment(raw_target, authorized_root)?;
+
+        // 4. Verify the folder actually contains project.manifest.json or project markers
+        // This prevents deleting an arbitrary non-project directory even if inside root
+        let manifest_path = canonical_target.join("project.manifest.json");
+        if !manifest_path.exists() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Directory does not contain project.manifest.json; deletion aborted for safety",
+            ));
+        }
+
+        // 5. Execute recursive removal
+        fs::remove_dir_all(&canonical_target)?;
+
+        Ok(VaultDeletionOutcome::Deleted)
     }
 }
