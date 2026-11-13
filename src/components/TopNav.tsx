@@ -1,39 +1,33 @@
 import React from 'react';
 import { 
-  Film, 
   FolderPlus, 
-  FolderOpen, 
   Save, 
-  Cpu, 
   Settings, 
-  Layers, 
-  CheckCircle2, 
-  Edit3, 
-  XSquare,
   Sparkles,
-  Trash2,
+  SlidersHorizontal,
+  Home,
+  Compass,
   FolderTree,
-  Share2
+  Info,
+  Bot,
+  Sliders
 } from 'lucide-react';
 import { useStudioStore } from '../stores/useStudioStore';
 
 export const TopNav: React.FC = () => {
   const { 
     activeProject, 
-    telemetry, 
     saveCurrentProject, 
-    closeProject,
     setNewProjectModalOpen, 
-    setOpenProjectModalOpen, 
     setSettingsModalOpen,
-    setRenameModalOpen,
-    setDeleteModalOpen,
-    seed360Clips,
-    clips,
+    setIsAboutModalOpen,
+    mainView,
+    setMainView,
+    isBeginnerMode,
+    toggleBeginnerMode,
     registeredProfiles,
-    setChromeProfileModalOpen,
-    setMediaLibraryModalOpen,
-    setExportModalOpen
+    isInspectorOpen,
+    toggleInspector
   } = useStudioStore();
 
   const [isSavedRecently, setIsSavedRecently] = React.useState(false);
@@ -45,161 +39,158 @@ export const TopNav: React.FC = () => {
   };
 
   return (
-    <header className="h-14 bg-studio-900 border-b border-studio-800 flex items-center justify-between px-4 select-none shrink-0 z-20">
-      {/* Brand & Project Identity */}
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2 text-studio-accent font-bold tracking-wider text-base">
-          <Film className="w-5 h-5 text-studio-accent animate-pulse" />
-          <span className="text-slate-100 font-mono">CINEMATIC<span className="text-studio-accent">STUDIO</span></span>
-          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-studio-800 text-slate-300 border border-studio-700">
-            Phase 1-4 Engine
-          </span>
-        </div>
+    <header className="h-9 bg-studio-900 border-b border-studio-800 flex items-center justify-between px-3 select-none shrink-0 z-20 font-sans text-xs">
 
-        <div className="h-5 w-[1px] bg-studio-800 mx-2" />
+      {/* 1. Left: Workspace Page Switcher */}
+      <div className="flex items-center space-x-1">
+        <nav className="flex items-center bg-studio-950 p-0.5 rounded-lg border border-studio-800 text-[11px]">
+          <button
+            onClick={() => setMainView('PRODUCTIONS')}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
+              mainView === 'PRODUCTIONS'
+                ? 'bg-studio-800 text-white font-semibold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Home className="w-3 h-3" />
+            <span>Productions</span>
+          </button>
 
-        {/* Current Active Project */}
-        {activeProject ? (
-          <div className="flex items-center space-x-2 bg-studio-850 border border-studio-750 px-2.5 py-1 rounded">
-            <span className="text-xs text-slate-400 font-mono">Project:</span>
-            <span className="text-xs font-semibold text-slate-200">{activeProject.name}</span>
-            <span className="text-[10px] text-studio-cyan font-mono px-1 bg-studio-800 rounded">
-              {activeProject.target_aspect_ratio} • {activeProject.target_fps}fps
-            </span>
+          {activeProject && (
             <button
-              onClick={() => setRenameModalOpen(true)}
-              title="Rename Project"
-              className="text-slate-400 hover:text-slate-200 transition-colors p-0.5"
+              onClick={() => setMainView('STUDIO')}
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
+                mainView === 'STUDIO'
+                  ? 'bg-studio-accent text-white font-semibold'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <Edit3 className="w-3.5 h-3.5" />
+              <Compass className="w-3 h-3" />
+              <span className="truncate max-w-[160px]">Studio: {activeProject.name}</span>
             </button>
-            <button
-              onClick={closeProject}
-              title="Close Project"
-              className="text-slate-400 hover:text-amber-400 transition-colors p-0.5"
-            >
-              <XSquare className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setDeleteModalOpen(true, activeProject)}
-              title="Delete Project Vault"
-              className="text-slate-400 hover:text-red-400 transition-colors p-0.5"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <div className="text-xs text-slate-500 italic font-mono">
-            No Project Active — Create or Open a Project to begin
-          </div>
-        )}
+          )}
+
+          <button
+            onClick={() => setMainView('AI_PROVIDERS')}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
+              mainView === 'AI_PROVIDERS'
+                ? 'bg-studio-800 text-white font-semibold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Bot className="w-3 h-3 text-purple-400" />
+            <span>AI Providers</span>
+            {registeredProfiles.length > 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setMainView('MEDIA_VAULT')}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
+              mainView === 'MEDIA_VAULT'
+                ? 'bg-studio-800 text-white font-semibold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FolderTree className="w-3 h-3 text-studio-cyan" />
+            <span>Media Vault</span>
+          </button>
+        </nav>
       </div>
 
-      {/* Center Actions (Project & Benchmark) */}
-      <div className="flex items-center space-x-2">
-        <button
-          onClick={() => setNewProjectModalOpen(true)}
-          className="flex items-center space-x-1.5 text-xs bg-studio-800 hover:bg-studio-750 text-slate-200 px-3 py-1.5 rounded border border-studio-700 transition-colors"
-        >
-          <FolderPlus className="w-3.5 h-3.5 text-studio-accent" />
-          <span>New Project</span>
-        </button>
+      {/* 2. Center: Active Project Specs & Actions */}
+      <div className="flex items-center space-x-2 text-[11px]">
+        {activeProject && mainView === 'STUDIO' && (
+          <div className="hidden lg:flex items-center space-x-2 font-mono text-slate-400 mr-2">
+            <span className="px-1.5 py-0.5 rounded bg-studio-950 text-studio-cyan border border-studio-800">
+              {activeProject.target_aspect_ratio}
+            </span>
+            <span>•</span>
+            <span>{activeProject.target_fps} fps</span>
+          </div>
+        )}
 
         <button
-          onClick={() => setOpenProjectModalOpen(true)}
-          className="flex items-center space-x-1.5 text-xs bg-studio-800 hover:bg-studio-750 text-slate-200 px-3 py-1.5 rounded border border-studio-700 transition-colors"
+          onClick={() => setNewProjectModalOpen(true)}
+          className="flex items-center space-x-1 bg-studio-850 hover:bg-studio-800 text-white px-2.5 py-1 rounded border border-studio-750 transition-colors font-medium text-[11px]"
         >
-          <FolderOpen className="w-3.5 h-3.5 text-studio-cyan" />
-          <span>Open Project</span>
+          <FolderPlus className="w-3 h-3 text-studio-accent" />
+          <span>New Production</span>
         </button>
 
         {activeProject && (
-          <>
-            <button
-              onClick={handleSave}
-              className={`flex items-center space-x-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${
-                isSavedRecently 
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700' 
-                  : 'bg-studio-800 hover:bg-studio-750 text-slate-200 border-studio-700'
-              }`}
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{isSavedRecently ? 'Saved!' : 'Save'}</span>
-            </button>
-
-            <button
-              onClick={() => setMediaLibraryModalOpen(true)}
-              title="Open Project Media Vault (Clips, Audio, Assets)"
-              className="flex items-center space-x-1.5 text-xs bg-studio-800 hover:bg-studio-750 text-slate-200 px-3 py-1.5 rounded border border-studio-700 transition-colors"
-            >
-              <FolderTree className="w-3.5 h-3.5 text-studio-cyan" />
-              <span>Media Vault</span>
-            </button>
-
-            <button
-              onClick={() => setExportModalOpen(true)}
-              title="Render Timeline to Master MP4 with FFmpeg"
-              className="flex items-center space-x-1.5 text-xs bg-studio-accent/20 hover:bg-studio-accent/30 text-studio-accent px-3 py-1.5 rounded border border-studio-accent/40 transition-colors font-medium"
-            >
-              <Share2 className="w-3.5 h-3.5 text-studio-accent" />
-              <span>Export Video</span>
-            </button>
-
-            {clips.length < 50 && (
-              <button
-                onClick={seed360Clips}
-                title="Generates 360 clip records to benchmark virtualization and low-memory performance"
-                className="flex items-center space-x-1.5 text-xs bg-studio-850 hover:bg-studio-800 text-amber-300 px-2.5 py-1.5 rounded border border-amber-800/60 transition-colors"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Benchmark (360 Clips)</span>
-              </button>
-            )}
-          </>
+          <button
+            onClick={handleSave}
+            className={`flex items-center space-x-1 text-[11px] px-2.5 py-1 rounded border transition-colors ${
+              isSavedRecently
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700 font-semibold'
+                : 'bg-studio-850 hover:bg-studio-800 text-slate-200 border-studio-750'
+            }`}
+          >
+            <Save className="w-3 h-3" />
+            <span>{isSavedRecently ? 'Saved!' : 'Save'}</span>
+          </button>
         )}
       </div>
 
-      {/* Right Status, Telemetry & Settings */}
-      <div className="flex items-center space-x-3 text-xs font-mono">
-        {/* Chrome Profile Manager Button */}
-        <button 
-          onClick={() => setChromeProfileModalOpen(true)}
-          className="flex items-center space-x-1.5 bg-studio-850 hover:bg-studio-800 border border-studio-800 hover:border-studio-700 px-2.5 py-1 rounded text-slate-300 transition-colors cursor-pointer"
-          title="Open Chrome Profiles & Extension Pairing Manager"
+      {/* 3. Right: Inspector Toggle & Workspace Mode */}
+      <div className="flex items-center space-x-1.5 text-[11px]">
+        {/* Toggle Inspector Button */}
+        <button
+          onClick={toggleInspector}
+          className={`flex items-center space-x-1 px-2 py-1 rounded border transition-colors ${
+            isInspectorOpen
+              ? 'bg-studio-800 border-studio-700 text-white'
+              : 'bg-studio-950 border-studio-800 text-slate-400 hover:text-white'
+          }`}
+          title="Toggle Context Inspector Panel (Ctrl+I)"
         >
-          <Layers className="w-3.5 h-3.5 text-studio-cyan" />
-          <span className="text-[11px] font-mono">Profiles:</span>
-          <span className="text-[10px] text-studio-cyan bg-studio-900 border border-studio-750 px-1.5 py-0.5 rounded font-mono font-semibold">
-            {registeredProfiles.length} Registered
-          </span>
+          <Sliders className="w-3 h-3 text-studio-accent" />
+          <span className="hidden sm:inline">Inspector</span>
         </button>
 
-        {/* Telemetry Pill */}
-        {telemetry && (
-          <div className="flex items-center space-x-2 bg-studio-950 border border-studio-800 px-2.5 py-1 rounded text-slate-300">
-            <Cpu className="w-3.5 h-3.5 text-studio-cyan" />
-            <span className="text-[11px]">RAM: <span className="text-studio-accent font-semibold">{telemetry.app_process_memory_mb} MB</span></span>
-            <span className="text-slate-600">|</span>
-            <span className="text-[11px]">Sys: {telemetry.memory_percent}%</span>
-          </div>
-        )}
+        {/* Beginner vs Advanced Mode Toggle */}
+        <button
+          onClick={toggleBeginnerMode}
+          className={`flex items-center space-x-1 px-2 py-1 rounded border transition-colors ${
+            isBeginnerMode
+              ? 'bg-purple-950/50 border-purple-800/80 text-purple-300 font-medium'
+              : 'bg-studio-850 border-studio-750 text-slate-300 font-medium'
+          }`}
+          title="Toggle Director / Engineer Mode (Ctrl+B)"
+        >
+          {isBeginnerMode ? (
+            <>
+              <Sparkles className="w-3 h-3 text-studio-accent" />
+              <span>Director Mode</span>
+            </>
+          ) : (
+            <>
+              <SlidersHorizontal className="w-3 h-3 text-studio-cyan" />
+              <span>Engineer Mode</span>
+            </>
+          )}
+        </button>
 
-        {/* Production Status */}
-        <div className="flex items-center space-x-1.5 bg-studio-850 border border-studio-800 px-2.5 py-1 rounded text-slate-300">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-[11px] text-emerald-300 uppercase">Ready</span>
-        </div>
-
-        {/* Settings Button */}
+        {/* Global Settings Shortcut */}
         <button
           onClick={() => setSettingsModalOpen(true)}
-          title="Open Settings"
-          className="text-slate-400 hover:text-slate-200 bg-studio-850 hover:bg-studio-800 border border-studio-800 p-1.5 rounded transition-colors"
+          title="Studio Settings"
+          className="p-1 rounded text-slate-400 hover:text-white bg-studio-850 hover:bg-studio-800 border border-studio-800 transition-colors"
         >
-          <Settings className="w-4 h-4" />
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+
+        {/* About Shortcut */}
+        <button
+          onClick={() => setIsAboutModalOpen(true)}
+          title="About Cinematic Studio"
+          className="p-1 rounded text-slate-400 hover:text-white bg-studio-850 hover:bg-studio-800 border border-studio-800 transition-colors"
+        >
+          <Info className="w-3.5 h-3.5" />
         </button>
       </div>
     </header>
   );
 };
-

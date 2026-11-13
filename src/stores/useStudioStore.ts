@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { 
-  Project, 
-  Scene, 
-  Clip, 
+import {
+  Project,
+  CreateProjectInput,
+  Scene,
+  Clip,
   ProductionTask,
-  SystemTelemetry, 
+  SystemTelemetry,
   AppSettings,
   DiscoveredChromeProfile,
   RegisteredChromeProfile,
@@ -19,23 +20,52 @@ import {
   UpdateTimelineClipInput,
   RenderJob,
   CreateRenderJobInput,
-  FFmpegStatus
+  FFmpegStatus,
+  CharacterProfile,
+  EnvironmentProfile
 } from '../types';
 import { apiService } from '../services/api';
 
+export type MainStudioView = 'PRODUCTIONS' | 'STUDIO' | 'AI_PROVIDERS' | 'MEDIA_VAULT';
+
+export type WorkspaceSection =
+  | 'OVERVIEW'
+  | 'STORY'
+  | 'CHARACTERS'
+  | 'ENVIRONMENTS'
+  | 'STORYBOARD'
+  | 'GENERATION'
+  | 'CONTINUITY'
+  | 'TIMELINE'
+  | 'EXPORT';
+
 interface StudioState {
+  // Navigation & Workflow Mode
+  mainView: MainStudioView;
+  currentView: 'DASHBOARD' | 'WORKSPACE';
+  currentWorkspaceSection: WorkspaceSection;
+  isBeginnerMode: boolean;
+  isAboutModalOpen: boolean;
+  isInspectorOpen: boolean;
+  selectedCharacterId: string | null;
+  selectedEnvironmentId: string | null;
+
+  // Characters & Environments
+  characters: CharacterProfile[];
+  environments: EnvironmentProfile[];
+
   // Projects
   projects: Project[];
   activeProject: Project | null;
   isLoadingProjects: boolean;
-  
+
   // Workspace Scene/Clip Data
   scenes: Scene[];
   clips: Clip[];
   selectedClipId: string | null;
   selectedSceneId: string | null;
   isLoadingClips: boolean;
-  
+
   // UI Dialog States
   isNewProjectModalOpen: boolean;
   isOpenProjectModalOpen: boolean;
@@ -44,7 +74,7 @@ interface StudioState {
   isDeleteModalOpen: boolean;
   isChromeProfileModalOpen: boolean;
   projectToDelete: Project | null;
-  
+
   // Telemetry & Settings
   telemetry: SystemTelemetry | null;
   settings: AppSettings | null;
@@ -72,14 +102,33 @@ interface StudioState {
   isPlaying: boolean;
 
   // Actions
+  setMainView: (view: MainStudioView) => void;
+  setCurrentView: (view: 'DASHBOARD' | 'WORKSPACE') => void;
+  setCurrentWorkspaceSection: (section: WorkspaceSection) => void;
+  setBeginnerMode: (enabled: boolean) => void;
+  toggleBeginnerMode: () => void;
+  setIsAboutModalOpen: (open: boolean) => void;
+  setIsInspectorOpen: (open: boolean) => void;
+  toggleInspector: () => void;
+  setSelectedCharacterId: (id: string | null) => void;
+  setSelectedEnvironmentId: (id: string | null) => void;
+
+  addCharacter: (char: Omit<CharacterProfile, 'id'>) => Promise<CharacterProfile>;
+  updateCharacter: (char: CharacterProfile) => Promise<void>;
+  deleteCharacter: (id: string) => Promise<void>;
+
+  addEnvironment: (env: Omit<EnvironmentProfile, 'id'>) => Promise<EnvironmentProfile>;
+  updateEnvironment: (env: EnvironmentProfile) => Promise<void>;
+  deleteEnvironment: (id: string) => Promise<void>;
+
   fetchProjects: () => Promise<void>;
-  createProject: (name: string, synopsis?: string) => Promise<Project>;
+  createProject: (inputOrName: CreateProjectInput | string, synopsis?: string) => Promise<Project>;
   openProject: (projectId: string) => Promise<void>;
   closeProject: () => Promise<void>;
   renameProject: (newName: string) => Promise<void>;
   deleteProject: (projectId: string, confirmName: string) => Promise<void>;
   saveCurrentProject: () => Promise<void>;
-  
+
   fetchWorkspaceData: (projectId: string) => Promise<void>;
   selectClip: (clipId: string | null) => void;
   selectScene: (sceneId: string | null) => void;
@@ -141,7 +190,154 @@ interface StudioState {
   clearActivePairingChallenge: () => void;
 }
 
+const getDefaultCharacters = (projectId: string): CharacterProfile[] => [
+  {
+    id: `char-elena-${projectId}`,
+    project_id: projectId,
+    name: 'Elena Vance',
+    role: 'Protagonist / Neural Archivist',
+    gender: 'Female',
+    age: '34',
+    physical_description: 'Mid-30s, athletic lean build, sharp jawline, messy dark hair with cyan streaks, cybernetic optic lens over left eye.',
+    wardrobe: 'Weathered high-collar brown leather jacket with brass hardware, dark utility trousers, heavy boots.',
+    visual_prompt_lock: '35mm cinematic photograph, Elena Vance, weathered brown leather jacket, glowing cyan left eye, athletic build, messy dark hair, anamorphic lens',
+    assigned_scenes: ['1']
+  },
+  {
+    id: `char-kaelen-${projectId}`,
+    project_id: projectId,
+    name: 'Kaelen Morse',
+    role: 'Antagonist / Syndicate Enforcer',
+    gender: 'Male',
+    age: '42',
+    physical_description: 'Tall imposing figure, scarred cheek, slicked silver-streaked dark hair, cold observant gaze.',
+    wardrobe: 'Floor-length matte black armored trench coat, high structured collar, minimalist titanium gloves.',
+    visual_prompt_lock: '35mm cinematic photograph, Kaelen Morse, matte black armored trench coat, silver-streaked hair, scarred cheek, dramatic shadows',
+    assigned_scenes: ['1']
+  }
+];
+
+const getDefaultEnvironments = (projectId: string): EnvironmentProfile[] => [
+  {
+    id: `env-vault-${projectId}`,
+    project_id: projectId,
+    name: 'Submerged Archive Vault',
+    location_type: 'Interior / Underground',
+    time_of_day: 'Perpetual Twilight',
+    weather: 'Subterranean condensation',
+    atmosphere: 'Flooded brutalist concrete hall with floating cyan holographic data monoliths and rusted steel walkways.',
+    lighting_rules: 'Volumetric underwater cyan caustics reflected on damp walls, sharp amber emergency beacon backlights.',
+    visual_prompt_lock: 'cinematic establishing shot, brutalist flooded underground concrete vault, glowing floating cyan data crystals, amber emergency beacons, volumetric mist'
+  },
+  {
+    id: `env-bridge-${projectId}`,
+    project_id: projectId,
+    name: 'Neo-Venice Suspension Bridge',
+    location_type: 'Exterior / High Altitude',
+    time_of_day: 'Midnight',
+    weather: 'Heavy downpour & fog',
+    atmosphere: 'Sprawling rain-drenched suspension bridge spanning between megatowers, dense fog, streaming vehicle light trails.',
+    lighting_rules: 'High contrast wet asphalt reflections, saturated magenta and cobalt neon signage diffuse through rainy mist.',
+    visual_prompt_lock: 'cinematic wide angle shot, rain-soaked futuristic suspension bridge at night, glowing magenta and blue neon signs reflecting on puddles, heavy atmospheric fog'
+  }
+];
+
 export const useStudioStore = create<StudioState>((set, get) => ({
+  mainView: 'PRODUCTIONS',
+  currentView: 'DASHBOARD',
+  currentWorkspaceSection: 'OVERVIEW',
+  isBeginnerMode: true,
+  isAboutModalOpen: false,
+  isInspectorOpen: true,
+  selectedCharacterId: null,
+  selectedEnvironmentId: null,
+
+  characters: [],
+  environments: [],
+
+  setMainView: (view: MainStudioView) => set({
+    mainView: view,
+    currentView: view === 'STUDIO' ? 'WORKSPACE' : 'DASHBOARD'
+  }),
+  setCurrentView: (view: 'DASHBOARD' | 'WORKSPACE') => set({
+    currentView: view,
+    mainView: view === 'WORKSPACE' ? 'STUDIO' : 'PRODUCTIONS'
+  }),
+  setCurrentWorkspaceSection: (section: WorkspaceSection) => set({ currentWorkspaceSection: section }),
+  setBeginnerMode: (enabled: boolean) => set({ isBeginnerMode: enabled }),
+  toggleBeginnerMode: () => set(state => ({ isBeginnerMode: !state.isBeginnerMode })),
+  setIsAboutModalOpen: (open: boolean) => set({ isAboutModalOpen: open }),
+  setIsInspectorOpen: (open: boolean) => set({ isInspectorOpen: open }),
+  toggleInspector: () => set(state => ({ isInspectorOpen: !state.isInspectorOpen })),
+  setSelectedCharacterId: (id: string | null) => set({ selectedCharacterId: id }),
+  setSelectedEnvironmentId: (id: string | null) => set({ selectedEnvironmentId: id }),
+
+  addCharacter: async (char) => {
+    const newChar: CharacterProfile = {
+      ...char,
+      id: crypto.randomUUID(),
+      created_at: Date.now()
+    };
+    const updated = [...get().characters, newChar];
+    set({ characters: updated });
+    const { activeProject } = get();
+    if (activeProject) {
+      localStorage.setItem(`cinematic_chars_${activeProject.id}`, JSON.stringify(updated));
+    }
+    return newChar;
+  },
+
+  updateCharacter: async (char) => {
+    const updated = get().characters.map(c => c.id === char.id ? char : c);
+    set({ characters: updated });
+    const { activeProject } = get();
+    if (activeProject) {
+      localStorage.setItem(`cinematic_chars_${activeProject.id}`, JSON.stringify(updated));
+    }
+  },
+
+  deleteCharacter: async (id) => {
+    const updated = get().characters.filter(c => c.id !== id);
+    set({ characters: updated });
+    const { activeProject } = get();
+    if (activeProject) {
+      localStorage.setItem(`cinematic_chars_${activeProject.id}`, JSON.stringify(updated));
+    }
+  },
+
+  addEnvironment: async (env) => {
+    const newEnv: EnvironmentProfile = {
+      ...env,
+      id: crypto.randomUUID(),
+      created_at: Date.now()
+    };
+    const updated = [...get().environments, newEnv];
+    set({ environments: updated });
+    const { activeProject } = get();
+    if (activeProject) {
+      localStorage.setItem(`cinematic_envs_${activeProject.id}`, JSON.stringify(updated));
+    }
+    return newEnv;
+  },
+
+  updateEnvironment: async (env) => {
+    const updated = get().environments.map(e => e.id === env.id ? env : e);
+    set({ environments: updated });
+    const { activeProject } = get();
+    if (activeProject) {
+      localStorage.setItem(`cinematic_envs_${activeProject.id}`, JSON.stringify(updated));
+    }
+  },
+
+  deleteEnvironment: async (id) => {
+    const updated = get().environments.filter(e => e.id !== id);
+    set({ environments: updated });
+    const { activeProject } = get();
+    if (activeProject) {
+      localStorage.setItem(`cinematic_envs_${activeProject.id}`, JSON.stringify(updated));
+    }
+  },
+
   projects: [],
   activeProject: null,
   isLoadingProjects: false,
@@ -199,12 +395,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     }
   },
 
-  createProject: async (name: string, synopsis?: string) => {
-    const project = await apiService.createProject({ name, synopsis });
+  createProject: async (inputOrName: CreateProjectInput | string, synopsis?: string) => {
+    let input: CreateProjectInput;
+    if (typeof inputOrName === 'string') {
+      input = { name: inputOrName, synopsis };
+    } else {
+      input = inputOrName;
+    }
+    const project = await apiService.createProject(input);
     set(state => ({
       projects: [project, ...state.projects],
       activeProject: project,
       isNewProjectModalOpen: false,
+      mainView: 'STUDIO',
+      currentView: 'WORKSPACE',
+      currentWorkspaceSection: 'OVERVIEW',
     }));
     await get().fetchWorkspaceData(project.id);
     return project;
@@ -212,18 +417,28 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   openProject: async (projectId: string) => {
     const project = await apiService.openProject(projectId);
-    set({ activeProject: project, isOpenProjectModalOpen: false });
+    set({
+      activeProject: project,
+      isOpenProjectModalOpen: false,
+      mainView: 'STUDIO',
+      currentView: 'WORKSPACE',
+      currentWorkspaceSection: 'OVERVIEW',
+    });
     await get().fetchWorkspaceData(project.id);
   },
 
   closeProject: async () => {
     await apiService.closeProject();
-    set({ 
-      activeProject: null, 
-      scenes: [], 
-      clips: [], 
-      selectedClipId: null, 
-      selectedSceneId: null 
+    set({
+      activeProject: null,
+      scenes: [],
+      clips: [],
+      selectedClipId: null,
+      selectedSceneId: null,
+      characters: [],
+      environments: [],
+      mainView: 'PRODUCTIONS',
+      currentView: 'DASHBOARD',
     });
   },
 
@@ -270,6 +485,11 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         apiService.listTimelineClips(projectId),
         apiService.listRenderJobs(projectId),
       ]);
+      const rawChars = localStorage.getItem(`cinematic_chars_${projectId}`);
+      const characters: CharacterProfile[] = rawChars ? JSON.parse(rawChars) : getDefaultCharacters(projectId);
+      const rawEnvs = localStorage.getItem(`cinematic_envs_${projectId}`);
+      const environments: EnvironmentProfile[] = rawEnvs ? JSON.parse(rawEnvs) : getDefaultEnvironments(projectId);
+
       set({
         scenes,
         clips,
@@ -277,6 +497,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         timelineTracks,
         timelineClips,
         renderJobs,
+        characters,
+        environments,
         selectedSceneId: scenes[0]?.id || null,
         selectedClipId: clips[0]?.id || null,
         isLoadingClips: false

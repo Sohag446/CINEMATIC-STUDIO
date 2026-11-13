@@ -191,6 +191,44 @@ export interface PairingVerificationResult {
   message: string;
 }
 
+export interface CharacterProfile {
+  id: string;
+  project_id: string;
+  name: string;
+  role: string;
+  gender?: string;
+  age?: string;
+  physical_description: string;
+  wardrobe: string;
+  visual_prompt_lock: string;
+  reference_image_url?: string;
+  assigned_scenes?: string[];
+  created_at?: number;
+}
+
+export interface EnvironmentProfile {
+  id: string;
+  project_id: string;
+  name: string;
+  location_type: string;
+  time_of_day: string;
+  weather: string;
+  atmosphere: string;
+  lighting_rules: string;
+  visual_prompt_lock: string;
+  reference_image_url?: string;
+  created_at?: number;
+}
+
+export interface ContinuityWarning {
+  id: string;
+  shot_id: string;
+  severity: 'WARNING' | 'NOTICE' | 'RESOLVED';
+  category: 'CHARACTER_WARDROBE' | 'ENVIRONMENT_LIGHTING' | 'SCREEN_DIRECTION' | 'PROMPT_CONSISTENCY';
+  message: string;
+  remedy: string;
+}
+
 export * from './provider';
 export * from './media';
 
