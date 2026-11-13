@@ -11,6 +11,11 @@ use crate::chrome_service::{
     PairingService, PairingChallengeDto, VerifyPairingDto, PairingVerificationResult,
     NativeMessagingIpc,
 };
+use crate::media_service::{
+    MediaService, MediaAssetDto, CreateMediaAssetDto,
+    TimelineTrackDto, TimelineClipDto, CreateTimelineClipDto, UpdateTimelineClipDto,
+    RenderJobDto, CreateRenderJobDto, FFmpegStatusDto, FFmpegManager
+};
 
 pub struct AppState {
     pub db: DbPool,
@@ -355,4 +360,210 @@ pub async fn revoke_profile_pairing(profile_id: String, state: State<'_, AppStat
 pub async fn install_native_host() -> Result<String, String> {
     let path = NativeMessagingIpc::install_host_manifest(None, None)?;
     Ok(path.to_string_lossy().to_string())
+}
+
+// ============================================================================
+// PHASE 3: TASK QUEUE & EXECUTION ENGINE COMMANDS
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskDto {
+    pub id: String,
+    pub project_id: String,
+    pub clip_id: Option<String>,
+    pub profile_id: Option<String>,
+    pub task_type: String,
+    pub target_provider: String,
+    pub state: String,
+    pub priority: i32,
+    pub progress_percentage: f64,
+    pub error_message: Option<String>,
+    pub human_action_reason: Option<String>,
+    pub created_at: i64,
+    pub completed_at: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateTaskDto {
+    pub project_id: String,
+    pub clip_id: Option<String>,
+    pub profile_id: Option<String>,
+    pub task_type: String,
+    pub target_provider: String,
+    pub priority: Option<i32>,
+    pub prompt: String,
+}
+
+#[tauri::command]
+pub async fn get_project_tasks(project_id: String, state: State<'_, AppState>) -> Result<Vec<TaskDto>, String> {
+    let conn = state.db.get().map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(
+        "SELECT id, project_id, clip_id, profile_id, task_type, target_provider, state, priority, progress_percentage, error_message, human_action_reason, created_at, completed_at
+         FROM tasks WHERE project_id = ?1 ORDER BY priority DESC, created_at ASC"
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map([&project_id], |row| {
+        Ok(TaskDto {
+            id: row.get(0)?,
+            project_id: row.get(1)?,
+            clip_id: row.get(2)?,
+            profile_id: row.get(3)?,
+            task_type: row.get(4)?,
+            target_provider: row.get(5)?,
+            state: row.get(6)?,
+            priority: row.get(7)?,
+            progress_percentage: row.get(8)?,
+            error_message: row.get(9)?,
+            human_action_reason: row.get(10)?,
+            created_at: row.get(11)?,
+            completed_at: row.get(12)?,
+        })
+    }).map_err(|e| e.to_string())?;
+
+    let mut tasks = Vec::new();
+    for t in rows {
+        tasks.push(t.map_err(|e| e.to_string())?);
+    }
+    Ok(tasks)
+}
+
+#[tauri::command]
+pub async fn create_production_task(input: CreateTaskDto, state: State<'_, AppState>) -> Result<TaskDto, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    let now = chrono::Utc::now().timestamp_millis();
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let priority = input.priority.unwrap_or(50);
+
+    let payload = serde_json::json!({
+        "prompt": input.prompt,
+    });
+
+    conn.execute(
+        "INSERT INTO tasks (id, project_id, clip_id, profile_id, task_type, target_provider, state, priority, progress_percentage, payload_json, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'QUEUED', ?7, 0.0, ?8, ?9)",
+        rusqlite::params![
+            task_id,
+            input.project_id,
+            input.clip_id,
+            input.profile_id,
+            input.task_type,
+            input.target_provider,
+            priority,
+            payload.to_string(),
+            now
+        ],
+    ).map_err(|e| format!("Failed to create production task: {}", e))?;
+
+    Ok(TaskDto {
+        id: task_id,
+        project_id: input.project_id,
+        clip_id: input.clip_id,
+        profile_id: input.profile_id,
+        task_type: input.task_type,
+        target_provider: input.target_provider,
+        state: "QUEUED".to_string(),
+        priority,
+        progress_percentage: 0.0,
+        error_message: None,
+        human_action_reason: None,
+        created_at: now,
+        completed_at: None,
+    })
+}
+
+#[tauri::command]
+pub async fn cancel_production_task(task_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE tasks SET state = 'CANCELLED' WHERE id = ?1",
+        [&task_id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn resume_human_action_task(task_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE tasks SET state = 'QUEUED', error_message = NULL, human_action_reason = NULL WHERE id = ?1",
+        [&task_id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ============================================================================
+// PHASE 4: MEDIA MANAGEMENT, MULTITRACK TIMELINE & FFMPEG RENDERING
+// ============================================================================
+
+#[tauri::command]
+pub async fn list_media_assets(project_id: String, state: State<'_, AppState>) -> Result<Vec<MediaAssetDto>, String> {
+    let conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::list_media_assets(&conn, &project_id)
+}
+
+#[tauri::command]
+pub async fn create_media_asset(input: CreateMediaAssetDto, state: State<'_, AppState>) -> Result<MediaAssetDto, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::create_media_asset(&mut conn, input)
+}
+
+#[tauri::command]
+pub async fn delete_media_asset(asset_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::delete_media_asset(&mut conn, &asset_id)
+}
+
+#[tauri::command]
+pub async fn list_timeline_tracks(project_id: String, state: State<'_, AppState>) -> Result<Vec<TimelineTrackDto>, String> {
+    let conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::list_timeline_tracks(&conn, &project_id)
+}
+
+#[tauri::command]
+pub async fn list_timeline_clips(project_id: String, state: State<'_, AppState>) -> Result<Vec<TimelineClipDto>, String> {
+    let conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::list_timeline_clips(&conn, &project_id)
+}
+
+#[tauri::command]
+pub async fn create_timeline_clip(input: CreateTimelineClipDto, state: State<'_, AppState>) -> Result<TimelineClipDto, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::create_timeline_clip(&mut conn, input)
+}
+
+#[tauri::command]
+pub async fn update_timeline_clip(input: UpdateTimelineClipDto, state: State<'_, AppState>) -> Result<(), String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::update_timeline_clip(&mut conn, input)
+}
+
+#[tauri::command]
+pub async fn delete_timeline_clip(clip_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::delete_timeline_clip(&mut conn, &clip_id)
+}
+
+#[tauri::command]
+pub async fn list_render_jobs(project_id: String, state: State<'_, AppState>) -> Result<Vec<RenderJobDto>, String> {
+    let conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::list_render_jobs(&conn, &project_id)
+}
+
+#[tauri::command]
+pub async fn create_render_job(input: CreateRenderJobDto, state: State<'_, AppState>) -> Result<RenderJobDto, String> {
+    let mut conn = state.db.get().map_err(|e| e.to_string())?;
+    MediaService::create_render_job(&mut conn, input)
+}
+
+#[tauri::command]
+pub async fn detect_ffmpeg_status(
+    app: tauri::AppHandle,
+    custom_ffmpeg: Option<String>,
+    custom_ffprobe: Option<String>
+) -> Result<FFmpegStatusDto, String> {
+    Ok(FFmpegManager::detect_tools_with_app(
+        Some(&app),
+        custom_ffmpeg.as_deref(),
+        custom_ffprobe.as_deref()
+    ))
 }

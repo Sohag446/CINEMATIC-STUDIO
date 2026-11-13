@@ -1,0 +1,94 @@
+name: CINEMATIC STUDIO — Windows Installer Build & Packaging
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-installer:
+    name: Build Windows x64 Installer (MSI & NSIS)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust Toolchain (Stable MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Acquire & Verify Bundled FFmpeg Media Engine
+        run: node scripts/acquire_ffmpeg.cjs
+
+      - name: Verify Bundled Media Engine Checksums & PE Headers
+        run: node scripts/inspect_pe.cjs
+
+      - name: Execute Automated Test Suites
+        run: |
+          node tests/combined_phase1_2_validation.cjs
+          node tests/phase3_provider_matrix_test.cjs
+          node tests/phase4_media_assembly_test.cjs
+          node tests/phase4_runtime_hardening_test.cjs
+          node tests/media_engine_resolver_test.cjs
+          node tests/real_media_rendering_test.cjs
+          node tests/final_rendering_regression_suite.cjs
+
+      - name: Build Frontend Production Bundle
+        run: npm run build
+
+      - name: Build Chrome Native Messaging Host Binary
+        run: cargo build --release --bin cinematic-studio-host --manifest-path src-tauri/Cargo.toml
+
+      - name: Stage Native Messaging Host for Installer Packaging
+        shell: pwsh
+        run: |
+          $binDir = "src-tauri/resources/bin"
+          if (!(Test-Path $binDir)) { New-Item -ItemType Directory -Force -Path $binDir }
+          Copy-Item "src-tauri/target/release/cinematic-studio-host.exe" "$binDir/cinematic-studio-host.exe" -Force
+          Write-Host "Staged cinematic-studio-host.exe into resources/bin/"
+
+      - name: Build Tauri Desktop Application & Installers
+        run: npx tauri build --verbose
+
+      - name: Verify Generated Installer Packages
+        shell: pwsh
+        run: |
+          $bundlePath = "src-tauri/target/release/bundle"
+          if (Test-Path $bundlePath) {
+            Write-Host "Discovered Bundle Output Directory:"
+            Get-ChildItem -Recurse $bundlePath | Select-Object FullName, Length | Format-Table
+          } else {
+            Write-Error "Bundle directory was not created!"
+            exit 1
+          }
+
+      - name: Upload Installer Packages Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinematic-studio-windows-installer
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/cinematic-studio-host.exe
+          retention-days: 30

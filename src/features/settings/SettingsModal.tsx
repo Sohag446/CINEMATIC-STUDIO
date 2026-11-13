@@ -1,10 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { X, Settings, HardDrive, Cpu, Terminal, Palette } from 'lucide-react';
+import { 
+  X, 
+  Settings, 
+  HardDrive, 
+  Cpu, 
+  Terminal, 
+  Palette, 
+  Film, 
+  CheckCircle, 
+  AlertCircle, 
+  RefreshCw,
+  ShieldAlert,
+  CheckCircle2
+} from 'lucide-react';
 import { useStudioStore } from '../../stores/useStudioStore';
 import { AppSettings } from '../../types';
 
 export const SettingsModal: React.FC = () => {
-  const { isSettingsModalOpen, setSettingsModalOpen, settings, updateSettings, fetchSettings } = useStudioStore();
+  const { 
+    isSettingsModalOpen, 
+    setSettingsModalOpen, 
+    settings, 
+    updateSettings, 
+    fetchSettings,
+    ffmpegStatus,
+    checkFFmpegStatus 
+  } = useStudioStore();
 
   const [form, setForm] = useState<AppSettings>({
     default_project_storage_path: 'C:\\CinematicStudio\\Projects',
@@ -17,7 +38,8 @@ export const SettingsModal: React.FC = () => {
 
   useEffect(() => {
     fetchSettings();
-  }, [fetchSettings]);
+    checkFFmpegStatus();
+  }, [fetchSettings, checkFFmpegStatus]);
 
   useEffect(() => {
     if (settings) setForm(settings);
@@ -139,6 +161,121 @@ export const SettingsModal: React.FC = () => {
                 <option value="cinematic">Dark Cinematic (Default)</option>
                 <option value="dark">Studio Dark</option>
               </select>
+            </div>
+          </div>
+
+          {/* Media Engine Diagnostics (Self-Contained Installer) */}
+          <div className="bg-studio-950 border border-studio-800 p-3 rounded space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono text-studio-cyan uppercase font-semibold flex items-center space-x-1.5">
+                <Film className="w-3.5 h-3.5" />
+                <span>Media Engine Diagnostics</span>
+                {ffmpegStatus?.is_bundled && (
+                  <span className="text-[9px] bg-studio-accent/20 text-studio-accent border border-studio-accent/30 px-1.5 py-0.2 rounded font-mono">
+                    BUNDLED
+                  </span>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => checkFFmpegStatus()}
+                className="flex items-center space-x-1 text-[10px] text-slate-400 hover:text-studio-cyan font-mono"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Re-probe Engine</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+              {/* FFmpeg Status & Version */}
+              <div className="p-2 bg-studio-900 border border-studio-800 rounded">
+                <div className="text-slate-500 text-[10px] flex items-center justify-between">
+                  <span>FFmpeg Binary</span>
+                  {ffmpegStatus?.is_bundled ? (
+                    <span className="text-emerald-400 text-[9px]">Self-Contained</span>
+                  ) : (
+                    <span className="text-slate-500 text-[9px]">System / External</span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-1.5 mt-0.5">
+                  {ffmpegStatus?.ffmpeg_available ? (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-emerald-300 truncate text-[10px]" title={ffmpegStatus.ffmpeg_version}>
+                        {ffmpegStatus.ffmpeg_version?.split(' ')[2] || 'Ready'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="text-amber-300 text-[10px]">Unavailable</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* FFprobe Analysis */}
+              <div className="p-2 bg-studio-900 border border-studio-800 rounded">
+                <div className="text-slate-500 text-[10px]">FFprobe Prober</div>
+                <div className="flex items-center space-x-1.5 mt-0.5">
+                  {ffmpegStatus?.ffprobe_available ? (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-emerald-300 truncate text-[10px]" title={ffmpegStatus.ffprobe_version}>
+                        {ffmpegStatus.ffprobe_version?.split(' ')[2] || 'Ready'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="text-amber-300 text-[10px]">Unavailable</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Resource Integrity */}
+              <div className="p-2 bg-studio-900 border border-studio-800 rounded">
+                <div className="text-slate-500 text-[10px]">Resource Integrity</div>
+                <div className="flex items-center space-x-1.5 mt-0.5">
+                  {ffmpegStatus?.resource_integrity_verified ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-emerald-300 text-[10px]">SHA-256 Verified</span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400 text-[10px]">Unverified / External</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Codecs & Acceleration */}
+              <div className="p-2 bg-studio-900 border border-studio-800 rounded">
+                <div className="text-slate-500 text-[10px]">Available Encoders</div>
+                <div className="text-[10px] text-slate-300 truncate mt-0.5">
+                  {ffmpegStatus?.encoders_available?.length ? (
+                    ffmpegStatus.encoders_available.join(', ')
+                  ) : (
+                    'libx264, aac, libx265'
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Windows Security Policy Diagnostics (if any) */}
+            {ffmpegStatus?.security_policy_error && (
+              <div className="bg-amber-950/70 border border-amber-800 p-2 rounded text-[10px] font-mono text-amber-300 flex items-start space-x-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-semibold">Windows Security Policy Restriction</div>
+                  <div>{ffmpegStatus.security_policy_error}</div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-[10px] text-slate-500 font-mono flex items-center justify-between">
+              <span>{ffmpegStatus?.status_message || 'Media Engine Ready'}</span>
+              <span className="text-slate-400">RAM Stream Bounded</span>
             </div>
           </div>
 

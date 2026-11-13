@@ -3,13 +3,23 @@ import {
   Project, 
   Scene, 
   Clip, 
+  ProductionTask,
   SystemTelemetry, 
   AppSettings,
   DiscoveredChromeProfile,
   RegisteredChromeProfile,
   RegisterProfileInput,
   UpdateProfileInput,
-  PairingChallenge
+  PairingChallenge,
+  MediaAsset,
+  CreateMediaAssetInput,
+  TimelineTrack,
+  TimelineClip,
+  CreateTimelineClipInput,
+  UpdateTimelineClipInput,
+  RenderJob,
+  CreateRenderJobInput,
+  FFmpegStatus
 } from '../types';
 import { apiService } from '../services/api';
 
@@ -45,6 +55,22 @@ interface StudioState {
   isDiscoveringProfiles: boolean;
   activePairingChallenge: PairingChallenge | null;
 
+  // Phase 3 Task Queue & Execution Engine
+  tasks: ProductionTask[];
+  activeHumanPromptTask: ProductionTask | null;
+
+  // Phase 4 Media, Multitrack Timeline & Rendering
+  mediaAssets: MediaAsset[];
+  timelineTracks: TimelineTrack[];
+  timelineClips: TimelineClip[];
+  selectedTimelineClipId: string | null;
+  renderJobs: RenderJob[];
+  ffmpegStatus: FFmpegStatus | null;
+  isExportModalOpen: boolean;
+  isMediaLibraryModalOpen: boolean;
+  playheadTimeSeconds: number;
+  isPlaying: boolean;
+
   // Actions
   fetchProjects: () => Promise<void>;
   createProject: (name: string, synopsis?: string) => Promise<Project>;
@@ -73,6 +99,38 @@ interface StudioState {
   initiatePairing: (profileId: string) => Promise<PairingChallenge>;
   revokePairing: (profileId: string) => Promise<void>;
   installNativeHost: () => Promise<string>;
+
+  // Phase 3 Actions
+  fetchTasks: (projectId: string) => Promise<void>;
+  createTask: (input: {
+    project_id: string;
+    clip_id?: string;
+    profile_id?: string;
+    task_type: string;
+    target_provider: string;
+    priority?: number;
+    prompt: string;
+  }) => Promise<ProductionTask>;
+  cancelTask: (taskId: string) => Promise<void>;
+  resumeHumanTask: (taskId: string) => Promise<void>;
+  setActiveHumanPromptTask: (task: ProductionTask | null) => void;
+
+  // Phase 4 Actions
+  fetchMediaAssets: (projectId: string) => Promise<void>;
+  createMediaAsset: (input: CreateMediaAssetInput) => Promise<MediaAsset>;
+  deleteMediaAsset: (assetId: string) => Promise<void>;
+  fetchTimeline: (projectId: string) => Promise<void>;
+  addClipToTimeline: (input: CreateTimelineClipInput) => Promise<TimelineClip>;
+  updateTimelineClip: (input: UpdateTimelineClipInput) => Promise<void>;
+  deleteTimelineClip: (clipId: string) => Promise<void>;
+  fetchRenderJobs: (projectId: string) => Promise<void>;
+  createRenderJob: (input: CreateRenderJobInput) => Promise<RenderJob>;
+  checkFFmpegStatus: (customFFmpeg?: string, customFFprobe?: string) => Promise<void>;
+  setExportModalOpen: (open: boolean) => void;
+  setMediaLibraryModalOpen: (open: boolean) => void;
+  setPlayheadTimeSeconds: (time: number) => void;
+  setIsPlaying: (playing: boolean) => void;
+  setSelectedTimelineClipId: (id: string | null) => void;
 
   setNewProjectModalOpen: (open: boolean) => void;
   setOpenProjectModalOpen: (open: boolean) => void;
@@ -109,6 +167,22 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   registeredProfiles: [],
   isDiscoveringProfiles: false,
   activePairingChallenge: null,
+
+  // Phase 3 Task Queue & Execution Engine
+  tasks: [],
+  activeHumanPromptTask: null,
+
+  // Phase 4 Media, Multitrack Timeline & Rendering
+  mediaAssets: [],
+  timelineTracks: [],
+  timelineClips: [],
+  selectedTimelineClipId: null,
+  renderJobs: [],
+  ffmpegStatus: null,
+  isExportModalOpen: false,
+  isMediaLibraryModalOpen: false,
+  playheadTimeSeconds: 0,
+  isPlaying: false,
 
   fetchProjects: async () => {
     set({ isLoadingProjects: true });
@@ -188,13 +262,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   fetchWorkspaceData: async (projectId: string) => {
     set({ isLoadingClips: true });
     try {
-      const [scenes, clips] = await Promise.all([
+      const [scenes, clips, mediaAssets, timelineTracks, timelineClips, renderJobs] = await Promise.all([
         apiService.getScenes(projectId),
-        apiService.getClips(projectId)
+        apiService.getClips(projectId),
+        apiService.listMediaAssets(projectId),
+        apiService.listTimelineTracks(projectId),
+        apiService.listTimelineClips(projectId),
+        apiService.listRenderJobs(projectId),
       ]);
       set({
         scenes,
         clips,
+        mediaAssets,
+        timelineTracks,
+        timelineClips,
+        renderJobs,
         selectedSceneId: scenes[0]?.id || null,
         selectedClipId: clips[0]?.id || null,
         isLoadingClips: false
@@ -296,6 +378,112 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   installNativeHost: async () => {
     return apiService.installNativeHost();
   },
+
+  // Phase 3 Actions
+  fetchTasks: async (projectId) => {
+    const tasks = await apiService.getProjectTasks(projectId);
+    set({ tasks });
+  },
+
+  createTask: async (input) => {
+    const task = await apiService.createProductionTask(input);
+    const { tasks } = get();
+    set({ tasks: [task, ...tasks] });
+    return task;
+  },
+
+  cancelTask: async (taskId) => {
+    await apiService.cancelProductionTask(taskId);
+    const { tasks } = get();
+    set({
+      tasks: tasks.map(t => t.id === taskId ? { ...t, state: 'CANCELLED' } : t)
+    });
+  },
+
+  resumeHumanTask: async (taskId) => {
+    await apiService.resumeHumanActionTask(taskId);
+    const { tasks } = get();
+    set({
+      tasks: tasks.map(t => t.id === taskId ? { ...t, state: 'QUEUED', error_message: undefined } : t),
+      activeHumanPromptTask: null
+    });
+  },
+
+  setActiveHumanPromptTask: (task) => set({ activeHumanPromptTask: task }),
+
+  // Phase 4 Actions
+  fetchMediaAssets: async (projectId) => {
+    const mediaAssets = await apiService.listMediaAssets(projectId);
+    set({ mediaAssets });
+  },
+
+  createMediaAsset: async (input) => {
+    const asset = await apiService.createMediaAsset(input);
+    const { mediaAssets } = get();
+    set({ mediaAssets: [asset, ...mediaAssets] });
+    return asset;
+  },
+
+  deleteMediaAsset: async (assetId) => {
+    await apiService.deleteMediaAsset(assetId);
+    const { mediaAssets } = get();
+    set({ mediaAssets: mediaAssets.filter(a => a.id !== assetId) });
+  },
+
+  fetchTimeline: async (projectId) => {
+    const [timelineTracks, timelineClips] = await Promise.all([
+      apiService.listTimelineTracks(projectId),
+      apiService.listTimelineClips(projectId)
+    ]);
+    set({ timelineTracks, timelineClips });
+  },
+
+  addClipToTimeline: async (input) => {
+    const clip = await apiService.createTimelineClip(input);
+    const { timelineClips } = get();
+    set({ timelineClips: [...timelineClips, clip] });
+    return clip;
+  },
+
+  updateTimelineClip: async (input) => {
+    await apiService.updateTimelineClip(input);
+    const { timelineClips } = get();
+    set({
+      timelineClips: timelineClips.map(c => c.id === input.id ? { ...c, ...input, updated_at: Date.now() } : c)
+    });
+  },
+
+  deleteTimelineClip: async (clipId) => {
+    await apiService.deleteTimelineClip(clipId);
+    const { timelineClips, selectedTimelineClipId } = get();
+    set({
+      timelineClips: timelineClips.filter(c => c.id !== clipId),
+      selectedTimelineClipId: selectedTimelineClipId === clipId ? null : selectedTimelineClipId
+    });
+  },
+
+  fetchRenderJobs: async (projectId) => {
+    const renderJobs = await apiService.listRenderJobs(projectId);
+    set({ renderJobs });
+  },
+
+  createRenderJob: async (input) => {
+    const job = await apiService.createRenderJob(input);
+    const { renderJobs } = get();
+    set({ renderJobs: [job, ...renderJobs] });
+    return job;
+  },
+
+  checkFFmpegStatus: async (customFFmpeg, customFFprobe) => {
+    const status = await apiService.detectFFmpegStatus(customFFmpeg, customFFprobe);
+    set({ ffmpegStatus: status });
+  },
+
+  setExportModalOpen: (open) => set({ isExportModalOpen: open }),
+  setMediaLibraryModalOpen: (open) => set({ isMediaLibraryModalOpen: open }),
+  setPlayheadTimeSeconds: (time) => set({ playheadTimeSeconds: time }),
+  setIsPlaying: (playing) => set({ isPlaying: playing }),
+  setSelectedTimelineClipId: (id) => set({ selectedTimelineClipId: id }),
 
   setNewProjectModalOpen: (open) => set({ isNewProjectModalOpen: open }),
   setOpenProjectModalOpen: (open) => set({ isOpenProjectModalOpen: open }),

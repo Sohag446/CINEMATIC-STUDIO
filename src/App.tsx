@@ -9,6 +9,8 @@ import { RenameProjectModal } from './features/projects/RenameProjectModal';
 import { DeleteProjectModal } from './features/projects/DeleteProjectModal';
 import { SettingsModal } from './features/settings/SettingsModal';
 import { ChromeProfileManagerModal } from './features/profiles/ChromeProfileManagerModal';
+import { MediaLibraryModal } from './features/media/MediaLibraryModal';
+import { ExportModal } from './features/export/ExportModal';
 import { useStudioStore } from './stores/useStudioStore';
 
 export const App: React.FC = () => {
@@ -52,6 +54,8 @@ export const App: React.FC = () => {
       <DeleteProjectModal />
       <SettingsModal />
       <ChromeProfileManagerModal />
+      <MediaLibraryModal />
+      <ExportModal />
     </div>
   );
 };

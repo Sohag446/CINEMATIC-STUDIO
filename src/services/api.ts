@@ -3,6 +3,7 @@ import {
   CreateProjectInput, 
   Scene, 
   Clip, 
+  ProductionTask,
   SystemTelemetry, 
   AppSettings,
   DiscoveredChromeProfile,
@@ -11,7 +12,16 @@ import {
   UpdateProfileInput,
   PairingChallenge,
   VerifyPairingInput,
-  PairingVerificationResult
+  PairingVerificationResult,
+  MediaAsset,
+  CreateMediaAssetInput,
+  TimelineTrack,
+  TimelineClip,
+  CreateTimelineClipInput,
+  UpdateTimelineClipInput,
+  RenderJob,
+  CreateRenderJobInput,
+  FFmpegStatus
 } from '../types';
 
 // Detect if running inside a Tauri native desktop context
@@ -496,6 +506,275 @@ export const apiService = {
       return invoke<string>('install_native_host');
     }
     return 'C:\\Users\\Default\\AppData\\Local\\CinematicStudio\\NativeMessaging\\com.cinematic.studio.json';
+  },
+
+  // ==========================================
+  // PHASE 3: TASK QUEUE & EXECUTION ENGINE
+  // ==========================================
+  async getProjectTasks(projectId: string): Promise<ProductionTask[]> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<ProductionTask[]>('get_project_tasks', { projectId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_tasks');
+    const all = raw ? JSON.parse(raw) : [];
+    return all.filter((t: ProductionTask) => t.project_id === projectId);
+  },
+
+  async createProductionTask(input: {
+    project_id: string;
+    clip_id?: string;
+    profile_id?: string;
+    task_type: string;
+    target_provider: string;
+    priority?: number;
+    prompt: string;
+  }): Promise<ProductionTask> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<ProductionTask>('create_production_task', { input });
+    }
+    const raw = localStorage.getItem('cinematic_studio_tasks');
+    const all: ProductionTask[] = raw ? JSON.parse(raw) : [];
+    const newTask: ProductionTask = {
+      id: crypto.randomUUID(),
+      project_id: input.project_id,
+      clip_id: input.clip_id,
+      task_type: input.task_type,
+      target_provider: input.target_provider,
+      state: 'QUEUED',
+      priority: input.priority ?? 50,
+      progress_percentage: 0.0,
+      created_at: Date.now(),
+    };
+    all.unshift(newTask);
+    localStorage.setItem('cinematic_studio_tasks', JSON.stringify(all));
+    return newTask;
+  },
+
+  async cancelProductionTask(taskId: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('cancel_production_task', { taskId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_tasks');
+    const all: ProductionTask[] = raw ? JSON.parse(raw) : [];
+    const t = all.find(item => item.id === taskId);
+    if (t) {
+      t.state = 'CANCELLED';
+      localStorage.setItem('cinematic_studio_tasks', JSON.stringify(all));
+    }
+  },
+
+  async resumeHumanActionTask(taskId: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('resume_human_action_task', { taskId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_tasks');
+    const all: ProductionTask[] = raw ? JSON.parse(raw) : [];
+    const t = all.find(item => item.id === taskId);
+    if (t) {
+      t.state = 'QUEUED';
+      t.error_message = undefined;
+      localStorage.setItem('cinematic_studio_tasks', JSON.stringify(all));
+    }
+  },
+
+  // ==========================================
+  // PHASE 4: MEDIA MANAGEMENT, MULTITRACK TIMELINE & FFMPEG
+  // ==========================================
+  async listMediaAssets(projectId: string): Promise<MediaAsset[]> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<MediaAsset[]>('list_media_assets', { projectId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_media_assets');
+    const all = raw ? JSON.parse(raw) : [];
+    return all.filter((a: MediaAsset) => a.project_id === projectId);
+  },
+
+  async createMediaAsset(input: CreateMediaAssetInput): Promise<MediaAsset> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<MediaAsset>('create_media_asset', { input });
+    }
+    const raw = localStorage.getItem('cinematic_studio_media_assets');
+    const all: MediaAsset[] = raw ? JSON.parse(raw) : [];
+    const newAsset: MediaAsset = {
+      id: crypto.randomUUID(),
+      ...input,
+      created_at: Date.now(),
+    };
+    all.unshift(newAsset);
+    localStorage.setItem('cinematic_studio_media_assets', JSON.stringify(all));
+    return newAsset;
+  },
+
+  async deleteMediaAsset(assetId: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('delete_media_asset', { assetId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_media_assets');
+    const all: MediaAsset[] = raw ? JSON.parse(raw) : [];
+    const filtered = all.filter(a => a.id !== assetId);
+    localStorage.setItem('cinematic_studio_media_assets', JSON.stringify(filtered));
+  },
+
+  async listTimelineTracks(projectId: string): Promise<TimelineTrack[]> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<TimelineTrack[]>('list_timeline_tracks', { projectId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_timeline_tracks');
+    const all: TimelineTrack[] = raw ? JSON.parse(raw) : [];
+    const projTracks = all.filter(t => t.project_id === projectId);
+    if (projTracks.length === 0) {
+      const defaults: TimelineTrack[] = [
+        { id: crypto.randomUUID(), project_id: projectId, track_type: 'VIDEO', track_index: 1, label: 'V1: Main Video', is_muted: false, is_locked: false, volume: 1.0 },
+        { id: crypto.randomUUID(), project_id: projectId, track_type: 'VIDEO', track_index: 2, label: 'V2: Overlays / B-Roll', is_muted: false, is_locked: false, volume: 1.0 },
+        { id: crypto.randomUUID(), project_id: projectId, track_type: 'AUDIO', track_index: 1, label: 'A1: Dialogue / Voiceover', is_muted: false, is_locked: false, volume: 1.0 },
+        { id: crypto.randomUUID(), project_id: projectId, track_type: 'AUDIO', track_index: 2, label: 'A2: Music Score & Foley', is_muted: false, is_locked: false, volume: 1.0 },
+      ];
+      localStorage.setItem('cinematic_studio_timeline_tracks', JSON.stringify([...all, ...defaults]));
+      return defaults;
+    }
+    return projTracks;
+  },
+
+  async listTimelineClips(projectId: string): Promise<TimelineClip[]> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<TimelineClip[]>('list_timeline_clips', { projectId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_timeline_clips');
+    const all = raw ? JSON.parse(raw) : [];
+    return all.filter((c: TimelineClip) => c.project_id === projectId);
+  },
+
+  async createTimelineClip(input: CreateTimelineClipInput): Promise<TimelineClip> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<TimelineClip>('create_timeline_clip', { input });
+    }
+    const raw = localStorage.getItem('cinematic_studio_timeline_clips');
+    const all: TimelineClip[] = raw ? JSON.parse(raw) : [];
+    const newClip: TimelineClip = {
+      id: crypto.randomUUID(),
+      track_id: input.track_id,
+      project_id: input.project_id,
+      media_asset_id: input.media_asset_id,
+      clip_id: input.clip_id,
+      timeline_start_seconds: input.timeline_start_seconds,
+      timeline_duration_seconds: input.timeline_duration_seconds,
+      source_in_seconds: input.source_in_seconds || 0.0,
+      source_out_seconds: input.source_out_seconds || input.timeline_duration_seconds,
+      volume: input.volume ?? 1.0,
+      fade_in_seconds: 0.0,
+      fade_out_seconds: 0.0,
+      z_order: 0,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+    all.push(newClip);
+    localStorage.setItem('cinematic_studio_timeline_clips', JSON.stringify(all));
+    return newClip;
+  },
+
+  async updateTimelineClip(input: UpdateTimelineClipInput): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('update_timeline_clip', { input });
+    }
+    const raw = localStorage.getItem('cinematic_studio_timeline_clips');
+    const all: TimelineClip[] = raw ? JSON.parse(raw) : [];
+    const c = all.find(item => item.id === input.id);
+    if (c) {
+      if (input.track_id !== undefined) c.track_id = input.track_id;
+      if (input.timeline_start_seconds !== undefined) c.timeline_start_seconds = input.timeline_start_seconds;
+      if (input.timeline_duration_seconds !== undefined) c.timeline_duration_seconds = input.timeline_duration_seconds;
+      if (input.source_in_seconds !== undefined) c.source_in_seconds = input.source_in_seconds;
+      if (input.source_out_seconds !== undefined) c.source_out_seconds = input.source_out_seconds;
+      if (input.volume !== undefined) c.volume = input.volume;
+      if (input.fade_in_seconds !== undefined) c.fade_in_seconds = input.fade_in_seconds;
+      if (input.fade_out_seconds !== undefined) c.fade_out_seconds = input.fade_out_seconds;
+      c.updated_at = Date.now();
+      localStorage.setItem('cinematic_studio_timeline_clips', JSON.stringify(all));
+    }
+  },
+
+  async deleteTimelineClip(clipId: string): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('delete_timeline_clip', { clipId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_timeline_clips');
+    const all: TimelineClip[] = raw ? JSON.parse(raw) : [];
+    const filtered = all.filter(c => c.id !== clipId);
+    localStorage.setItem('cinematic_studio_timeline_clips', JSON.stringify(filtered));
+  },
+
+  async listRenderJobs(projectId: string): Promise<RenderJob[]> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<RenderJob[]>('list_render_jobs', { projectId });
+    }
+    const raw = localStorage.getItem('cinematic_studio_render_jobs');
+    const all = raw ? JSON.parse(raw) : [];
+    return all.filter((j: RenderJob) => j.project_id === projectId);
+  },
+
+  async createRenderJob(input: CreateRenderJobInput): Promise<RenderJob> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<RenderJob>('create_render_job', { input });
+    }
+    const raw = localStorage.getItem('cinematic_studio_render_jobs');
+    const all: RenderJob[] = raw ? JSON.parse(raw) : [];
+
+    // Collision protection audit
+    const fileExists = all.some(j => j.output_path === input.output_path && j.state === 'COMPLETED');
+    if (fileExists && !input.allow_overwrite) {
+      throw new Error(`COLLISION_DETECTED: Output file already exists at '${input.output_path}'. Explicit overwrite confirmation required.`);
+    }
+
+    const jobId = crypto.randomUUID();
+    const newJob: RenderJob = {
+      id: jobId,
+      project_id: input.project_id,
+      preset_name: input.preset_name,
+      state: 'QUEUED',
+      output_path: input.output_path,
+      staging_path: `${input.output_path}.tmp.${jobId}.mp4`,
+      progress_percentage: 0.0,
+      current_fps: 0.0,
+      current_frame: 0,
+      total_frames: 0,
+      render_strategy: input.render_strategy || 'NORMALIZING_TRANSCODE',
+      allow_overwrite: !!input.allow_overwrite,
+      created_at: Date.now(),
+    };
+    all.unshift(newJob);
+    localStorage.setItem('cinematic_studio_render_jobs', JSON.stringify(all));
+    return newJob;
+  },
+
+  async detectFFmpegStatus(customFFmpeg?: string, customFFprobe?: string): Promise<FFmpegStatus> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<FFmpegStatus>('detect_ffmpeg_status', { customFfmpeg: customFFmpeg, customFfprobe: customFFprobe });
+    }
+    return {
+      ffmpeg_available: false,
+      ffprobe_available: false,
+      is_bundled: false,
+      supports_h264_nvenc: false,
+      supports_hevc_nvenc: false,
+      encoders_available: ['libx264', 'aac'],
+      resource_integrity_verified: false,
+      status_message: 'FFmpeg not detected in browser sandbox. Configure executable path in Settings.'
+    };
   },
 
   // Local helper utilities

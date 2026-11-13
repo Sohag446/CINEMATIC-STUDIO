@@ -3,13 +3,42 @@ node_modules/
 .pnp
 .pnp.js
 
-# Build outputs
+# Build outputs & Bundles
 dist/
 dist-ssr/
 *.local
-
-# Tauri / Rust
 src-tauri/target/
+
+# Large Binaries (> 100 MB GitHub file limit)
+# Bundled FFmpeg Gyan essentials binaries (~105 MB) are downloaded and verified during CI via scripts/acquire_ffmpeg.cjs
+src-tauri/resources/media-engine/windows-x64/ffmpeg.exe
+src-tauri/resources/media-engine/windows-x64/ffprobe.exe
+*.exe
+*.dll
+*.pdb
+*.o
+*.obj
+
+# Local Databases, Caches & Backups
+backups/
+temp_download/
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Test Fixtures & Render Outputs (Large Audio/Video files)
+tests/test_media/
+tests/test_output/
+
+# Environment & Secrets (Anti-Leak Guards)
+.env
+.env.*
+*.pfx
+*.key
+*.pem
+*.cer
 
 # Editor / OS
 .DS_Store
@@ -17,4 +46,3 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
-

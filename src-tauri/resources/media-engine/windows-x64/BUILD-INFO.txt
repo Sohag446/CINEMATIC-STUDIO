@@ -1,0 +1,18 @@
+CINEMATIC STUDIO — BUNDLED MEDIA ENGINE DISTRIBUTION INFO
+===========================================================
+Package:         FFmpeg & FFprobe Windows x64 Static Distribution
+Release Version: 9.0.2 Essentials Build
+Upstream Source: Gyan.dev (official Windows release linked by https://ffmpeg.org/download.html)
+Download URL:    https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.2-essentials_build.zip
+Archive SHA-256: 60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba
+Acquisition Date: 2026-11-13T10:57:42.687Z
+
+INCLUDED BINARIES:
+- ffmpeg.exe:  FFmpeg video/audio converter, muxer, demuxer and filtergraph engine
+- ffprobe.exe: FFmpeg media stream analyzer and metadata prober
+
+LICENSING & REDISTRIBUTION:
+This build is licensed under the GNU General Public License version 3 (GPL v3) or later.
+See LICENSES/FFMPEG-LICENSE.txt for complete license terms.
+Source code corresponding to this release is available from the upstream repository:
+https://github.com/FFmpeg/FFmpeg/releases/tag/n9.0.2

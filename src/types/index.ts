@@ -191,3 +191,7 @@ export interface PairingVerificationResult {
   message: string;
 }
 
+export * from './provider';
+export * from './media';
+
+

@@ -27,6 +27,51 @@ pub struct IpcMessage {
     pub timestamp: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReferenceAssetPayload {
+    pub id: String,
+    pub asset_type: String,
+    pub file_name: String,
+    pub mime_type: String,
+    pub file_size_bytes: u64,
+    pub local_path: String,
+    pub data_base64: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskExecutionPayload {
+    pub task_id: String,
+    pub provider_id: String,
+    pub task_type: String,
+    pub prompt: String,
+    pub negative_prompt: Option<String>,
+    pub target_duration_seconds: Option<f64>,
+    pub target_aspect_ratio: Option<String>,
+    pub reference_assets: Option<Vec<ReferenceAssetPayload>>,
+    pub timeout_ms: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskProgressPayload {
+    pub task_id: String,
+    pub percentage: f64,
+    pub status_message: String,
+    pub current_phase: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskResultPayload {
+    pub task_id: String,
+    pub success: bool,
+    pub text_output: Option<String>,
+    pub output_video_url: Option<String>,
+    pub downloaded_file_path: Option<String>,
+    pub error_message: Option<String>,
+    pub requires_human_action: Option<bool>,
+    pub human_action_reason: Option<String>,
+    pub execution_duration_ms: u64,
+}
+
 pub struct NativeMessagingIpc;
 
 impl NativeMessagingIpc {
@@ -44,13 +89,19 @@ impl NativeMessagingIpc {
         let exe_path_str = host_exe_path
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| {
-                manifest_dir.join("cinematic-studio-host.exe").to_string_lossy().to_string()
+                let bin_dir = app_data.join("CinematicStudio").join("bin");
+                let bin_path = bin_dir.join("cinematic-studio-host.exe");
+                if bin_path.exists() {
+                    bin_path.to_string_lossy().to_string()
+                } else {
+                    manifest_dir.join("cinematic-studio-host.exe").to_string_lossy().to_string()
+                }
             });
 
         let ext_origin = if let Some(id) = extension_id {
             format!("chrome-extension://{}/", id)
         } else {
-            "chrome-extension://*/".to_string()
+            "chrome-extension://olfkacbfbgihonffpmnmnhmfmonfhmpf/".to_string()
         };
 
         let manifest = NativeHostManifest {

@@ -3,10 +3,13 @@
  * Native Messaging Bridge, HMAC-SHA256 Authentication & Profile Isolation
  */
 
+import { ExecutionEngine } from './engine/executionEngine.js';
+
 const NATIVE_HOST_NAME = 'com.cinematic.studio';
 let nativePort = null;
 let reconnectTimer = null;
 let isHandshakeComplete = false;
+const engine = new ExecutionEngine(postDesktopMessage);
 
 // ----------------------------------------------------------------------------
 // 1. LIFECYCLE INITIALIZATION & STATE RESTORATION
@@ -31,7 +34,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 // ----------------------------------------------------------------------------
 async function computeHmacSha256Hex(secretHex, message) {
   const encoder = new TextEncoder();
-  const rawSecret = new Uint8Array(secretHex.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+  const rawSecret = encoder.encode(secretHex);
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
     rawSecret,
@@ -184,6 +187,21 @@ async function handleDesktopMessage(packet) {
       break;
     }
 
+    case 'EXECUTE_TASK': {
+      if (!isHandshakeComplete) {
+        console.warn('[Cinematic Agent] Cannot execute task: handshake not verified.');
+        return;
+      }
+      engine.executeTask(packet.payload, profileId);
+      break;
+    }
+
+    case 'CANCEL_TASK': {
+      const taskId = packet.payload?.task_id;
+      if (taskId) engine.cancelTask(taskId, profileId);
+      break;
+    }
+
     default:
       console.log('[Cinematic Agent] Unknown desktop packet type:', packet.type);
   }
@@ -211,6 +229,15 @@ async function findMatchingTabs(domain) {
 // 6. POPUP & INTERNAL EXTENSION MESSAGING INTERFACE
 // ----------------------------------------------------------------------------
 chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+  if (req.action === 'RELAY_TASK_PROGRESS') {
+    chrome.storage.local.get(['profileId']).then(({ profileId }) => {
+      if (profileId && req.progress) {
+        engine.relayProgress(req.progress, profileId);
+      }
+    });
+    return;
+  }
+
   if (req.action === 'GET_STATUS') {
     chrome.storage.local.get(['profileId', 'pairingSecret', 'connectionState', 'lastSeenAt', 'lastError'])
       .then(data => {

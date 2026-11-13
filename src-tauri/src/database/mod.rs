@@ -161,6 +161,34 @@ pub fn apply_all_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::er
         tx.commit()?;
     }
 
+    // 6. Migration v4: Task queue execution engine and persistent logs
+    if current_version < 4 {
+        let tx = conn.transaction()?;
+        let migration_v4 = include_str!("../../migrations/004_task_queue_and_execution.sql");
+        tx.execute_batch(migration_v4)?;
+
+        let now = chrono::Utc::now().timestamp_millis();
+        tx.execute(
+            "INSERT INTO _schema_migrations (version, applied_at) VALUES (?1, ?2)",
+            (4, now),
+        )?;
+        tx.commit()?;
+    }
+
+    // 7. Migration v5: Media assets, multitrack timeline & FFmpeg rendering
+    if current_version < 5 {
+        let tx = conn.transaction()?;
+        let migration_v5 = include_str!("../../migrations/005_media_and_rendering.sql");
+        tx.execute_batch(migration_v5)?;
+
+        let now = chrono::Utc::now().timestamp_millis();
+        tx.execute(
+            "INSERT INTO _schema_migrations (version, applied_at) VALUES (?1, ?2)",
+            (5, now),
+        )?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 

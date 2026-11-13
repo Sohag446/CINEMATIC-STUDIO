@@ -2,6 +2,7 @@ pub mod database;
 pub mod project_manager;
 pub mod project_service;
 pub mod chrome_service;
+pub mod media_service;
 pub mod telemetry;
 pub mod commands;
 
@@ -63,6 +64,21 @@ pub fn run() {
             commands::verify_profile_pairing,
             commands::revoke_profile_pairing,
             commands::install_native_host,
+            commands::get_project_tasks,
+            commands::create_production_task,
+            commands::cancel_production_task,
+            commands::resume_human_action_task,
+            commands::list_media_assets,
+            commands::create_media_asset,
+            commands::delete_media_asset,
+            commands::list_timeline_tracks,
+            commands::list_timeline_clips,
+            commands::create_timeline_clip,
+            commands::update_timeline_clip,
+            commands::delete_timeline_clip,
+            commands::list_render_jobs,
+            commands::create_render_job,
+            commands::detect_ffmpeg_status,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running CINEMATIC STUDIO application");

@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "Cinematic Studio Production Agent",
   "version": "1.0.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnri8H4I0tgDmkVeSmGNfNsRy9iCxIstiIfJUUOpIV8rZBhr+S2y44+QgVWg0mgf+mr22hJIr/6Jl2Q2ZMmjAVUhtXLO58SSSWaigQ5vp0YS8H5J1ifaP+L20JaMqeprF5F3yTaSpelhKzNXyhFvqF5bhud5RJRJXmnjxfn5+khfl0V+viArt4yafXW+ZS496yBmZ9xDJcKWUU16Hjvin39lLu/7nERiI0VeUlTAZXjEoc4LAHh5fKTRM/pE2MOpsMX/0XrlhLUGunWvOW8hke6g0oUVn/OSeUC0eYAvdeRKQY4kNq6BRATsuEEGexB1jUyWS0lEXqx/7ostSjup1xwIDAQAB",
   "description": "Desktop-integrated AI video and narrative production bridge for Cinematic Studio.",
   "permissions": [
     "storage",
@@ -38,7 +39,14 @@
         "https://flow.google.com/*",
         "https://*.google.com/veo/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "adapters/common.js",
+        "adapters/chatgpt.js",
+        "adapters/gemini.js",
+        "adapters/claude.js",
+        "adapters/googleFlowVeo.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]

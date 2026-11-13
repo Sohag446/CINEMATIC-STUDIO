@@ -1,48 +1,76 @@
 /**
- * CINEMATIC STUDIO — Isolated Content Script
- * Provider State Detection & DOM Bridge Foundation
+ * CINEMATIC STUDIO — Content Script & Adapter Dispatcher
+ * Coordinates page-level task execution with specialized provider adapters
  */
 
 (function() {
-  console.log('[Cinematic Studio Agent] Content script injected on:', window.location.hostname);
+  console.log('[Cinematic Agent] Content script active on:', window.location.hostname);
 
-  // Detect basic authenticated state on known providers
-  function detectAuthState() {
-    const host = window.location.hostname;
-    let isAuthenticated = false;
-    let userIndicator = null;
+  function resolveAdapter() {
+    const host = window.location.hostname.toLowerCase();
+    const adapters = window.CinematicAdapters || {};
 
     if (host.includes('chatgpt.com')) {
-      // ChatGPT authenticated user menu indicator
-      const avatar = document.querySelector('button[data-testid="profile-button"], img[alt*="User"]');
-      if (avatar) {
-        isAuthenticated = true;
-        userIndicator = 'ChatGPT User';
-      }
+      return adapters.ChatGPT;
     } else if (host.includes('claude.ai')) {
-      // Claude user menu
-      const userBtn = document.querySelector('[data-testid="user-menu-button"]');
-      if (userBtn) {
-        isAuthenticated = true;
-        userIndicator = 'Claude User';
-      }
-    } else if (host.includes('google.com')) {
-      // Google Veo / Gemini Google Account indicator
-      const gAccount = document.querySelector('a[aria-label*="Google Account"], img[alt*="Google Account"]');
-      if (gAccount) {
-        isAuthenticated = true;
-        userIndicator = gAccount.getAttribute('aria-label') || 'Google Account Active';
-      }
+      return adapters.Claude;
+    } else if (host.includes('gemini.google.com')) {
+      return adapters.Gemini;
+    } else if (host.includes('flow.google.com') || host.includes('veo')) {
+      return adapters.GoogleFlowVeo;
     }
-
-    return { isAuthenticated, userIndicator, hostname: host, title: document.title };
+    return null;
   }
 
-  // Listen for queries from background service worker
+  // Handle messages dispatched from background service worker
   chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+    const adapter = resolveAdapter();
+
     if (req.action === 'CHECK_PROVIDER_STATUS') {
-      const auth = detectAuthState();
-      sendResponse(auth);
+      if (!adapter) {
+        sendResponse({
+          status: 'UI_UNRECOGNIZED',
+          authenticated: false,
+          statusMessage: 'No adapter available for domain: ' + window.location.hostname
+        });
+        return true;
+      }
+
+      adapter.checkReadiness().then(res => sendResponse(res));
+      return true; // async sendResponse
+    }
+
+    if (req.action === 'EXECUTE_PROVIDER_TASK') {
+      if (!adapter) {
+        sendResponse({
+          taskId: req.task.taskId,
+          success: false,
+          errorMessage: 'Unsupported provider domain: ' + window.location.hostname,
+          executionDurationMs: 0
+        });
+        return true;
+      }
+
+      const onProgress = (progress) => {
+        // Send intermediate progress back to background service worker
+        chrome.runtime.sendMessage({
+          action: 'RELAY_TASK_PROGRESS',
+          progress
+        });
+      };
+
+      adapter.executeTask(req.task, onProgress).then(result => {
+        sendResponse(result);
+      }).catch(err => {
+        sendResponse({
+          taskId: req.task.taskId,
+          success: false,
+          errorMessage: err.message || 'Execution exception occurred in content script',
+          executionDurationMs: 0
+        });
+      });
+
+      return true; // async sendResponse
     }
   });
 })();

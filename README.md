@@ -1,141 +1,153 @@
 # CINEMATIC STUDIO
-## Master Architecture & Technical Blueprint
 
-**CINEMATIC STUDIO** is a professional, local-first, desktop-centered AI video production management platform designed to orchestrate long-form cinematic video creation (10-minute, 20-minute, 60-minute, and multi-hour episodic projects) using existing consumer AI web interfaces through user-authenticated Chrome browser sessions.
+> **Professional Desktop-Centered AI Video Production Platform**  
+> *Orchestrating Long-Form Cinematic Video Pipelines via Local-First Architecture, Chrome Profile Automation, and RAM-Efficient FFmpeg Assembly.*
 
----
-
-### Key Architectural Pillars
-
-1. **Desktop-Centered Hybrid Architecture**: The Desktop Application (built on Tauri 2, Rust, React, and SQLite) acts as the single source of truth and orchestration brain. Chrome Profiles host lightweight Manifest V3 execution agents that interact strictly with permitted browser tabs.
-2. **Extreme RAM & Resource Optimization**: Engineered to operate comfortably within a 20 GB host RAM environment alongside multiple browser profiles. Enforces bounded concurrency, lazy state hydration, off-RAM media streaming, virtualized UI grids, and strictly scoped process lifecycles.
-3. **Robust Multi-Profile Session Isolation**: Explicitly maps `Project -> Task -> Provider -> Chrome Profile -> Browser Session -> Result`. Eliminates cross-profile state bleeding and Google Account coupling.
-4. **Resilient Browser-Native Automation**: Decoupled DOM adapters with visual anchor fallback, multi-stage state machines (`WAITING_FOR_USER`, `GENERATING`, `COLLECTING`), and zero attempts to bypass CAPTCHA, Cloudflare, or anti-bot protections.
-5. **Deterministic Production Pipeline**: End-to-end management spanning Story Analysis, Script Decomposition, Character/Location Consistency Vaults, Continuity Graph Tracking, Multi-Model Prompt Compilation, Task Queue Recovery, and Low-Memory FFmpeg Video Assembly.
+[![Build Status](https://github.com/Sohag446/CINEMATIC-STUDIO/actions/workflows/windows-installer-build.yml/badge.svg)](https://github.com/Sohag446/CINEMATIC-STUDIO/actions)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2011%20x64-blue.svg)](https://microsoft.com/windows)
+[![Architecture](https://img.shields.io/badge/Tech-Tauri%202%20%7C%20Rust%20%7C%20React%20%7C%20SQLite-indigo.svg)]()
+[![Status](https://img.shields.io/badge/Implementation-Phases%201--4%20Complete-green.svg)]()
 
 ---
 
-### Master Documentation Index
+## 1. Product Vision & Overview
 
-| Document | Purpose & Scope |
-| :--- | :--- |
-| [01. README.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/README.md) | Platform overview, engineering tenets, and document navigation. |
-| [02. PRODUCT-REQUIREMENTS.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/PRODUCT-REQUIREMENTS.md) | Comprehensive functional and non-functional requirements, user stories, constraints. |
-| [03. SYSTEM-ARCHITECTURE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/SYSTEM-ARCHITECTURE.md) | High-level topology, data flows, boundaries, and communication topologies. |
-| [04. TECH-STACK-DECISIONS.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/TECH-STACK-DECISIONS.md) | Deep comparative evaluation (Tauri 2 vs Electron, Native Messaging vs WS, etc.). |
-| [05. DATABASE-SCHEMA.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/DATABASE-SCHEMA.md) | Relational SQLite schema, indexes, migrations, WAL mode, integrity checks. |
-| [06. PROJECT-FILE-STRUCTURE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/PROJECT-FILE-STRUCTURE.md) | On-disk project bundle layout, caching, atomic saves, ZIP packaging. |
-| [07. DESKTOP-APPLICATION-ARCHITECTURE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/DESKTOP-APPLICATION-ARCHITECTURE.md) | Tauri Rust backend, React frontend, UI layout, virtualization, and state flow. |
-| [08. CHROME-PROFILE-INTEGRATION.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/CHROME-PROFILE-INTEGRATION.md) | Discovery, registration, Windows Chrome User Data directory mapping, lifecycle. |
-| [09. CHROME-EXTENSION-ARCHITECTURE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/CHROME-EXTENSION-ARCHITECTURE.md) | Manifest V3 design, background service workers, content script sandboxing. |
-| [10. BROWSER-AUTOMATION-STRATEGY.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/BROWSER-AUTOMATION-STRATEGY.md) | DOM selector resilience, mutation observers, human interaction pauses, ethical policy. |
-| [11. AI-PROVIDER-ADAPTER-ARCHITECTURE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/AI-PROVIDER-ADAPTER-ARCHITECTURE.md) | Adapter contract for LLMs (ChatGPT, Claude, Gemini) and Video generators (Veo, Flow). |
-| [12. VIDEO-PRODUCTION-ENGINE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/VIDEO-PRODUCTION-ENGINE.md) | Scene breakdown, clip planning, scheduling, multi-clip asset assembly. |
-| [13. VIDEO-CONTINUITY-ENGINE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/VIDEO-CONTINUITY-ENGINE.md) | Visual continuity tracking, start/end frame references, motion direction vectors. |
-| [14. PROMPT-ENGINE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/PROMPT-ENGINE.md) | Multi-tier prompt compilation, variable injection, provider templating, versioning. |
-| [15. TASK-QUEUE-AND-RECOVERY.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/TASK-QUEUE-AND-RECOVERY.md) | Resilient state machine, crash recovery, deduplication, retry semantics. |
-| [16. MEDIA-AND-FFMPEG-ARCHITECTURE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/MEDIA-AND-FFMPEG-ARCHITECTURE.md) | FFmpeg streaming assembly, chunked concatenations, proxy thumbnails, audio mix. |
-| [17. SECURITY-ARCHITECTURE.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/SECURITY-ARCHITECTURE.md) | IPC validation, origin fencing, path traversal prevention, credential isolation. |
-| [18. RAM-AND-PERFORMANCE-OPTIMIZATION.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/RAM-AND-PERFORMANCE-OPTIMIZATION.md) | Strict memory budgets, garbage collection triggers, zero-copy pipelines, profiling. |
-| [19. FIVE-PHASE-IMPLEMENTATION-ROADMAP.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/FIVE-PHASE-IMPLEMENTATION-ROADMAP.md) | Step-by-step phased execution roadmap with completion criteria for each phase. |
-| [20. RISKS-AND-TECHNICAL-LIMITATIONS.md](file:///c:/Users/Sohag%20Hossen/Documents/video%20agent/RISKS-AND-TECHNICAL-LIMITATIONS.md) | Exhaustive feasibility matrix, DOM mutation risks, policy limitations, fallbacks. |
+**CINEMATIC STUDIO** is a local-first Windows desktop platform engineered to orchestrate long-form cinematic video production (10-minute, 20-minute, and multi-scene episodic projects). 
+
+Rather than relying on expensive, black-box third-party cloud orchestration APIs with recurring per-minute markups, CINEMATIC STUDIO coordinates the creator's existing, authenticated consumer AI web sessions (such as **ChatGPT**, **Claude**, **Gemini**, and **Google Flow / Veo**) across dedicated Chrome browser profiles, while retaining all project assets, scene breakdowns, script versions, and video assembly locally on the creator's desktop.
+
+### Core Architectural Tenets:
+1. **Local-First Single Source of Truth**: The Desktop Application (built on **Tauri 2**, **Rust**, **React 18**, and **SQLite**) acts as the central orchestration brain. All scripts, project trees, task queues, and media metadata live in a relational SQLite database on local NVMe/SSD storage.
+2. **Extreme RAM & Hardware Efficiency**: Engineered to operate comfortably within a standard **20 GB RAM workstation** alongside multiple open browser profiles. Enforces bounded concurrency (one active browser generation task at a time), off-RAM media streaming, and lazy state hydration.
+3. **Passive Authentication & Non-Circumvention**: Never asks for, reads, stores, or transmits user passwords, login cookies, or session tokens. All browser automation interacts strictly with existing user-logged-in Chrome profiles via a sandboxed Manifest V3 extension.
+4. **Zero Bot Bypassing**: When a provider website presents a CAPTCHA, Cloudflare Turnstile, or login wall, automation immediately pauses and signals `NEEDS_HUMAN_ACTION`, preserving the tab so the creator can solve it directly in Chrome.
+5. **Deterministic Media Assembly**: Integrated multitrack timeline with bundled **FFmpeg 9.0.2** media engine performing non-destructive conform, 1080p/720p normalization, 24 fps rate conforming, sidechain audio ducking, crossfades, and social vertical (9:16) rendering.
 
 ---
 
-### High-Level Topology
+## 2. High-Level Architecture Topology
 
 ```
 +--------------------------------------------------------------------------------------------------+
 |                                    CINEMATIC STUDIO (DESKTOP)                                    |
 |                                                                                                  |
-|  [ UI LAYER: React 18 + TypeScript + TailwindCSS + Virtualized Canvas / Timeline / Inspector ]   |
+|  [ UI LAYER: React 18 + TypeScript + TailwindCSS + Virtualized Multitrack Timeline & Inspector ]|
 |                                          | Tauri IPC                                             |
-|  [ CORE RUST BACKEND: Tokio Async Runtime, Concurrency Semaphore, Media Pipeline, FFmpeg Subproc] |
+|  [ CORE RUST BACKEND: Tokio Async Runtime, Concurrency Semaphore, SQLite Pool, FFmpeg Pipeline ] |
 |                                          |                                                       |
-|  [ LOCAL DATABASE: SQLite 3 with WAL Mode, Relational Schema, Strict Foreign Keys, JSON Indexing]|
+|  [ LOCAL DATABASE: SQLite 3 with WAL Mode, Migrations 001–005, Strict Relational Foreign Keys ]  |
 |                                          |                                                       |
-|  [ LOCAL COMMUNICATION BRIDGE: Windows Named Pipe Server (Strict DACL) + Native Relay]            |
+|  [ NATIVE MESSAGING HOST: 32-bit LE Stdio Framing, HMAC-SHA256 Challenge-Response Broker ]        |
 +------------------------------------------+-------------------------------------------------------+
-                                           | Windows Named Pipe Stream (\\.\pipe\cinematic_studio_ipc)
-         +---------------------------------+---------------------------------+
-         |                                 |                                 |
-+--------v-----------------------+ +-------v-----------------------+ +-------v---------------------+
-| Chrome Profile 1 (e.g. Chat)   | | Chrome Profile 2 (e.g. Gemini)| | Chrome Profile 3 (Video Gen)|
-| +----------------------------+ | | +----------------------------+ | | +--------------------------+ |
-| | Manifest V3 Extension Agent| | | | Manifest V3 Extension Agent| | | | Manifest V3 Extension Agent| |
-| | - Background Service Worker| | | | - Background Service Worker| | | | - Background Service Worker| |
-| | - Active Tab Content Script| | | | - Active Tab Content Script| | | | - Active Tab Content Script| |
-| | - Site Adapter: ChatGPT    | | | | - Site Adapter: Claude/Gem | | | | - Site Adapter: Veo/Flow   | |
-| +--------------+-------------+ | | +--------------+-------------+ | | +--------------+-----------+ |
-|                | DOM Injection | |                | DOM Injection | |                | DOM Inject|
-| +--------------v-------------+ | | +--------------v-------------+ | | +--------------v-----------+ |
-| | chatgpt.com                | | | | gemini.google.com          | | | | video-gen.google.com /... | |
-| +----------------------------+ | | +----------------------------+ | | +--------------------------+ |
-+--------------------------------+ +--------------------------------+ +------------------------------+
+                                           | Standard I/O Pipe (Chrome Native Messaging)
+        +----------------------------------+----------------------------------+
+        |                                                                     |
+        v                                                                     v
++-------------------------------+                     +-------------------------------+
+|   CHROME PROFILE: "SOHAG AI"   |                     |    CHROME PROFILE: "CLAUDE"   |
+|   (Profile 4 - Veo Video)     |                     |    (Profile 6 - Script Chat)  |
+|                               |                     |                               |
+|  [Manifest V3 Extension]      |                     |  [Manifest V3 Extension]      |
+|  [Execution Engine]           |                     |  [Execution Engine]           |
+|  [Veo / Google Flow Adapter]  |                     |  [Claude.ai Adapter]          |
+|  Active Tab: flow.google.com  |                     |  Active Tab: claude.ai        |
++-------------------------------+                     +-------------------------------+
 ```
 
 ---
 
-### Project Status & Governance
-- **Current Phase**: **PHASE 1 COMPLETE — Desktop Core & Project Foundation Verified**.
-- **Implementation Status**:
-  - [x] High-performance React 18 + TypeScript + Tailwind CSS cinematic desktop interface.
-  - [x] Dual-Panel Control Center (AI Model Workspace & Video Generation Workspace).
-  - [x] Bottom Production Management Panel with $O(1)$ memory virtualized timeline strip.
-  - [x] 100% Local-first Project Management backed by atomic filesystem vaults and SQLite schemas.
-  - [x] 360-clip benchmark suite (validating sub-second responsiveness for 60-minute featurette scale).
-  - [x] Low-RAM SQLite database configuration (`WAL mode`, `temp_store = FILE`, `cache_size = -8000`).
-  - [x] Phase 1 Automated Validation Suite (13 / 13 tests passing).
+## 3. Implementation Status Across Phases
+
+The application architecture is structured into five engineering phases. **Phases 1 through 4 are fully implemented at the source level**:
+
+| Phase | Core Functional Modules | Source Status | Live Runtime Status |
+| :--- | :--- | :--- | :--- |
+| **Phase 1: Desktop Core Foundation** | Tauri 2 backend, React frontend, SQLite persistence (Migrations 001–002), Deletion State Machine, 20 architecture blueprints. | **COMPLETE** | **VERIFIED** (Component tests passing) |
+| **Phase 2: Chrome Profile & Extension** | Read-only Chrome `Local State` profile discovery, MV3 extension, HMAC-SHA256 handshake, stdio Native Messaging host (`src/bin/host.rs`). | **COMPLETE** | **PARTIALLY VERIFIED** (Host binary compilation blocked locally by Windows SAC) |
+| **Phase 3: AI Provider Automation** | Fallback DOM selector trees, ProseMirror event injection, and failure recovery for ChatGPT, Claude, Gemini, and Google Flow/Veo. | **COMPLETE** | **DOM VERIFIED** (Live online credit generation intentionally gated) |
+| **Phase 4: Media Assembly & FFmpeg** | Multitrack timeline engine (V1, V2, A1, A2, Overlay), asset ingestion, bundled FFmpeg 9.0.2 Gyan essentials distribution, 15 render regression scenarios. | **COMPLETE** | **VERIFIED** (14 real render scenarios passing with real media) |
+| **Phase 5: Production Packaging & Release** | Cloud CI/CD build, Authenticode code signing, SmartScreen reputation bootstrapping, signed NSIS installer distribution. | **IN PROGRESS** | **AWAITING CI PIPELINE EXECUTION** |
 
 ---
 
-## Developer Quick Start & Phase 1 Execution
+## 4. Current Limitations & Known Blocker
 
-### 1. Prerequisites
-- **Operating System**: Windows 10/11 x64.
-- **Node.js**: v20.18.0+ LTS (installed in `%LOCALAPPDATA%\Programs\nodejs`).
-- **WebView2 Runtime**: Microsoft Edge WebView2 (installed in `%ProgramFiles(x86)%\Microsoft\EdgeWebView`).
-- **Git**: 2.50+ Windows x64.
-- **Rust Toolchain**: Rust 1.80+ / Cargo (managed via Rustup). Note: Windows 11 Smart App Control (SAC) must be set to allow Rust toolchain execution if building native binaries.
+> [!IMPORTANT]
+> **Windows 11 Smart App Control & Native Compilation Notice**:
+> - **Native Messaging Host Binary**: `cinematic-studio-host.exe` is fully implemented in Rust (`src-tauri/src/bin/host.rs`), but the physical binary is not pre-committed to Git because it must be compiled for the target platform.
+> - **Local Workstation Constraint**: On machines running **Windows 11 Smart App Control (SAC)** in enforcement mode without local MSVC C++ Build Tools (`link.exe`), local ad-hoc compilation is blocked with `os error 4551`.
+> - **Resolution Strategy**: The binary and installer packages are built through the sanitized GitHub Actions CI runner (`windows-latest`) which houses pre-installed Visual Studio 2022 Enterprise with genuine MSVC linkers.
+> - **Provider Website UI Notice**: AI provider web interfaces (ChatGPT, Claude, Gemini, Flow) evolve independently. The extension uses resilient multi-tier fallback selectors, but interface shifts may require adapter updates.
+> - **Zero Live Automation Claims**: Live remote video generation using paid user credits has NOT been automatically run to guarantee zero unauthorized credit consumption.
 
-### 2. Launching Desktop UI in Development Mode
-```powershell
-# Set Node in environment path if not persistent
-$env:Path = "C:\Users\Sohag Hossen\AppData\Local\Programs\nodejs;$env:Path"
+---
 
-# Run Vite development server
-npm run dev
-# -> Opens http://localhost:1420
-```
+## 5. Master Architecture Documentation Index
 
-### 3. Compiling Production Bundle
-```powershell
-$env:Path = "C:\Users\Sohag Hossen\AppData\Local\Programs\nodejs;$env:Path"
+The repository maintains an exhaustive library of 20 foundational architectural blueprints:
+
+| Document | Key Architectural Topics |
+| :--- | :--- |
+| [01. PRODUCT-REQUIREMENTS.md](PRODUCT-REQUIREMENTS.md) | Comprehensive functional and non-functional requirements, constraints. |
+| [02. SYSTEM-ARCHITECTURE.md](SYSTEM-ARCHITECTURE.md) | High-level topology, data flows, boundaries, and communication paths. |
+| [03. TECH-STACK-DECISIONS.md](TECH-STACK-DECISIONS.md) | Comparative evaluation (Tauri 2 vs Electron, Native Messaging vs WS). |
+| [04. DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) | Relational SQLite schema, indexes, migrations 001–005, WAL mode. |
+| [05. PROJECT-FILE-STRUCTURE.md](PROJECT-FILE-STRUCTURE.md) | On-disk project bundle layout, caching, atomic saves, ZIP export. |
+| [06. DESKTOP-APPLICATION-ARCHITECTURE.md](DESKTOP-APPLICATION-ARCHITECTURE.md) | Tauri Rust backend, React frontend, virtualized canvas, state flow. |
+| [07. CHROME-PROFILE-INTEGRATION.md](CHROME-PROFILE-INTEGRATION.md) | Discovery, registration, Windows Chrome User Data directory mapping. |
+| [08. CHROME-EXTENSION-ARCHITECTURE.md](CHROME-EXTENSION-ARCHITECTURE.md) | Manifest V3 design, background service workers, content script sandboxing. |
+| [09. BROWSER-AUTOMATION-STRATEGY.md](BROWSER-AUTOMATION-STRATEGY.md) | DOM selector resilience, mutation observers, human interaction pauses. |
+| [10. AI-PROVIDER-ADAPTER-ARCHITECTURE.md](AI-PROVIDER-ADAPTER-ARCHITECTURE.md) | Adapter contract for LLMs (ChatGPT, Claude, Gemini) and Video (Veo, Flow). |
+| [11. VIDEO-PRODUCTION-ENGINE.md](VIDEO-PRODUCTION-ENGINE.md) | Scene breakdown, clip planning, scheduling, multi-clip asset assembly. |
+| [12. VIDEO-CONTINUITY-ENGINE.md](VIDEO-CONTINUITY-ENGINE.md) | Visual continuity tracking, start/end frame references, motion direction. |
+| [13. PROMPT-ENGINE.md](PROMPT-ENGINE.md) | Multi-tier prompt compilation, variable injection, provider templating. |
+| [14. TASK-QUEUE-AND-RECOVERY.md](TASK-QUEUE-AND-RECOVERY.md) | Resilient state machine, crash recovery, deduplication, retry semantics. |
+| [15. MEDIA-AND-FFMPEG-ARCHITECTURE.md](MEDIA-AND-FFMPEG-ARCHITECTURE.md) | FFmpeg streaming assembly, chunked concatenations, proxy thumbnails. |
+| [16. SECURITY-ARCHITECTURE.md](SECURITY-ARCHITECTURE.md) | IPC validation, origin fencing, path traversal prevention, credentials. |
+| [17. RAM-AND-PERFORMANCE-OPTIMIZATION.md](RAM-AND-PERFORMANCE-OPTIMIZATION.md) | Strict memory budgets, garbage collection triggers, zero-copy pipelines. |
+| [18. FIVE-PHASE-IMPLEMENTATION-ROADMAP.md](FIVE-PHASE-IMPLEMENTATION-ROADMAP.md) | Phased execution roadmap with exit criteria for each phase. |
+| [19. RISKS-AND-TECHNICAL-LIMITATIONS.md](RISKS-AND-TECHNICAL-LIMITATIONS.md) | Exhaustive feasibility matrix, DOM mutation risks, policy fallbacks. |
+| [20. FFMPEG-RENDERING-ARCHITECTURE.md](FFMPEG-RENDERING-ARCHITECTURE.md) | 15 real rendering test scenarios, stream copy concat, audio ducking. |
+
+---
+
+## 6. Building from Source & Running Tests
+
+### Prerequisites:
+- **Node.js**: v20.x or higher
+- **Rust Toolchain**: Stable `x86_64-pc-windows-msvc` (with Visual Studio C++ Build Tools installed)
+- **Git**
+
+### Installation & Test Execution:
+```bash
+# 1. Clone the repository
+git clone https://github.com/Sohag446/CINEMATIC-STUDIO.git
+cd CINEMATIC-STUDIO
+
+# 2. Install Node dependencies
+npm ci
+
+# 3. Build the frontend production bundle
 npm run build
-# -> Type-checks and creates production bundle in /dist
-```
 
-### 4. Running the Phase 1 Validation Test Suite
-```powershell
-$env:Path = "C:\Users\Sohag Hossen\AppData\Local\Programs\nodejs;$env:Path"
-node tests/phase1_validation.cjs
-# -> Executes 13 tests verifying vault scaffolding, atomic writes, 360-clip scale, and integrity healing.
+# 4. Run automated test suites
+node tests/combined_phase1_2_validation.cjs
+node tests/phase3_provider_matrix_test.cjs
+node tests/phase4_media_assembly_test.cjs
+node tests/phase4_runtime_hardening_test.cjs
+node tests/media_engine_resolver_test.cjs
+node tests/final_rendering_regression_suite.cjs
 ```
 
 ---
 
-## Phase 1 Implemented Features vs Future Roadmap
+## 7. Security & Privacy
 
-| Feature Area | Status | Implementation Details |
-| :--- | :--- | :--- |
-| **Top Navigation** | **Implemented** | Project identity, New/Open/Save/Rename/Close modals, 360-clip benchmark button, live telemetry pill. |
-| **Left Panel (AI Model)** | **Implemented (UI & Types)** | Reasoning provider selector, task type picker, context toggles, prompt editor, review staging. |
-| **Right Panel (Video Gen)** | **Implemented (UI & Types)** | Video provider selector, Scene/Shot navigation, cinematography tags, reference frame placeholders. |
-| **Bottom Production Panel** | **Implemented** | Status counters (Pending, Running, Completed, Failed), Sequential mode switch, virtualized timeline. |
-| **Project Directory Vault** | **Implemented** | 14 structured subdirectories (`clips/`, `proxies/`, `thumbnails/`, etc.), atomic manifest saves. |
-| **Database & Persistence** | **Implemented** | Relational SQLite schema with WAL mode, `temp_store = FILE`, strict foreign keys. |
-| **Chrome Extensions & Bridge**| *Scheduled: Phase 2* | Portless Windows Named Pipe Relay, MV3 Service Worker agent, Chrome Profile pairing. |
-| **AI LLM Live Generation** | *Scheduled: Phase 3* | ChatGPT, Claude, Gemini DOM adapters, narrative breakdown parser. |
-| **AI Video Live Generation** | *Scheduled: Phase 4* | Google Veo, Runway, Luma DOM adapters, FFmpeg end-frame handover ($T_{end}$). |
-| **Final FFmpeg Video Export** | *Scheduled: Phase 5* | Concat demuxer stream copy, normalizing transcode, multi-track audio mix, ZIP export. |
+For security disclosures and policies, please review [SECURITY.md](SECURITY.md).
+CINEMATIC STUDIO operates under strict zero-credential-scraping and local data sovereignty principles.
 
+---
+
+## 8. Contributing & Collaboration
+
+Collaborators and friends are invited to review [CONTRIBUTING.md](CONTRIBUTING.md) for branch workflows, coding conventions, and architectural invariants.

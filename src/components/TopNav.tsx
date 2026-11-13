@@ -11,7 +11,9 @@ import {
   Edit3, 
   XSquare,
   Sparkles,
-  Trash2
+  Trash2,
+  FolderTree,
+  Share2
 } from 'lucide-react';
 import { useStudioStore } from '../stores/useStudioStore';
 
@@ -29,7 +31,9 @@ export const TopNav: React.FC = () => {
     seed360Clips,
     clips,
     registeredProfiles,
-    setChromeProfileModalOpen
+    setChromeProfileModalOpen,
+    setMediaLibraryModalOpen,
+    setExportModalOpen
   } = useStudioStore();
 
   const [isSavedRecently, setIsSavedRecently] = React.useState(false);
@@ -48,7 +52,7 @@ export const TopNav: React.FC = () => {
           <Film className="w-5 h-5 text-studio-accent animate-pulse" />
           <span className="text-slate-100 font-mono">CINEMATIC<span className="text-studio-accent">STUDIO</span></span>
           <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-studio-800 text-slate-300 border border-studio-700">
-            Phase 1+2
+            Phase 1-4 Engine
           </span>
         </div>
 
@@ -121,6 +125,24 @@ export const TopNav: React.FC = () => {
             >
               <Save className="w-3.5 h-3.5" />
               <span>{isSavedRecently ? 'Saved!' : 'Save'}</span>
+            </button>
+
+            <button
+              onClick={() => setMediaLibraryModalOpen(true)}
+              title="Open Project Media Vault (Clips, Audio, Assets)"
+              className="flex items-center space-x-1.5 text-xs bg-studio-800 hover:bg-studio-750 text-slate-200 px-3 py-1.5 rounded border border-studio-700 transition-colors"
+            >
+              <FolderTree className="w-3.5 h-3.5 text-studio-cyan" />
+              <span>Media Vault</span>
+            </button>
+
+            <button
+              onClick={() => setExportModalOpen(true)}
+              title="Render Timeline to Master MP4 with FFmpeg"
+              className="flex items-center space-x-1.5 text-xs bg-studio-accent/20 hover:bg-studio-accent/30 text-studio-accent px-3 py-1.5 rounded border border-studio-accent/40 transition-colors font-medium"
+            >
+              <Share2 className="w-3.5 h-3.5 text-studio-accent" />
+              <span>Export Video</span>
             </button>
 
             {clips.length < 50 && (
