@@ -1,14 +1,17 @@
+use super::models::{ConcatCompatibilityDto, FFmpegStatusDto, MediaAssetDto};
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::Manager;
-use super::models::{ConcatCompatibilityDto, FFmpegStatusDto, MediaAssetDto};
 
 /// Trusted Cryptographic Checksums from Upstream Gyan.dev 9.0.2 Essentials Build
-pub const EXPECTED_FFMPEG_SHA256: &str = "3256173f3f8bffd7df12227c68adf68025edb1832273a9530688a7bb1ed8edec";
-pub const EXPECTED_FFPROBE_SHA256: &str = "f0d36ecbbdd3bcfac3efa078c96c7271c2e68b3810595552ac3b7f17e9a65c52";
-pub const EXPECTED_ARCHIVE_SHA256: &str = "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba";
+pub const EXPECTED_FFMPEG_SHA256: &str =
+    "3256173f3f8bffd7df12227c68adf68025edb1832273a9530688a7bb1ed8edec";
+pub const EXPECTED_FFPROBE_SHA256: &str =
+    "f0d36ecbbdd3bcfac3efa078c96c7271c2e68b3810595552ac3b7f17e9a65c52";
+pub const EXPECTED_ARCHIVE_SHA256: &str =
+    "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba";
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResolutionSource {
@@ -55,29 +58,39 @@ impl MediaEngineResolver {
     pub fn resolve(
         app_handle: Option<&tauri::AppHandle>,
         custom_ffmpeg: Option<&str>,
-        custom_ffprobe: Option<&str>
+        custom_ffprobe: Option<&str>,
     ) -> MediaEngineResolutionReport {
         let mut diagnostics = Vec::new();
         let is_production = Self::is_production_environment(app_handle);
 
         diagnostics.push(format!(
             "MediaEngineResolver invoked. Mode: {}",
-            if is_production { "INSTALLED_PRODUCTION" } else { "DEVELOPMENT" }
+            if is_production {
+                "INSTALLED_PRODUCTION"
+            } else {
+                "DEVELOPMENT"
+            }
         ));
 
         // 1. Check User Override
         if let Some(custom) = custom_ffmpeg {
             let trimmed = custom.trim();
             if !trimmed.is_empty() {
-                diagnostics.push(format!("Checking Priority 1 (User Override): '{}'", trimmed));
+                diagnostics.push(format!(
+                    "Checking Priority 1 (User Override): '{}'",
+                    trimmed
+                ));
                 match Self::validate_user_path(trimmed, "ffmpeg") {
                     Ok(path) => {
                         let ffprobe_path = custom_ffprobe
                             .and_then(|p| Self::validate_user_path(p.trim(), "ffprobe").ok())
                             .or_else(|| Self::find_companion_binary(&path, "ffprobe"));
 
-                        let ffmpeg_integrity = Self::probe_binary_integrity(&path, Some(EXPECTED_FFMPEG_SHA256));
-                        let ffprobe_integrity = ffprobe_path.as_ref().map(|p| Self::probe_binary_integrity(p, Some(EXPECTED_FFPROBE_SHA256)));
+                        let ffmpeg_integrity =
+                            Self::probe_binary_integrity(&path, Some(EXPECTED_FFMPEG_SHA256));
+                        let ffprobe_integrity = ffprobe_path.as_ref().map(|p| {
+                            Self::probe_binary_integrity(p, Some(EXPECTED_FFPROBE_SHA256))
+                        });
 
                         return MediaEngineResolutionReport {
                             resolution_source: ResolutionSource::UserOverride,
@@ -98,14 +111,25 @@ impl MediaEngineResolver {
         }
 
         // 2. Check Tauri Production Resource Directory
-        diagnostics.push("Checking Priority 2 (Tauri Production Resource Directory)...".to_string());
+        diagnostics
+            .push("Checking Priority 2 (Tauri Production Resource Directory)...".to_string());
         let prod_dirs = Self::get_tauri_production_resource_dirs(app_handle);
         for dir in &prod_dirs {
-            diagnostics.push(format!("Probing production candidate dir: '{}'", dir.display()));
+            diagnostics.push(format!(
+                "Probing production candidate dir: '{}'",
+                dir.display()
+            ));
             if let Some((ffmpeg, ffprobe)) = Self::check_binary_pair_in_dir(dir) {
-                diagnostics.push(format!("Found bundled binaries in production resource directory: '{}'", dir.display()));
-                let ffmpeg_integrity = Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
-                let ffprobe_integrity = Some(Self::probe_binary_integrity(&ffprobe, Some(EXPECTED_FFPROBE_SHA256)));
+                diagnostics.push(format!(
+                    "Found bundled binaries in production resource directory: '{}'",
+                    dir.display()
+                ));
+                let ffmpeg_integrity =
+                    Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
+                let ffprobe_integrity = Some(Self::probe_binary_integrity(
+                    &ffprobe,
+                    Some(EXPECTED_FFPROBE_SHA256),
+                ));
 
                 return MediaEngineResolutionReport {
                     resolution_source: ResolutionSource::TauriProductionResource,
@@ -125,9 +149,16 @@ impl MediaEngineResolver {
         let dev_dirs = Self::get_development_resource_dirs();
         for dir in &dev_dirs {
             if let Some((ffmpeg, ffprobe)) = Self::check_binary_pair_in_dir(dir) {
-                diagnostics.push(format!("Found bundled binaries in development resource directory: '{}'", dir.display()));
-                let ffmpeg_integrity = Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
-                let ffprobe_integrity = Some(Self::probe_binary_integrity(&ffprobe, Some(EXPECTED_FFPROBE_SHA256)));
+                diagnostics.push(format!(
+                    "Found bundled binaries in development resource directory: '{}'",
+                    dir.display()
+                ));
+                let ffmpeg_integrity =
+                    Self::probe_binary_integrity(&ffmpeg, Some(EXPECTED_FFMPEG_SHA256));
+                let ffprobe_integrity = Some(Self::probe_binary_integrity(
+                    &ffprobe,
+                    Some(EXPECTED_FFPROBE_SHA256),
+                ));
 
                 return MediaEngineResolutionReport {
                     resolution_source: ResolutionSource::DevelopmentResource,
@@ -147,7 +178,10 @@ impl MediaEngineResolver {
         if let Some(appdata) = std::env::var_os("LOCALAPPDATA") {
             let local_bin = PathBuf::from(appdata).join("CinematicStudio").join("bin");
             if let Some((ffmpeg, ffprobe)) = Self::check_binary_pair_in_dir(&local_bin) {
-                diagnostics.push(format!("Found binaries in local AppData fallback: '{}'", local_bin.display()));
+                diagnostics.push(format!(
+                    "Found binaries in local AppData fallback: '{}'",
+                    local_bin.display()
+                ));
                 let ffmpeg_integrity = Self::probe_binary_integrity(&ffmpeg, None);
                 let ffprobe_integrity = Some(Self::probe_binary_integrity(&ffprobe, None));
 
@@ -171,8 +205,12 @@ impl MediaEngineResolver {
 
         if ffmpeg_sys.is_some() {
             diagnostics.push("Found ffmpeg executable in system PATH".to_string());
-            let ffmpeg_integrity = ffmpeg_sys.as_ref().map(|p| Self::probe_binary_integrity(p, None));
-            let ffprobe_integrity = ffprobe_sys.as_ref().map(|p| Self::probe_binary_integrity(p, None));
+            let ffmpeg_integrity = ffmpeg_sys
+                .as_ref()
+                .map(|p| Self::probe_binary_integrity(p, None));
+            let ffprobe_integrity = ffprobe_sys
+                .as_ref()
+                .map(|p| Self::probe_binary_integrity(p, None));
 
             return MediaEngineResolutionReport {
                 resolution_source: ResolutionSource::SystemPath,
@@ -186,7 +224,9 @@ impl MediaEngineResolver {
             };
         }
 
-        diagnostics.push("Media engine binaries could not be located in any supported location".to_string());
+        diagnostics.push(
+            "Media engine binaries could not be located in any supported location".to_string(),
+        );
         MediaEngineResolutionReport {
             resolution_source: ResolutionSource::NotFound,
             ffmpeg_path: None,
@@ -220,10 +260,16 @@ impl MediaEngineResolver {
         if cfg!(windows) {
             if let Some(ext) = path.extension() {
                 if !ext.eq_ignore_ascii_case("exe") {
-                    return Err(format!("File '{}' is not an executable (.exe)", path.display()));
+                    return Err(format!(
+                        "File '{}' is not an executable (.exe)",
+                        path.display()
+                    ));
                 }
             } else {
-                return Err(format!("File '{}' missing executable extension", path.display()));
+                return Err(format!(
+                    "File '{}' missing executable extension",
+                    path.display()
+                ));
             }
         }
 
@@ -231,7 +277,10 @@ impl MediaEngineResolver {
         if let Some(stem) = path.file_stem() {
             let stem_str = stem.to_string_lossy().to_ascii_lowercase();
             if !stem_str.contains(expected_binary) {
-                return Err(format!("Executable name '{}' does not match expected '{}'", stem_str, expected_binary));
+                return Err(format!(
+                    "Executable name '{}' does not match expected '{}'",
+                    stem_str, expected_binary
+                ));
             }
         }
 
@@ -241,7 +290,11 @@ impl MediaEngineResolver {
     /// Discovers companion binary in the same directory (e.g. ffprobe next to ffmpeg)
     fn find_companion_binary(primary: &Path, companion_name: &str) -> Option<PathBuf> {
         let parent = primary.parent()?;
-        let exe_name = if cfg!(windows) { format!("{}.exe", companion_name) } else { companion_name.to_string() };
+        let exe_name = if cfg!(windows) {
+            format!("{}.exe", companion_name)
+        } else {
+            companion_name.to_string()
+        };
         let candidate = parent.join(exe_name);
         if candidate.exists() && candidate.is_file() {
             Some(candidate)
@@ -251,14 +304,21 @@ impl MediaEngineResolver {
     }
 
     /// Queries Tauri 2 application resource directory if AppHandle is present, plus current_exe anchor
-    pub fn get_tauri_production_resource_dirs(app_handle: Option<&tauri::AppHandle>) -> Vec<PathBuf> {
+    pub fn get_tauri_production_resource_dirs(
+        app_handle: Option<&tauri::AppHandle>,
+    ) -> Vec<PathBuf> {
         let mut dirs = Vec::new();
 
         // 1. Official Tauri 2 resource directory via Manager::path()
         if let Some(app) = app_handle {
             if let Ok(res_dir) = app.path().resource_dir() {
                 dirs.push(res_dir.join("media-engine").join("windows-x64"));
-                dirs.push(res_dir.join("resources").join("media-engine").join("windows-x64"));
+                dirs.push(
+                    res_dir
+                        .join("resources")
+                        .join("media-engine")
+                        .join("windows-x64"),
+                );
                 dirs.push(res_dir.clone());
             }
         }
@@ -266,7 +326,12 @@ impl MediaEngineResolver {
         // 2. Installed executable anchor (production layout on Windows NSIS/MSI)
         if let Ok(current_exe) = std::env::current_exe() {
             if let Some(exe_dir) = current_exe.parent() {
-                dirs.push(exe_dir.join("resources").join("media-engine").join("windows-x64"));
+                dirs.push(
+                    exe_dir
+                        .join("resources")
+                        .join("media-engine")
+                        .join("windows-x64"),
+                );
                 dirs.push(exe_dir.join("media-engine").join("windows-x64"));
                 dirs.push(exe_dir.to_path_buf());
             }
@@ -278,9 +343,18 @@ impl MediaEngineResolver {
     /// Candidate resource paths in development workspace
     pub fn get_development_resource_dirs() -> Vec<PathBuf> {
         vec![
-            PathBuf::from("src-tauri").join("resources").join("media-engine").join("windows-x64"),
-            PathBuf::from("resources").join("media-engine").join("windows-x64"),
-            PathBuf::from("..").join("src-tauri").join("resources").join("media-engine").join("windows-x64"),
+            PathBuf::from("src-tauri")
+                .join("resources")
+                .join("media-engine")
+                .join("windows-x64"),
+            PathBuf::from("resources")
+                .join("media-engine")
+                .join("windows-x64"),
+            PathBuf::from("..")
+                .join("src-tauri")
+                .join("resources")
+                .join("media-engine")
+                .join("windows-x64"),
         ]
     }
 
@@ -290,13 +364,25 @@ impl MediaEngineResolver {
             return None;
         }
 
-        let ffmpeg_name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
-        let ffprobe_name = if cfg!(windows) { "ffprobe.exe" } else { "ffprobe" };
+        let ffmpeg_name = if cfg!(windows) {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
+        let ffprobe_name = if cfg!(windows) {
+            "ffprobe.exe"
+        } else {
+            "ffprobe"
+        };
 
         let ffmpeg_path = dir.join(ffmpeg_name);
         let ffprobe_path = dir.join(ffprobe_name);
 
-        if ffmpeg_path.exists() && ffmpeg_path.is_file() && ffprobe_path.exists() && ffprobe_path.is_file() {
+        if ffmpeg_path.exists()
+            && ffmpeg_path.is_file()
+            && ffprobe_path.exists()
+            && ffprobe_path.is_file()
+        {
             Some((ffmpeg_path, ffprobe_path))
         } else {
             None
@@ -316,7 +402,10 @@ impl MediaEngineResolver {
             }
         }
         if let Ok(current_exe) = std::env::current_exe() {
-            let exe_name = current_exe.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let exe_name = current_exe
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
             if !exe_name.contains("target") {
                 return true;
             }
@@ -325,7 +414,10 @@ impl MediaEngineResolver {
     }
 
     /// Verifies PE header (PE32+ 64-bit), file size, and executable version
-    pub fn probe_binary_integrity(path: &Path, expected_hash: Option<&str>) -> Option<BinaryIntegrityInfo> {
+    pub fn probe_binary_integrity(
+        path: &Path,
+        expected_hash: Option<&str>,
+    ) -> Option<BinaryIntegrityInfo> {
         let meta = fs::metadata(path).ok()?;
         let file_size = meta.len();
 
@@ -378,13 +470,18 @@ impl MediaEngineResolver {
         }
 
         // PE offset is at 0x3C (little-endian 32-bit integer)
-        let pe_offset = u32::from_le_bytes([header[0x3C], header[0x3D], header[0x3E], header[0x3F]]) as usize;
+        let pe_offset =
+            u32::from_le_bytes([header[0x3C], header[0x3D], header[0x3E], header[0x3F]]) as usize;
         if pe_offset + 24 > bytes_read {
             return Ok(false);
         }
 
         // Verify PE signature: 'P' 'E' 0 0 (0x50, 0x45, 0x00, 0x00)
-        if header[pe_offset] != 0x50 || header[pe_offset + 1] != 0x45 || header[pe_offset + 2] != 0 || header[pe_offset + 3] != 0 {
+        if header[pe_offset] != 0x50
+            || header[pe_offset + 1] != 0x45
+            || header[pe_offset + 2] != 0
+            || header[pe_offset + 3] != 0
+        {
             return Ok(false);
         }
 
@@ -413,7 +510,11 @@ impl MediaEngineResolver {
     }
 
     fn probe_command_in_path(cmd: &str) -> Option<PathBuf> {
-        let exe_name = if cfg!(windows) { format!("{}.exe", cmd) } else { cmd.to_string() };
+        let exe_name = if cfg!(windows) {
+            format!("{}.exe", cmd)
+        } else {
+            cmd.to_string()
+        };
         let out = Command::new(&exe_name).arg("-version").output().ok()?;
         if out.status.success() {
             Some(PathBuf::from(exe_name))
@@ -427,7 +528,10 @@ pub struct FFmpegManager;
 
 impl FFmpegManager {
     /// Detects availability, versions, bundled status, encoders, and hardware capabilities of FFmpeg and FFprobe
-    pub fn detect_tools(custom_ffmpeg: Option<&str>, custom_ffprobe: Option<&str>) -> FFmpegStatusDto {
+    pub fn detect_tools(
+        custom_ffmpeg: Option<&str>,
+        custom_ffprobe: Option<&str>,
+    ) -> FFmpegStatusDto {
         Self::detect_tools_with_app(None, custom_ffmpeg, custom_ffprobe)
     }
 
@@ -435,25 +539,51 @@ impl FFmpegManager {
     pub fn detect_tools_with_app(
         app_handle: Option<&tauri::AppHandle>,
         custom_ffmpeg: Option<&str>,
-        custom_ffprobe: Option<&str>
+        custom_ffprobe: Option<&str>,
     ) -> FFmpegStatusDto {
         let report = MediaEngineResolver::resolve(app_handle, custom_ffmpeg, custom_ffprobe);
 
-        let ffmpeg_avail = report.ffmpeg_path.is_some() && report.ffmpeg_integrity.as_ref().map(|i| i.version_string.is_some()).unwrap_or(false);
-        let ffprobe_avail = report.ffprobe_path.is_some() && report.ffprobe_integrity.as_ref().map(|i| i.version_string.is_some()).unwrap_or(false);
+        let ffmpeg_avail = report.ffmpeg_path.is_some()
+            && report
+                .ffmpeg_integrity
+                .as_ref()
+                .map(|i| i.version_string.is_some())
+                .unwrap_or(false);
+        let ffprobe_avail = report.ffprobe_path.is_some()
+            && report
+                .ffprobe_integrity
+                .as_ref()
+                .map(|i| i.version_string.is_some())
+                .unwrap_or(false);
 
         let is_bundled = matches!(
             report.resolution_source,
             ResolutionSource::TauriProductionResource | ResolutionSource::DevelopmentResource
         );
 
-        let ffmpeg_path = report.ffmpeg_path.as_ref().map(|p| p.to_string_lossy().to_string());
-        let ffprobe_path = report.ffprobe_path.as_ref().map(|p| p.to_string_lossy().to_string());
+        let ffmpeg_path = report
+            .ffmpeg_path
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string());
+        let ffprobe_path = report
+            .ffprobe_path
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string());
 
-        let ffmpeg_ver = report.ffmpeg_integrity.as_ref().and_then(|i| i.version_string.clone());
-        let ffprobe_ver = report.ffprobe_integrity.as_ref().and_then(|i| i.version_string.clone());
+        let ffmpeg_ver = report
+            .ffmpeg_integrity
+            .as_ref()
+            .and_then(|i| i.version_string.clone());
+        let ffprobe_ver = report
+            .ffprobe_integrity
+            .as_ref()
+            .and_then(|i| i.version_string.clone());
 
-        let integrity_verified = report.ffmpeg_integrity.as_ref().map(|i| i.is_pe64 && i.file_size > 10_000_000).unwrap_or(false);
+        let integrity_verified = report
+            .ffmpeg_integrity
+            .as_ref()
+            .map(|i| i.is_pe64 && i.file_size > 10_000_000)
+            .unwrap_or(false);
 
         // Probe hardware acceleration and encoders if ffmpeg is available
         let mut encoders_available = Vec::new();
@@ -463,7 +593,15 @@ impl FFmpegManager {
         if let Some(ref p) = ffmpeg_path {
             if let Ok(out) = Command::new(p).args(&["-encoders"]).output() {
                 let enc_text = String::from_utf8_lossy(&out.stdout);
-                for enc in &["libx264", "libx265", "aac", "prores", "h264_nvenc", "hevc_nvenc", "libvpx-vp9"] {
+                for enc in &[
+                    "libx264",
+                    "libx265",
+                    "aac",
+                    "prores",
+                    "h264_nvenc",
+                    "hevc_nvenc",
+                    "libvpx-vp9",
+                ] {
                     if enc_text.contains(enc) {
                         encoders_available.push(enc.to_string());
                     }
@@ -475,9 +613,15 @@ impl FFmpegManager {
 
         let status_message = if ffmpeg_avail && ffprobe_avail {
             if is_bundled {
-                format!("Bundled Media Engine active (v{}) — Ready for production rendering", ffmpeg_ver.clone().unwrap_or_default())
+                format!(
+                    "Bundled Media Engine active (v{}) — Ready for production rendering",
+                    ffmpeg_ver.clone().unwrap_or_default()
+                )
             } else {
-                format!("External FFmpeg/FFprobe active: {}", ffmpeg_ver.clone().unwrap_or_default())
+                format!(
+                    "External FFmpeg/FFprobe active: {}",
+                    ffmpeg_ver.clone().unwrap_or_default()
+                )
             }
         } else if let Some(ref err) = report.security_policy_error {
             format!("FFmpeg detected but execution blocked: {}", err)
@@ -505,7 +649,10 @@ impl FFmpegManager {
     }
 
     /// Evaluates concatenation compatibility across source media assets
-    pub fn evaluate_concat_compatibility(clips: &[MediaAssetDto], has_transitions: bool) -> ConcatCompatibilityDto {
+    pub fn evaluate_concat_compatibility(
+        clips: &[MediaAssetDto],
+        has_transitions: bool,
+    ) -> ConcatCompatibilityDto {
         let mut reasons = Vec::new();
 
         if clips.is_empty() {
@@ -517,7 +664,10 @@ impl FFmpegManager {
         }
 
         if has_transitions {
-            reasons.push("Timeline contains transitions/crossfades which require re-encoding filtergraph".to_string());
+            reasons.push(
+                "Timeline contains transitions/crossfades which require re-encoding filtergraph"
+                    .to_string(),
+            );
         }
 
         let baseline = &clips[0];
@@ -536,16 +686,26 @@ impl FFmpegManager {
 
             if let (Some(fps_a), Some(fps_b)) = (baseline.fps, c.fps) {
                 if (fps_a - fps_b).abs() > 0.001 {
-                    reasons.push(format!("Clip #{} frame rate ({:.2}fps) differs from baseline ({:.2}fps)", i + 1, fps_b, fps_a));
+                    reasons.push(format!(
+                        "Clip #{} frame rate ({:.2}fps) differs from baseline ({:.2}fps)",
+                        i + 1,
+                        fps_b,
+                        fps_a
+                    ));
                 }
             } else if baseline.fps != c.fps {
-                reasons.push(format!("Clip #{} has undefined or mismatched frame rate", i + 1));
+                reasons.push(format!(
+                    "Clip #{} has undefined or mismatched frame rate",
+                    i + 1
+                ));
             }
 
             if c.video_codec != baseline.video_codec {
                 reasons.push(format!(
                     "Clip #{} video codec ({:?}) differs from baseline ({:?})",
-                    i + 1, c.video_codec, baseline.video_codec
+                    i + 1,
+                    c.video_codec,
+                    baseline.video_codec
                 ));
             }
 
@@ -555,7 +715,9 @@ impl FFmpegManager {
             if baseline_has_audio != c_has_audio {
                 reasons.push(format!(
                     "Clip #{} audio stream mismatch (baseline has_audio={}, clip has_audio={})",
-                    i + 1, baseline_has_audio, c_has_audio
+                    i + 1,
+                    baseline_has_audio,
+                    c_has_audio
                 ));
             } else if c_has_audio {
                 if c.audio_codec != baseline.audio_codec {
@@ -573,7 +735,11 @@ impl FFmpegManager {
         let is_safe = reasons.is_empty();
         ConcatCompatibilityDto {
             is_stream_copy_safe: is_safe,
-            recommended_strategy: if is_safe { "STREAM_COPY".to_string() } else { "NORMALIZING_TRANSCODE".to_string() },
+            recommended_strategy: if is_safe {
+                "STREAM_COPY".to_string()
+            } else {
+                "NORMALIZING_TRANSCODE".to_string()
+            },
             reasons,
         }
     }
@@ -587,7 +753,7 @@ impl FFmpegManager {
         target_fps: f64,
         threads: i32,
         staging_output_path: &str,
-        allow_overwrite: bool
+        allow_overwrite: bool,
     ) -> Vec<String> {
         let mut args = Vec::new();
 
@@ -677,10 +843,13 @@ impl FFmpegManager {
     pub fn finalize_render_atomic(
         staging_path: &Path,
         final_path: &Path,
-        allow_overwrite: bool
+        allow_overwrite: bool,
     ) -> Result<(), String> {
         if !staging_path.exists() {
-            return Err(format!("Staging output does not exist: {}", staging_path.display()));
+            return Err(format!(
+                "Staging output does not exist: {}",
+                staging_path.display()
+            ));
         }
 
         let meta = fs::metadata(staging_path).map_err(|e| e.to_string())?;
@@ -689,7 +858,10 @@ impl FFmpegManager {
         }
 
         if final_path.exists() && !allow_overwrite {
-            return Err(format!("Target output already exists at: {}", final_path.display()));
+            return Err(format!(
+                "Target output already exists at: {}",
+                final_path.display()
+            ));
         }
 
         // Ensure parent directory exists
@@ -699,15 +871,18 @@ impl FFmpegManager {
 
         // If target exists and overwrite is permitted, remove it first on Windows before rename
         if final_path.exists() && allow_overwrite {
-            fs::remove_file(final_path).map_err(|e| format!("Failed to remove previous file: {}", e))?;
+            fs::remove_file(final_path)
+                .map_err(|e| format!("Failed to remove previous file: {}", e))?;
         }
 
         // Atomic rename / move
-        fs::rename(staging_path, final_path).or_else(|_| {
-            // Fallback for cross-filesystem moves
-            fs::copy(staging_path, final_path)?;
-            fs::remove_file(staging_path)
-        }).map_err(|e| format!("Failed to finalize render output: {}", e))?;
+        fs::rename(staging_path, final_path)
+            .or_else(|_| {
+                // Fallback for cross-filesystem moves
+                fs::copy(staging_path, final_path)?;
+                fs::remove_file(staging_path)
+            })
+            .map_err(|e| format!("Failed to finalize render output: {}", e))?;
 
         Ok(())
     }
@@ -715,7 +890,8 @@ impl FFmpegManager {
     /// Cleans up temporary staging file on failure or cancellation without touching valid final outputs
     pub fn cleanup_staging_file(staging_path: &Path) -> Result<(), String> {
         if staging_path.exists() {
-            fs::remove_file(staging_path).map_err(|e| format!("Failed to clean staging file: {}", e))?;
+            fs::remove_file(staging_path)
+                .map_err(|e| format!("Failed to clean staging file: {}", e))?;
         }
         Ok(())
     }

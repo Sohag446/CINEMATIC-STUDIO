@@ -22,8 +22,8 @@ impl Sha256 {
     pub fn new() -> Self {
         Self {
             state: [
-                0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-                0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+                0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
+                0x5be0cd19,
             ],
             count: 0,
             buffer: [0u8; 64],
@@ -89,7 +89,10 @@ impl Sha256 {
         for i in 16..64 {
             let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
             let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
-            w[i] = w[i - 16].wrapping_add(s0).wrapping_add(w[i - 7]).wrapping_add(s1);
+            w[i] = w[i - 16]
+                .wrapping_add(s0)
+                .wrapping_add(w[i - 7])
+                .wrapping_add(s1);
         }
 
         let mut a = self.state[0];
@@ -104,7 +107,11 @@ impl Sha256 {
         for i in 0..64 {
             let s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
             let ch = (e & f) ^ ((!e) & g);
-            let temp1 = h.wrapping_add(s1).wrapping_add(ch).wrapping_add(K[i]).wrapping_add(w[i]);
+            let temp1 = h
+                .wrapping_add(s1)
+                .wrapping_add(ch)
+                .wrapping_add(K[i])
+                .wrapping_add(w[i]);
             let s0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
             let maj = (a & b) ^ (a & c) ^ (b & c);
             let temp2 = s0.wrapping_add(maj);
@@ -189,7 +196,12 @@ pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 pub fn generate_pairing_secret() -> String {
     let u1 = uuid::Uuid::new_v4();
     let u2 = uuid::Uuid::new_v4();
-    let combined = format!("{}:{}:{}", u1, u2, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+    let combined = format!(
+        "{}:{}:{}",
+        u1,
+        u2,
+        chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+    );
     let digest = sha256_digest(combined.as_bytes());
     to_hex(&digest)
 }

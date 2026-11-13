@@ -76,7 +76,10 @@ pub struct NativeMessagingIpc;
 
 impl NativeMessagingIpc {
     /// Generates and installs the Chrome Native Messaging host manifest JSON on Windows
-    pub fn install_host_manifest(host_exe_path: Option<&Path>, extension_id: Option<&str>) -> Result<PathBuf, String> {
+    pub fn install_host_manifest(
+        host_exe_path: Option<&Path>,
+        extension_id: Option<&str>,
+    ) -> Result<PathBuf, String> {
         let app_data = std::env::var_os("LOCALAPPDATA")
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from(r"C:\Users\Default\AppData\Local"));
@@ -94,7 +97,10 @@ impl NativeMessagingIpc {
                 if bin_path.exists() {
                     bin_path.to_string_lossy().to_string()
                 } else {
-                    manifest_dir.join("cinematic-studio-host.exe").to_string_lossy().to_string()
+                    manifest_dir
+                        .join("cinematic-studio-host.exe")
+                        .to_string_lossy()
+                        .to_string()
                 }
             });
 
@@ -121,7 +127,10 @@ impl NativeMessagingIpc {
             let _ = std::process::Command::new("reg")
                 .args([
                     "add",
-                    &format!(r"HKCU\Software\Google\Chrome\NativeMessagingHosts\{}", NATIVE_HOST_NAME),
+                    &format!(
+                        r"HKCU\Software\Google\Chrome\NativeMessagingHosts\{}",
+                        NATIVE_HOST_NAME
+                    ),
                     "/ve",
                     "/t",
                     "REG_SZ",
@@ -138,27 +147,38 @@ impl NativeMessagingIpc {
     /// Decodes a 32-bit little-endian length-prefixed Native Messaging packet from a reader
     pub fn read_packet<R: Read>(reader: &mut R) -> Result<IpcMessage, String> {
         let mut len_buf = [0u8; 4];
-        reader.read_exact(&mut len_buf).map_err(|e| format!("Failed to read packet length: {}", e))?;
+        reader
+            .read_exact(&mut len_buf)
+            .map_err(|e| format!("Failed to read packet length: {}", e))?;
         let len = u32::from_le_bytes(len_buf) as usize;
 
         if len == 0 {
             return Err("Received 0-byte packet".to_string());
         }
         if len > MAX_MESSAGE_SIZE {
-            return Err(format!("Message size {} exceeds maximum bounded limit of {} bytes", len, MAX_MESSAGE_SIZE));
+            return Err(format!(
+                "Message size {} exceeds maximum bounded limit of {} bytes",
+                len, MAX_MESSAGE_SIZE
+            ));
         }
 
         let mut data = vec![0u8; len];
-        reader.read_exact(&mut data).map_err(|e| format!("Failed to read packet body: {}", e))?;
+        reader
+            .read_exact(&mut data)
+            .map_err(|e| format!("Failed to read packet body: {}", e))?;
 
-        serde_json::from_slice::<IpcMessage>(&data).map_err(|e| format!("Invalid JSON message payload: {}", e))
+        serde_json::from_slice::<IpcMessage>(&data)
+            .map_err(|e| format!("Invalid JSON message payload: {}", e))
     }
 
     /// Encodes and writes a 32-bit little-endian length-prefixed Native Messaging packet
     pub fn write_packet<W: Write>(writer: &mut W, msg: &IpcMessage) -> Result<(), String> {
         let json = serde_json::to_vec(msg).map_err(|e| e.to_string())?;
         if json.len() > MAX_MESSAGE_SIZE {
-            return Err(format!("Message size {} exceeds maximum allowed packet limit", json.len()));
+            return Err(format!(
+                "Message size {} exceeds maximum allowed packet limit",
+                json.len()
+            ));
         }
 
         let len = (json.len() as u32).to_le_bytes();

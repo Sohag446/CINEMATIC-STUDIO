@@ -1,9 +1,9 @@
+use crate::project_manager::ProjectManager;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use crate::project_manager::ProjectManager;
 
 pub type DbPool = Pool<SqliteConnectionManager>;
 
@@ -62,19 +62,18 @@ pub struct RecoveryReport {
 }
 
 pub fn init_db<P: AsRef<Path>>(db_path: P) -> Result<DbPool, Box<dyn std::error::Error>> {
-    let manager = SqliteConnectionManager::file(db_path)
-        .with_init(|conn: &mut Connection| {
-            // Enforce low-RAM and data-integrity SQLite pragmas on EVERY pooled connection
-            conn.execute_batch(
-                "PRAGMA journal_mode = WAL;
+    let manager = SqliteConnectionManager::file(db_path).with_init(|conn: &mut Connection| {
+        // Enforce low-RAM and data-integrity SQLite pragmas on EVERY pooled connection
+        conn.execute_batch(
+            "PRAGMA journal_mode = WAL;
                  PRAGMA synchronous = NORMAL;
                  PRAGMA foreign_keys = ON;
                  PRAGMA cache_size = -8000;
                  PRAGMA temp_store = FILE;
                  PRAGMA mmap_size = 0;",
-            )?;
-            Ok(())
-        });
+        )?;
+        Ok(())
+    });
 
     let pool = Pool::builder()
         .max_size(4) // 1 write + 3 read connections max to bound RAM
@@ -109,7 +108,7 @@ pub fn apply_all_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::er
         "CREATE TABLE IF NOT EXISTS _schema_migrations (
             version INTEGER PRIMARY KEY NOT NULL,
             applied_at INTEGER NOT NULL
-        );"
+        );",
     )?;
 
     // 2. Query current migration version without silently suppressing database errors
@@ -136,7 +135,8 @@ pub fn apply_all_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::er
     // 4. Migration v2: storage_root and deletion journal
     if current_version < 2 {
         let tx = conn.transaction()?;
-        let migration_v2 = include_str!("../../migrations/002_storage_root_and_deletion_journal.sql");
+        let migration_v2 =
+            include_str!("../../migrations/002_storage_root_and_deletion_journal.sql");
         tx.execute_batch(migration_v2)?;
 
         let now = chrono::Utc::now().timestamp_millis();
@@ -193,7 +193,9 @@ pub fn apply_all_migrations(conn: &mut Connection) -> Result<(), Box<dyn std::er
 }
 
 /// Recovers any interrupted project deletions recorded in the deletion journal
-pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<RecoveryReport, Box<dyn std::error::Error>> {
+pub fn recover_interrupted_deletions(
+    conn: &mut Connection,
+) -> Result<RecoveryReport, Box<dyn std::error::Error>> {
     // Check if table exists
     let table_exists: bool = conn.query_row(
         "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='project_deletion_journal'",
@@ -237,7 +239,10 @@ pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<RecoveryRe
 
     for (project_id, name, dir_path, storage_root, mut deletion_state) in pending {
         // Resolve trusted storage root
-        let authorized_root = match ProjectManager::resolve_trusted_storage_root(&dir_path, &storage_root) {
+        let authorized_root = match ProjectManager::resolve_trusted_storage_root(
+            &dir_path,
+            &storage_root,
+        ) {
             Ok(root) => root,
             Err(e) => {
                 let err_msg = format!("Unauthorized storage root on recovery: {}", e);
@@ -245,7 +250,9 @@ pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<RecoveryRe
                     "UPDATE project_deletion_journal SET error_details = ?1, retry_count = retry_count + 1, updated_at = ?2 WHERE project_id = ?3",
                     (&err_msg, now, &project_id),
                 )?;
-                report.pending_failures.push(format!("{}: {}", project_id, err_msg));
+                report
+                    .pending_failures
+                    .push(format!("{}: {}", project_id, err_msg));
                 continue;
             }
         };
@@ -266,7 +273,9 @@ pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<RecoveryRe
                         "UPDATE project_deletion_journal SET error_details = ?1, retry_count = retry_count + 1, updated_at = ?2 WHERE project_id = ?3",
                         (&err_msg, now, &project_id),
                     )?;
-                    report.pending_failures.push(format!("{}: {}", project_id, err_msg));
+                    report
+                        .pending_failures
+                        .push(format!("{}: {}", project_id, err_msg));
                     // Preserve journal and database record for later retry!
                     continue;
                 }
@@ -278,14 +287,19 @@ pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<RecoveryRe
             let db_cleanup = (|| -> Result<(), rusqlite::Error> {
                 let tx = conn.transaction()?;
                 tx.execute("DELETE FROM projects WHERE id = ?1", [&project_id])?;
-                tx.execute("DELETE FROM project_deletion_journal WHERE project_id = ?1", [&project_id])?;
+                tx.execute(
+                    "DELETE FROM project_deletion_journal WHERE project_id = ?1",
+                    [&project_id],
+                )?;
                 tx.commit()?;
                 Ok(())
             })();
 
             match db_cleanup {
                 Ok(_) => {
-                    report.successful_recoveries.push(format!("{}: {}", project_id, name));
+                    report
+                        .successful_recoveries
+                        .push(format!("{}: {}", project_id, name));
                 }
                 Err(e) => {
                     let err_msg = format!("Database cleanup failed during recovery: {}", e);
@@ -293,7 +307,9 @@ pub fn recover_interrupted_deletions(conn: &mut Connection) -> Result<RecoveryRe
                         "UPDATE project_deletion_journal SET error_details = ?1, retry_count = retry_count + 1, updated_at = ?2 WHERE project_id = ?3",
                         (&err_msg, now, &project_id),
                     )?;
-                    report.pending_failures.push(format!("{}: {}", project_id, err_msg));
+                    report
+                        .pending_failures
+                        .push(format!("{}: {}", project_id, err_msg));
                 }
             }
         }
@@ -311,10 +327,9 @@ pub fn get_app_settings(conn: &Connection) -> Result<AppSettings, rusqlite::Erro
     );
 
     match result {
-        Ok(json_str) => {
-            serde_json::from_str(&json_str)
-                .map_err(|e| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e)))
-        }
+        Ok(json_str) => serde_json::from_str(&json_str).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+        }),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(AppSettings::default()),
         Err(e) => Err(e),
     }
@@ -350,7 +365,10 @@ pub fn get_last_active_project_id(conn: &Connection) -> Result<Option<String>, r
 }
 
 /// Persists the active project ID in app_settings, or clears it if None
-pub fn set_last_active_project_id(conn: &Connection, project_id: Option<&str>) -> Result<(), rusqlite::Error> {
+pub fn set_last_active_project_id(
+    conn: &Connection,
+    project_id: Option<&str>,
+) -> Result<(), rusqlite::Error> {
     match project_id {
         Some(id) => {
             conn.execute(

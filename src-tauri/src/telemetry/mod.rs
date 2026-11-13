@@ -1,6 +1,6 @@
 use serde::Serialize;
-use sysinfo::{Pid, System};
 use std::sync::Mutex;
+use sysinfo::{Pid, System};
 
 #[derive(Debug, Serialize, Clone)]
 pub struct TelemetryData {
@@ -31,7 +31,12 @@ impl TelemetryCollector {
         }
     }
 
-    pub fn sample(&self, active_project_id: Option<String>, active_project_name: Option<String>, active_tasks: usize) -> TelemetryData {
+    pub fn sample(
+        &self,
+        active_project_id: Option<String>,
+        active_project_name: Option<String>,
+        active_tasks: usize,
+    ) -> TelemetryData {
         let mut sys = self.sys.lock().unwrap();
         sys.refresh_processes();
         sys.refresh_memory();
@@ -66,4 +71,3 @@ impl TelemetryCollector {
         }
     }
 }
-

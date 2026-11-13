@@ -88,32 +88,36 @@ pub struct ProfileManager;
 impl ProfileManager {
     /// Lists all registered profiles from the persistent database
     pub fn list_registered(conn: &Connection) -> Result<Vec<RegisteredProfile>, String> {
-        let mut stmt = conn.prepare(
-            "SELECT id, profile_dir_key, display_name, user_data_dir, assigned_purpose, 
-                    assigned_provider, extension_installed, pairing_state, connection_state, 
-                    last_seen_at, last_error, created_at, updated_at 
-             FROM chrome_profiles 
-             ORDER BY created_at ASC"
-        ).map_err(|e| e.to_string())?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, profile_dir_key, display_name, user_data_dir, assigned_purpose, \
+                     assigned_provider, extension_installed, pairing_state, connection_state, \
+                     last_seen_at, last_error, created_at, updated_at \
+              FROM chrome_profiles \
+              ORDER BY created_at ASC",
+            )
+            .map_err(|e| e.to_string())?;
 
-        let rows = stmt.query_map([], |row| {
-            let ext_installed: i32 = row.get(6)?;
-            Ok(RegisteredProfile {
-                id: row.get(0)?,
-                profile_dir_key: row.get(1)?,
-                display_name: row.get(2)?,
-                user_data_dir: row.get(3)?,
-                assigned_purpose: row.get(4)?,
-                assigned_provider: row.get(5)?,
-                extension_installed: ext_installed == 1,
-                pairing_state: row.get(7)?,
-                connection_state: row.get(8)?,
-                last_seen_at: row.get(9)?,
-                last_error: row.get(10)?,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
+        let rows = stmt
+            .query_map([], |row| {
+                let ext_installed: i32 = row.get(6)?;
+                Ok(RegisteredProfile {
+                    id: row.get(0)?,
+                    profile_dir_key: row.get(1)?,
+                    display_name: row.get(2)?,
+                    user_data_dir: row.get(3)?,
+                    assigned_purpose: row.get(4)?,
+                    assigned_provider: row.get(5)?,
+                    extension_installed: ext_installed == 1,
+                    pairing_state: row.get(7)?,
+                    connection_state: row.get(8)?,
+                    last_seen_at: row.get(9)?,
+                    last_error: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
+                })
             })
-        }).map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())?;
 
         let mut list = Vec::new();
         for r in rows {
@@ -123,21 +127,29 @@ impl ProfileManager {
     }
 
     /// Registers a newly discovered or existing Chrome profile into the database
-    pub fn register_profile(conn: &mut Connection, input: RegisterProfileDto) -> Result<RegisteredProfile, String> {
+    pub fn register_profile(
+        conn: &mut Connection,
+        input: RegisterProfileDto,
+    ) -> Result<RegisteredProfile, String> {
         let trimmed_key = input.profile_dir_key.trim();
         if trimmed_key.is_empty() {
             return Err("Profile directory key cannot be empty".to_string());
         }
 
         // Check for duplicate profile_dir_key
-        let existing: Option<String> = conn.query_row(
-            "SELECT id FROM chrome_profiles WHERE profile_dir_key = ?1",
-            [trimmed_key],
-            |r| r.get(0),
-        ).ok();
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM chrome_profiles WHERE profile_dir_key = ?1",
+                [trimmed_key],
+                |r| r.get(0),
+            )
+            .ok();
 
         if let Some(existing_id) = existing {
-            return Err(format!("Profile with directory key '{}' is already registered (ID: {})", trimmed_key, existing_id));
+            return Err(format!(
+                "Profile with directory key '{}' is already registered (ID: {})",
+                trimmed_key, existing_id
+            ));
         }
 
         let id = uuid::Uuid::new_v4().to_string();
@@ -147,10 +159,15 @@ impl ProfileManager {
             input.display_name.trim().to_string()
         };
 
-        let user_data = input.user_data_dir
-            .unwrap_or_else(|| super::discovery::ChromeDiscoveryService::default_user_data_path().to_string_lossy().to_string());
+        let user_data = input.user_data_dir.unwrap_or_else(|| {
+            super::discovery::ChromeDiscoveryService::default_user_data_path()
+                .to_string_lossy()
+                .to_string()
+        });
 
-        let purpose = input.assigned_purpose.unwrap_or_else(|| "GENERAL".to_string());
+        let purpose = input
+            .assigned_purpose
+            .unwrap_or_else(|| "GENERAL".to_string());
         let provider = input.assigned_provider;
         let now = chrono::Utc::now().timestamp_millis();
 
@@ -160,8 +177,17 @@ impl ProfileManager {
                 assigned_provider, extension_installed, pairing_state, connection_state, 
                 created_at, updated_at
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 'UNPAIRED', 'DISCONNECTED', ?7, ?7)",
-            params![id, trimmed_key, display_name, user_data, purpose, provider, now],
-        ).map_err(|e| format!("Failed to register profile: {}", e))?;
+            params![
+                id,
+                trimmed_key,
+                display_name,
+                user_data,
+                purpose,
+                provider,
+                now
+            ],
+        )
+        .map_err(|e| format!("Failed to register profile: {}", e))?;
 
         Ok(RegisteredProfile {
             id,
@@ -181,32 +207,37 @@ impl ProfileManager {
     }
 
     /// Updates mutable metadata for a registered profile
-    pub fn update_profile(conn: &mut Connection, input: UpdateProfileDto) -> Result<RegisteredProfile, String> {
-        let mut profile = conn.query_row(
-            "SELECT id, profile_dir_key, display_name, user_data_dir, assigned_purpose, 
-                    assigned_provider, extension_installed, pairing_state, connection_state, 
-                    last_seen_at, last_error, created_at, updated_at 
-             FROM chrome_profiles WHERE id = ?1",
-            [&input.id],
-            |r| {
-                let ext: i32 = r.get(6)?;
-                Ok(RegisteredProfile {
-                    id: r.get(0)?,
-                    profile_dir_key: r.get(1)?,
-                    display_name: r.get(2)?,
-                    user_data_dir: r.get(3)?,
-                    assigned_purpose: r.get(4)?,
-                    assigned_provider: r.get(5)?,
-                    extension_installed: ext == 1,
-                    pairing_state: r.get(7)?,
-                    connection_state: r.get(8)?,
-                    last_seen_at: r.get(9)?,
-                    last_error: r.get(10)?,
-                    created_at: r.get(11)?,
-                    updated_at: r.get(12)?,
-                })
-            },
-        ).map_err(|_| format!("Profile with ID {} not found", input.id))?;
+    pub fn update_profile(
+        conn: &mut Connection,
+        input: UpdateProfileDto,
+    ) -> Result<RegisteredProfile, String> {
+        let mut profile = conn
+            .query_row(
+                "SELECT id, profile_dir_key, display_name, user_data_dir, assigned_purpose, \
+                     assigned_provider, extension_installed, pairing_state, connection_state, \
+                     last_seen_at, last_error, created_at, updated_at \
+              FROM chrome_profiles WHERE id = ?1",
+                [&input.id],
+                |r| {
+                    let ext: i32 = r.get(6)?;
+                    Ok(RegisteredProfile {
+                        id: r.get(0)?,
+                        profile_dir_key: r.get(1)?,
+                        display_name: r.get(2)?,
+                        user_data_dir: r.get(3)?,
+                        assigned_purpose: r.get(4)?,
+                        assigned_provider: r.get(5)?,
+                        extension_installed: ext == 1,
+                        pairing_state: r.get(7)?,
+                        connection_state: r.get(8)?,
+                        last_seen_at: r.get(9)?,
+                        last_error: r.get(10)?,
+                        created_at: r.get(11)?,
+                        updated_at: r.get(12)?,
+                    })
+                },
+            )
+            .map_err(|_| format!("Profile with ID {} not found", input.id))?;
 
         let now = chrono::Utc::now().timestamp_millis();
         if let Some(d) = input.display_name {
@@ -226,18 +257,24 @@ impl ProfileManager {
             "UPDATE chrome_profiles 
              SET display_name = ?1, assigned_purpose = ?2, assigned_provider = ?3, updated_at = ?4 
              WHERE id = ?5",
-            params![profile.display_name, profile.assigned_purpose, profile.assigned_provider, now, profile.id],
-        ).map_err(|e| format!("Failed to update profile: {}", e))?;
+            params![
+                profile.display_name,
+                profile.assigned_purpose,
+                profile.assigned_provider,
+                now,
+                profile.id
+            ],
+        )
+        .map_err(|e| format!("Failed to update profile: {}", e))?;
 
         Ok(profile)
     }
 
     /// Unregisters a profile from the database without deleting Chrome user data on disk
     pub fn unregister_profile(conn: &mut Connection, profile_id: &str) -> Result<(), String> {
-        let count = conn.execute(
-            "DELETE FROM chrome_profiles WHERE id = ?1",
-            [profile_id],
-        ).map_err(|e| format!("Failed to unregister profile: {}", e))?;
+        let count = conn
+            .execute("DELETE FROM chrome_profiles WHERE id = ?1", [profile_id])
+            .map_err(|e| format!("Failed to unregister profile: {}", e))?;
 
         if count == 0 {
             return Err(format!("Profile with ID {} not found", profile_id));
@@ -247,8 +284,9 @@ impl ProfileManager {
 
     /// Launches a specific Chrome profile using chrome.exe --profile-directory=...
     pub fn launch_profile(user_data_dir: &str, profile_dir_key: &str) -> Result<(), String> {
-        let chrome_bin = Self::find_chrome_executable()
-            .ok_or_else(|| "Google Chrome executable (chrome.exe) not found on system".to_string())?;
+        let chrome_bin = Self::find_chrome_executable().ok_or_else(|| {
+            "Google Chrome executable (chrome.exe) not found on system".to_string()
+        })?;
 
         let mut cmd = Command::new(chrome_bin);
         cmd.arg(format!("--profile-directory={}", profile_dir_key));
@@ -278,7 +316,11 @@ impl ProfileManager {
         }
 
         if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-            let p = PathBuf::from(local).join("Google").join("Chrome").join("Application").join("chrome.exe");
+            let p = PathBuf::from(local)
+                .join("Google")
+                .join("Chrome")
+                .join("Application")
+                .join("chrome.exe");
             if p.exists() {
                 return Some(p);
             }
@@ -289,7 +331,9 @@ impl ProfileManager {
 
     /// Checks if the extension appears to be installed in the profile's Extensions folder
     pub fn check_extension_installed(user_data_dir: &str, profile_dir_key: &str) -> bool {
-        let ext_dir = Path::new(user_data_dir).join(profile_dir_key).join("Extensions");
+        let ext_dir = Path::new(user_data_dir)
+            .join(profile_dir_key)
+            .join("Extensions");
         if ext_dir.exists() {
             if let Ok(entries) = std::fs::read_dir(ext_dir) {
                 return entries.count() > 0;

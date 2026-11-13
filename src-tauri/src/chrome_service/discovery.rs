@@ -6,14 +6,14 @@ use sysinfo::{ProcessExt, System, SystemExt};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiscoveredChromeProfile {
-    pub profile_dir_key: String,          // e.g. "Default", "Profile 1"
-    pub display_name: String,             // User label or "Default / Person 1"
+    pub profile_dir_key: String,              // e.g. "Default", "Profile 1"
+    pub display_name: String,                 // User label or "Default / Person 1"
     pub google_account_label: Option<String>, // gaia_name or user_name if present
-    pub avatar_icon: Option<String>,      // avatar identifier
-    pub profile_dir_path: String,         // Absolute directory path
-    pub user_data_dir: String,            // Path to Chrome User Data
-    pub profile_exists: bool,             // Verified on disk
-    pub is_chrome_running: bool,          // Active chrome.exe process found
+    pub avatar_icon: Option<String>,          // avatar identifier
+    pub profile_dir_path: String,             // Absolute directory path
+    pub user_data_dir: String,                // Path to Chrome User Data
+    pub profile_exists: bool,                 // Verified on disk
+    pub is_chrome_running: bool,              // Active chrome.exe process found
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,14 +40,19 @@ impl ChromeDiscoveryService {
     /// Resolves the default Chrome User Data directory on Windows
     pub fn default_user_data_path() -> PathBuf {
         if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
-            PathBuf::from(local_app_data).join("Google").join("Chrome").join("User Data")
+            PathBuf::from(local_app_data)
+                .join("Google")
+                .join("Chrome")
+                .join("User Data")
         } else {
             PathBuf::from(r"C:\Users\Default\AppData\Local\Google\Chrome\User Data")
         }
     }
 
     /// Read-only discovery scanning Chrome Local State without touching cookies or credentials
-    pub fn discover_profiles(custom_user_data_dir: Option<&Path>) -> Result<Vec<DiscoveredChromeProfile>, String> {
+    pub fn discover_profiles(
+        custom_user_data_dir: Option<&Path>,
+    ) -> Result<Vec<DiscoveredChromeProfile>, String> {
         let user_data = custom_user_data_dir
             .map(|p| p.to_path_buf())
             .unwrap_or_else(Self::default_user_data_path);
@@ -69,11 +74,13 @@ impl ChromeDiscoveryService {
                                 let exists = profile_path.exists();
                                 let is_running = running_profiles.contains(&key);
 
-                                let display_name = entry.name
+                                let display_name = entry
+                                    .name
                                     .filter(|s| !s.trim().is_empty())
                                     .unwrap_or_else(|| key.clone());
 
-                                let account_label = entry.gaia_name
+                                let account_label = entry
+                                    .gaia_name
                                     .or(entry.user_name)
                                     .filter(|s| !s.trim().is_empty());
 
@@ -105,7 +112,11 @@ impl ChromeDiscoveryService {
                                 let is_running = running_profiles.contains(name);
                                 discovered.push(DiscoveredChromeProfile {
                                     profile_dir_key: name.to_string(),
-                                    display_name: if name == "Default" { "Default Profile".to_string() } else { name.to_string() },
+                                    display_name: if name == "Default" {
+                                        "Default Profile".to_string()
+                                    } else {
+                                        name.to_string()
+                                    },
                                     google_account_label: None,
                                     avatar_icon: None,
                                     profile_dir_path: path.to_string_lossy().to_string(),
@@ -146,7 +157,9 @@ impl ChromeDiscoveryService {
             if process.name().to_lowercase().contains(target_bin) {
                 for arg in process.cmd() {
                     if arg.starts_with("--profile-directory=") {
-                        let key = arg.trim_start_matches("--profile-directory=").trim_matches('"');
+                        let key = arg
+                            .trim_start_matches("--profile-directory=")
+                            .trim_matches('"');
                         if !active_keys.contains(&key.to_string()) {
                             active_keys.push(key.to_string());
                         }

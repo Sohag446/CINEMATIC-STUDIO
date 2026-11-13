@@ -1,21 +1,20 @@
-use tauri::State;
+use crate::chrome_service::{
+    ChromeDiscoveryService, DiscoveredChromeProfile, NativeMessagingIpc, PairingChallengeDto,
+    PairingService, PairingVerificationResult, ProfileManager, RegisterProfileDto,
+    RegisteredProfile, UpdateProfileDto, VerifyPairingDto,
+};
+use crate::database::{run_integrity_check, AppSettings, DbPool, RecoveryReport};
+use crate::media_service::{
+    CreateMediaAssetDto, CreateRenderJobDto, CreateTimelineClipDto, FFmpegManager, FFmpegStatusDto,
+    MediaAssetDto, MediaService, RenderJobDto, TimelineClipDto, TimelineTrackDto,
+    UpdateTimelineClipDto,
+};
+use crate::project_manager::ProjectMetadata;
+use crate::project_service::ProjectService;
+use crate::telemetry::{TelemetryCollector, TelemetryData};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use crate::database::{DbPool, run_integrity_check, AppSettings, RecoveryReport};
-use crate::project_manager::ProjectMetadata;
-use crate::telemetry::{TelemetryCollector, TelemetryData};
-use crate::project_service::ProjectService;
-use crate::chrome_service::{
-    ChromeDiscoveryService, DiscoveredChromeProfile,
-    ProfileManager, RegisteredProfile, RegisterProfileDto, UpdateProfileDto,
-    PairingService, PairingChallengeDto, VerifyPairingDto, PairingVerificationResult,
-    NativeMessagingIpc,
-};
-use crate::media_service::{
-    MediaService, MediaAssetDto, CreateMediaAssetDto,
-    TimelineTrackDto, TimelineClipDto, CreateTimelineClipDto, UpdateTimelineClipDto,
-    RenderJobDto, CreateRenderJobDto, FFmpegStatusDto, FFmpegManager
-};
+use tauri::State;
 
 pub struct AppState {
     pub db: DbPool,
@@ -78,7 +77,10 @@ pub struct ClipDto {
 }
 
 #[tauri::command]
-pub async fn create_project(input: CreateProjectDto, state: State<'_, AppState>) -> Result<ProjectMetadata, String> {
+pub async fn create_project(
+    input: CreateProjectDto,
+    state: State<'_, AppState>,
+) -> Result<ProjectMetadata, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let project = ProjectService::create_project(&mut conn, input)?;
 
@@ -94,7 +96,10 @@ pub async fn list_projects(state: State<'_, AppState>) -> Result<Vec<ProjectMeta
 }
 
 #[tauri::command]
-pub async fn open_project(project_id: String, state: State<'_, AppState>) -> Result<ProjectMetadata, String> {
+pub async fn open_project(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<ProjectMetadata, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     let project = ProjectService::open_project(&conn, &project_id)?;
 
@@ -104,7 +109,9 @@ pub async fn open_project(project_id: String, state: State<'_, AppState>) -> Res
 }
 
 #[tauri::command]
-pub async fn get_active_project(state: State<'_, AppState>) -> Result<Option<ProjectMetadata>, String> {
+pub async fn get_active_project(
+    state: State<'_, AppState>,
+) -> Result<Option<ProjectMetadata>, String> {
     let in_memory = {
         let active = state.active_project.lock().unwrap();
         active.clone()
@@ -122,7 +129,11 @@ pub async fn get_active_project(state: State<'_, AppState>) -> Result<Option<Pro
 }
 
 #[tauri::command]
-pub async fn rename_project(project_id: String, new_name: String, state: State<'_, AppState>) -> Result<ProjectMetadata, String> {
+pub async fn rename_project(
+    project_id: String,
+    new_name: String,
+    state: State<'_, AppState>,
+) -> Result<ProjectMetadata, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let updated = ProjectService::rename_project(&mut conn, &project_id, &new_name)?;
 
@@ -136,7 +147,10 @@ pub async fn rename_project(project_id: String, new_name: String, state: State<'
 }
 
 #[tauri::command]
-pub async fn save_project(project: SaveProjectDto, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn save_project(
+    project: SaveProjectDto,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let updated = ProjectService::save_project(&mut conn, project)?;
 
@@ -160,7 +174,11 @@ pub async fn close_project(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn delete_project(project_id: String, confirmation_name: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn delete_project(
+    project_id: String,
+    confirmation_name: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     ProjectService::delete_project(&mut conn, &project_id, &confirmation_name)?;
 
@@ -174,7 +192,9 @@ pub async fn delete_project(project_id: String, confirmation_name: String, state
 }
 
 #[tauri::command]
-pub async fn recover_pending_deletions(state: State<'_, AppState>) -> Result<RecoveryReport, String> {
+pub async fn recover_pending_deletions(
+    state: State<'_, AppState>,
+) -> Result<RecoveryReport, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     ProjectService::recover_deletions(&mut conn)
 }
@@ -186,32 +206,40 @@ pub async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, Str
 }
 
 #[tauri::command]
-pub async fn update_settings(settings: AppSettings, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn update_settings(
+    settings: AppSettings,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     ProjectService::update_settings(&conn, settings)
 }
 
 #[tauri::command]
-pub async fn get_scenes(project_id: String, state: State<'_, AppState>) -> Result<Vec<SceneDto>, String> {
+pub async fn get_scenes(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<SceneDto>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     let mut stmt = conn.prepare(
         "SELECT id, project_id, sequence_number, title, dramatic_beat, estimated_duration_seconds, continuity_rules, created_at, updated_at
          FROM scenes WHERE project_id = ?1 ORDER BY sequence_number ASC"
     ).map_err(|e| e.to_string())?;
 
-    let rows = stmt.query_map([&project_id], |row| {
-        Ok(SceneDto {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            sequence_number: row.get(2)?,
-            title: row.get(3)?,
-            dramatic_beat: row.get(4)?,
-            estimated_duration_seconds: row.get(5)?,
-            continuity_rules: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+    let rows = stmt
+        .query_map([&project_id], |row| {
+            Ok(SceneDto {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                sequence_number: row.get(2)?,
+                title: row.get(3)?,
+                dramatic_beat: row.get(4)?,
+                estimated_duration_seconds: row.get(5)?,
+                continuity_rules: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+            })
         })
-    }).map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
     let mut scenes = Vec::new();
     for s in rows {
@@ -221,34 +249,49 @@ pub async fn get_scenes(project_id: String, state: State<'_, AppState>) -> Resul
 }
 
 #[tauri::command]
-pub async fn get_clips(project_id: String, state: State<'_, AppState>) -> Result<Vec<ClipDto>, String> {
+pub async fn get_clips(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<ClipDto>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     let mut stmt = conn.prepare(
         "SELECT id, scene_id, project_id, clip_number, target_duration_seconds, camera_framing, camera_angle, camera_movement, subject_action, lighting_setup, status, assigned_provider, thumbnail_path, proxy_path, output_video_path, created_at, updated_at
          FROM clips WHERE project_id = ?1 ORDER BY clip_number ASC"
     ).map_err(|e| e.to_string())?;
 
-    let rows = stmt.query_map([&project_id], |row| {
-        Ok(ClipDto {
-            id: row.get(0)?,
-            scene_id: row.get(1)?,
-            project_id: row.get(2)?,
-            clip_number: row.get(3)?,
-            target_duration_seconds: row.get(4)?,
-            camera_framing: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "MEDIUM".to_string()),
-            camera_angle: row.get::<_, Option<String>>(6)?.unwrap_or_else(|| "EYE_LEVEL".to_string()),
-            camera_movement: row.get::<_, Option<String>>(7)?.unwrap_or_else(|| "STATIC".to_string()),
-            subject_action: row.get(8)?,
-            lighting_setup: row.get(9)?,
-            status: row.get::<_, Option<String>>(10)?.unwrap_or_else(|| "PLANNED".to_string()),
-            assigned_provider: row.get::<_, Option<String>>(11)?.unwrap_or_else(|| "Google Veo".to_string()),
-            thumbnail_path: row.get(12)?,
-            proxy_path: row.get(13)?,
-            output_video_path: row.get(14)?,
-            created_at: row.get(15)?,
-            updated_at: row.get(16)?,
+    let rows = stmt
+        .query_map([&project_id], |row| {
+            Ok(ClipDto {
+                id: row.get(0)?,
+                scene_id: row.get(1)?,
+                project_id: row.get(2)?,
+                clip_number: row.get(3)?,
+                target_duration_seconds: row.get(4)?,
+                camera_framing: row
+                    .get::<_, Option<String>>(5)?
+                    .unwrap_or_else(|| "MEDIUM".to_string()),
+                camera_angle: row
+                    .get::<_, Option<String>>(6)?
+                    .unwrap_or_else(|| "EYE_LEVEL".to_string()),
+                camera_movement: row
+                    .get::<_, Option<String>>(7)?
+                    .unwrap_or_else(|| "STATIC".to_string()),
+                subject_action: row.get(8)?,
+                lighting_setup: row.get(9)?,
+                status: row
+                    .get::<_, Option<String>>(10)?
+                    .unwrap_or_else(|| "PLANNED".to_string()),
+                assigned_provider: row
+                    .get::<_, Option<String>>(11)?
+                    .unwrap_or_else(|| "Google Veo".to_string()),
+                thumbnail_path: row.get(12)?,
+                proxy_path: row.get(13)?,
+                output_video_path: row.get(14)?,
+                created_at: row.get(15)?,
+                updated_at: row.get(16)?,
+            })
         })
-    }).map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
     let mut clips = Vec::new();
     for c in rows {
@@ -258,7 +301,11 @@ pub async fn get_clips(project_id: String, state: State<'_, AppState>) -> Result
 }
 
 #[tauri::command]
-pub async fn seed_test_clips(project_id: String, count: i32, state: State<'_, AppState>) -> Result<Vec<ClipDto>, String> {
+pub async fn seed_test_clips(
+    project_id: String,
+    count: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<ClipDto>, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let scenes = get_scenes(project_id.clone(), state.clone()).await?;
     let scene_id = if let Some(s) = scenes.first() {
@@ -268,15 +315,30 @@ pub async fn seed_test_clips(project_id: String, count: i32, state: State<'_, Ap
     };
 
     let now = chrono::Utc::now().timestamp_millis();
-    let providers = ["Google Veo", "Luma Dream Machine", "Runway Gen-3", "Kling AI", "Minimax Hailuo"];
-    let framings = ["EXTREME_WIDE", "WIDE", "MEDIUM", "CLOSE_UP", "EXTREME_CLOSE_UP"];
+    let providers = [
+        "Google Veo",
+        "Luma Dream Machine",
+        "Runway Gen-3",
+        "Kling AI",
+        "Minimax Hailuo",
+    ];
+    let framings = [
+        "EXTREME_WIDE",
+        "WIDE",
+        "MEDIUM",
+        "CLOSE_UP",
+        "EXTREME_CLOSE_UP",
+    ];
 
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     for i in 1..=count {
         let clip_id = uuid::Uuid::new_v4().to_string();
         let provider = providers[(i as usize) % providers.len()];
         let framing = framings[(i as usize) % framings.len()];
-        let action = format!("Cinematic narrative sequence beat {} with photorealistic lighting", i);
+        let action = format!(
+            "Cinematic narrative sequence beat {} with photorealistic lighting",
+            i
+        );
 
         tx.execute(
             "INSERT INTO clips (id, scene_id, project_id, clip_number, target_duration_seconds, camera_framing, camera_angle, camera_movement, subject_action, status, assigned_provider, created_at, updated_at)
@@ -310,48 +372,71 @@ pub async fn discover_chrome_profiles() -> Result<Vec<DiscoveredChromeProfile>, 
 }
 
 #[tauri::command]
-pub async fn get_registered_chrome_profiles(state: State<'_, AppState>) -> Result<Vec<RegisteredProfile>, String> {
+pub async fn get_registered_chrome_profiles(
+    state: State<'_, AppState>,
+) -> Result<Vec<RegisteredProfile>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     ProfileManager::list_registered(&conn)
 }
 
 #[tauri::command]
-pub async fn register_chrome_profile(input: RegisterProfileDto, state: State<'_, AppState>) -> Result<RegisteredProfile, String> {
+pub async fn register_chrome_profile(
+    input: RegisterProfileDto,
+    state: State<'_, AppState>,
+) -> Result<RegisteredProfile, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     ProfileManager::register_profile(&mut conn, input)
 }
 
 #[tauri::command]
-pub async fn update_chrome_profile(input: UpdateProfileDto, state: State<'_, AppState>) -> Result<RegisteredProfile, String> {
+pub async fn update_chrome_profile(
+    input: UpdateProfileDto,
+    state: State<'_, AppState>,
+) -> Result<RegisteredProfile, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     ProfileManager::update_profile(&mut conn, input)
 }
 
 #[tauri::command]
-pub async fn unregister_chrome_profile(profile_id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn unregister_chrome_profile(
+    profile_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     ProfileManager::unregister_profile(&mut conn, &profile_id)
 }
 
 #[tauri::command]
-pub async fn launch_chrome_profile(user_data_dir: String, profile_dir_key: String) -> Result<(), String> {
+pub async fn launch_chrome_profile(
+    user_data_dir: String,
+    profile_dir_key: String,
+) -> Result<(), String> {
     ProfileManager::launch_profile(&user_data_dir, &profile_dir_key)
 }
 
 #[tauri::command]
-pub async fn initiate_profile_pairing(profile_id: String, state: State<'_, AppState>) -> Result<PairingChallengeDto, String> {
+pub async fn initiate_profile_pairing(
+    profile_id: String,
+    state: State<'_, AppState>,
+) -> Result<PairingChallengeDto, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     PairingService::initiate_pairing(&mut conn, &profile_id)
 }
 
 #[tauri::command]
-pub async fn verify_profile_pairing(input: VerifyPairingDto, state: State<'_, AppState>) -> Result<PairingVerificationResult, String> {
+pub async fn verify_profile_pairing(
+    input: VerifyPairingDto,
+    state: State<'_, AppState>,
+) -> Result<PairingVerificationResult, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     PairingService::verify_pairing(&mut conn, input)
 }
 
 #[tauri::command]
-pub async fn revoke_profile_pairing(profile_id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn revoke_profile_pairing(
+    profile_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     PairingService::revoke_pairing(&mut conn, &profile_id)
 }
@@ -395,30 +480,35 @@ pub struct CreateTaskDto {
 }
 
 #[tauri::command]
-pub async fn get_project_tasks(project_id: String, state: State<'_, AppState>) -> Result<Vec<TaskDto>, String> {
+pub async fn get_project_tasks(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<TaskDto>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     let mut stmt = conn.prepare(
         "SELECT id, project_id, clip_id, profile_id, task_type, target_provider, state, priority, progress_percentage, error_message, human_action_reason, created_at, completed_at
          FROM tasks WHERE project_id = ?1 ORDER BY priority DESC, created_at ASC"
     ).map_err(|e| e.to_string())?;
 
-    let rows = stmt.query_map([&project_id], |row| {
-        Ok(TaskDto {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            clip_id: row.get(2)?,
-            profile_id: row.get(3)?,
-            task_type: row.get(4)?,
-            target_provider: row.get(5)?,
-            state: row.get(6)?,
-            priority: row.get(7)?,
-            progress_percentage: row.get(8)?,
-            error_message: row.get(9)?,
-            human_action_reason: row.get(10)?,
-            created_at: row.get(11)?,
-            completed_at: row.get(12)?,
+    let rows = stmt
+        .query_map([&project_id], |row| {
+            Ok(TaskDto {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                clip_id: row.get(2)?,
+                profile_id: row.get(3)?,
+                task_type: row.get(4)?,
+                target_provider: row.get(5)?,
+                state: row.get(6)?,
+                priority: row.get(7)?,
+                progress_percentage: row.get(8)?,
+                error_message: row.get(9)?,
+                human_action_reason: row.get(10)?,
+                created_at: row.get(11)?,
+                completed_at: row.get(12)?,
+            })
         })
-    }).map_err(|e| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
     let mut tasks = Vec::new();
     for t in rows {
@@ -428,7 +518,10 @@ pub async fn get_project_tasks(project_id: String, state: State<'_, AppState>) -
 }
 
 #[tauri::command]
-pub async fn create_production_task(input: CreateTaskDto, state: State<'_, AppState>) -> Result<TaskDto, String> {
+pub async fn create_production_task(
+    input: CreateTaskDto,
+    state: State<'_, AppState>,
+) -> Result<TaskDto, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     let now = chrono::Utc::now().timestamp_millis();
     let task_id = uuid::Uuid::new_v4().to_string();
@@ -472,17 +565,24 @@ pub async fn create_production_task(input: CreateTaskDto, state: State<'_, AppSt
 }
 
 #[tauri::command]
-pub async fn cancel_production_task(task_id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn cancel_production_task(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     conn.execute(
         "UPDATE tasks SET state = 'CANCELLED' WHERE id = ?1",
         [&task_id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn resume_human_action_task(task_id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn resume_human_action_task(
+    task_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     conn.execute(
         "UPDATE tasks SET state = 'QUEUED', error_message = NULL, human_action_reason = NULL WHERE id = ?1",
@@ -496,61 +596,91 @@ pub async fn resume_human_action_task(task_id: String, state: State<'_, AppState
 // ============================================================================
 
 #[tauri::command]
-pub async fn list_media_assets(project_id: String, state: State<'_, AppState>) -> Result<Vec<MediaAssetDto>, String> {
+pub async fn list_media_assets(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<MediaAssetDto>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::list_media_assets(&conn, &project_id)
 }
 
 #[tauri::command]
-pub async fn create_media_asset(input: CreateMediaAssetDto, state: State<'_, AppState>) -> Result<MediaAssetDto, String> {
+pub async fn create_media_asset(
+    input: CreateMediaAssetDto,
+    state: State<'_, AppState>,
+) -> Result<MediaAssetDto, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::create_media_asset(&mut conn, input)
 }
 
 #[tauri::command]
-pub async fn delete_media_asset(asset_id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn delete_media_asset(
+    asset_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::delete_media_asset(&mut conn, &asset_id)
 }
 
 #[tauri::command]
-pub async fn list_timeline_tracks(project_id: String, state: State<'_, AppState>) -> Result<Vec<TimelineTrackDto>, String> {
+pub async fn list_timeline_tracks(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<TimelineTrackDto>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::list_timeline_tracks(&conn, &project_id)
 }
 
 #[tauri::command]
-pub async fn list_timeline_clips(project_id: String, state: State<'_, AppState>) -> Result<Vec<TimelineClipDto>, String> {
+pub async fn list_timeline_clips(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<TimelineClipDto>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::list_timeline_clips(&conn, &project_id)
 }
 
 #[tauri::command]
-pub async fn create_timeline_clip(input: CreateTimelineClipDto, state: State<'_, AppState>) -> Result<TimelineClipDto, String> {
+pub async fn create_timeline_clip(
+    input: CreateTimelineClipDto,
+    state: State<'_, AppState>,
+) -> Result<TimelineClipDto, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::create_timeline_clip(&mut conn, input)
 }
 
 #[tauri::command]
-pub async fn update_timeline_clip(input: UpdateTimelineClipDto, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn update_timeline_clip(
+    input: UpdateTimelineClipDto,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::update_timeline_clip(&mut conn, input)
 }
 
 #[tauri::command]
-pub async fn delete_timeline_clip(clip_id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn delete_timeline_clip(
+    clip_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::delete_timeline_clip(&mut conn, &clip_id)
 }
 
 #[tauri::command]
-pub async fn list_render_jobs(project_id: String, state: State<'_, AppState>) -> Result<Vec<RenderJobDto>, String> {
+pub async fn list_render_jobs(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<RenderJobDto>, String> {
     let conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::list_render_jobs(&conn, &project_id)
 }
 
 #[tauri::command]
-pub async fn create_render_job(input: CreateRenderJobDto, state: State<'_, AppState>) -> Result<RenderJobDto, String> {
+pub async fn create_render_job(
+    input: CreateRenderJobDto,
+    state: State<'_, AppState>,
+) -> Result<RenderJobDto, String> {
     let mut conn = state.db.get().map_err(|e| e.to_string())?;
     MediaService::create_render_job(&mut conn, input)
 }
@@ -559,11 +689,11 @@ pub async fn create_render_job(input: CreateRenderJobDto, state: State<'_, AppSt
 pub async fn detect_ffmpeg_status(
     app: tauri::AppHandle,
     custom_ffmpeg: Option<String>,
-    custom_ffprobe: Option<String>
+    custom_ffprobe: Option<String>,
 ) -> Result<FFmpegStatusDto, String> {
     Ok(FFmpegManager::detect_tools_with_app(
         Some(&app),
         custom_ffmpeg.as_deref(),
-        custom_ffprobe.as_deref()
+        custom_ffprobe.as_deref(),
     ))
 }

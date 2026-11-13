@@ -1,10 +1,14 @@
 pub mod crypto;
 pub mod discovery;
-pub mod profile_manager;
-pub mod pairing;
 pub mod ipc;
+pub mod pairing;
+pub mod profile_manager;
 
 pub use discovery::{ChromeDiscoveryService, DiscoveredChromeProfile};
-pub use profile_manager::{ProfileManager, RegisteredProfile, RegisterProfileDto, UpdateProfileDto, ProfileLifecycleState};
-pub use pairing::{PairingService, PairingChallengeDto, VerifyPairingDto, PairingVerificationResult};
-pub use ipc::{NativeMessagingIpc, IpcMessage, NATIVE_HOST_NAME, WINDOWS_NAMED_PIPE_NAME};
+pub use ipc::{IpcMessage, NativeMessagingIpc, NATIVE_HOST_NAME, WINDOWS_NAMED_PIPE_NAME};
+pub use pairing::{
+    PairingChallengeDto, PairingService, PairingVerificationResult, VerifyPairingDto,
+};
+pub use profile_manager::{
+    ProfileLifecycleState, ProfileManager, RegisterProfileDto, RegisteredProfile, UpdateProfileDto,
+};

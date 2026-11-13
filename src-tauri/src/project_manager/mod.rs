@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProjectMetadata {
@@ -31,9 +31,13 @@ impl ProjectManager {
     /// Returns default authorized projects directory in AppData / LocalAppData
     pub fn default_authorized_root() -> PathBuf {
         if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
-            PathBuf::from(local_app_data).join("CinematicStudio").join("Projects")
+            PathBuf::from(local_app_data)
+                .join("CinematicStudio")
+                .join("Projects")
         } else if let Some(user_profile) = std::env::var_os("USERPROFILE") {
-            PathBuf::from(user_profile).join("CinematicStudio").join("Projects")
+            PathBuf::from(user_profile)
+                .join("CinematicStudio")
+                .join("Projects")
         } else {
             PathBuf::from("./projects")
         }
@@ -63,8 +67,9 @@ impl ProjectManager {
             }
         }
         if components.len() == 2 {
-            if matches!(components[0], std::path::Component::Prefix(_)) 
-                && matches!(components[1], std::path::Component::RootDir) {
+            if matches!(components[0], std::path::Component::Prefix(_))
+                && matches!(components[1], std::path::Component::RootDir)
+            {
                 return true;
             }
         }
@@ -93,8 +98,12 @@ impl ProjectManager {
         // Check for forbidden characters in filename components
         for component in p.components() {
             let comp_str = component.as_os_str().to_string_lossy();
-            if comp_str.contains('<') || comp_str.contains('>') || comp_str.contains('|') 
-                || comp_str.contains('?') || comp_str.contains('*') {
+            if comp_str.contains('<')
+                || comp_str.contains('>')
+                || comp_str.contains('|')
+                || comp_str.contains('?')
+                || comp_str.contains('*')
+            {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     "Path contains illegal filesystem characters",
@@ -117,7 +126,8 @@ impl ProjectManager {
         }
 
         let s = validated.to_string_lossy().to_lowercase();
-        if s.contains(r"windows\system32") || s.contains(r"windows/system32") || s == "c:\\windows" {
+        if s.contains(r"windows\system32") || s.contains(r"windows/system32") || s == "c:\\windows"
+        {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::PermissionDenied,
                 "System directories are strictly prohibited as storage roots",
@@ -154,7 +164,10 @@ impl ProjectManager {
     }
 
     /// Verifies that target_dir is strictly contained within authorized_root and not the root itself
-    pub fn verify_containment<P: AsRef<Path>, R: AsRef<Path>>(target_dir: P, authorized_root: R) -> Result<(PathBuf, PathBuf), std::io::Error> {
+    pub fn verify_containment<P: AsRef<Path>, R: AsRef<Path>>(
+        target_dir: P,
+        authorized_root: R,
+    ) -> Result<(PathBuf, PathBuf), std::io::Error> {
         let target = target_dir.as_ref();
         let root = authorized_root.as_ref();
 
@@ -204,7 +217,10 @@ impl ProjectManager {
         if !canonical_target.starts_with(&canonical_root) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::PermissionDenied,
-                format!("Target path {:?} escapes authorized root {:?}", canonical_target, canonical_root),
+                format!(
+                    "Target path {:?} escapes authorized root {:?}",
+                    canonical_target, canonical_root
+                ),
             ));
         }
 
@@ -212,7 +228,10 @@ impl ProjectManager {
     }
 
     /// Scaffolds the complete physical directory vault for a project. Returns (project_dir, canonical_storage_root).
-    pub fn create_project_vault<P: AsRef<Path>>(base_dir: P, slug: &str) -> Result<(PathBuf, PathBuf), std::io::Error> {
+    pub fn create_project_vault<P: AsRef<Path>>(
+        base_dir: P,
+        slug: &str,
+    ) -> Result<(PathBuf, PathBuf), std::io::Error> {
         let clean_slug = slug.trim();
         if clean_slug.is_empty() {
             return Err(std::io::Error::new(
@@ -228,7 +247,10 @@ impl ProjectManager {
             ));
         }
 
-        if !clean_slug.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        if !clean_slug
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-')
+        {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "Project slug must only contain alphanumeric characters and hyphens",
@@ -240,7 +262,10 @@ impl ProjectManager {
         let canonical_base = Self::strip_unc_prefix(&fs::canonicalize(&clean_base)?);
         let project_dir = canonical_base.join(clean_slug);
 
-        if project_dir.exists() && (project_dir.join("project.manifest.json").exists() || fs::read_dir(&project_dir)?.next().is_some()) {
+        if project_dir.exists()
+            && (project_dir.join("project.manifest.json").exists()
+                || fs::read_dir(&project_dir)?.next().is_some())
+        {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 format!("A project directory already exists at {:?}", project_dir),
@@ -274,7 +299,10 @@ impl ProjectManager {
     }
 
     /// Atomically writes project metadata: writes to .tmp, flushes to disk, and renames atomically
-    pub fn save_metadata_atomic<P: AsRef<Path>>(project_dir: P, meta: &ProjectMetadata) -> Result<(), std::io::Error> {
+    pub fn save_metadata_atomic<P: AsRef<Path>>(
+        project_dir: P,
+        meta: &ProjectMetadata,
+    ) -> Result<(), std::io::Error> {
         let p_dir = project_dir.as_ref();
         if !p_dir.exists() {
             return Err(std::io::Error::new(
@@ -306,7 +334,9 @@ impl ProjectManager {
     }
 
     /// Reads and parses project.manifest.json, returning an error if corrupted or missing
-    pub fn read_manifest<P: AsRef<Path>>(project_dir: P) -> Result<ProjectMetadata, std::io::Error> {
+    pub fn read_manifest<P: AsRef<Path>>(
+        project_dir: P,
+    ) -> Result<ProjectMetadata, std::io::Error> {
         let manifest_path = project_dir.as_ref().join("project.manifest.json");
         if !manifest_path.exists() {
             return Err(std::io::Error::new(
@@ -323,8 +353,12 @@ impl ProjectManager {
             ));
         }
 
-        let meta: ProjectMetadata = serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Invalid manifest JSON: {}", e)))?;
+        let meta: ProjectMetadata = serde_json::from_str(&content).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Invalid manifest JSON: {}", e),
+            )
+        })?;
 
         Ok(meta)
     }
@@ -399,7 +433,9 @@ impl ProjectManager {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 // Directory is truly missing on disk.
                 // Verify that the registered target was legitimately within the authorized root
-                if let Ok((canon_target, canon_root)) = Self::verify_containment(raw_target, raw_root) {
+                if let Ok((canon_target, canon_root)) =
+                    Self::verify_containment(raw_target, raw_root)
+                {
                     if canon_target.starts_with(&canon_root) {
                         return Ok(VaultDeletionOutcome::AlreadyMissing);
                     }

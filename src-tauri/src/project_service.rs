@@ -1,27 +1,29 @@
-use rusqlite::Connection;
-use std::path::PathBuf;
+use crate::commands::{ClipDto, CreateProjectDto, SaveProjectDto, SceneDto};
 use crate::database::{
-    get_app_settings, 
-    save_app_settings, 
-    get_last_active_project_id, 
-    set_last_active_project_id, 
-    recover_interrupted_deletions,
-    AppSettings,
-    RecoveryReport
+    get_app_settings, get_last_active_project_id, recover_interrupted_deletions, save_app_settings,
+    set_last_active_project_id, AppSettings, RecoveryReport,
 };
 use crate::project_manager::{ProjectManager, ProjectMetadata};
-use crate::commands::{CreateProjectDto, SaveProjectDto, SceneDto, ClipDto};
+use rusqlite::Connection;
+use std::path::PathBuf;
 
 pub struct ProjectService;
 
 impl ProjectService {
-    pub fn create_project(conn: &mut Connection, input: CreateProjectDto) -> Result<ProjectMetadata, String> {
+    pub fn create_project(
+        conn: &mut Connection,
+        input: CreateProjectDto,
+    ) -> Result<ProjectMetadata, String> {
         let clean_name = input.name.trim();
         if clean_name.is_empty() {
             return Err("Project name cannot be empty".to_string());
         }
 
-        let slug = clean_name.to_lowercase().replace(|c: char| !c.is_alphanumeric(), "-").trim_matches('-').to_string();
+        let slug = clean_name
+            .to_lowercase()
+            .replace(|c: char| !c.is_alphanumeric(), "-")
+            .trim_matches('-')
+            .to_string();
         if slug.is_empty() {
             return Err("Invalid project name resulting in empty slug".to_string());
         }
@@ -36,19 +38,26 @@ impl ProjectService {
         };
 
         // Check duplicate slug in database
-        let slug_exists: bool = conn.query_row(
-            "SELECT count(*) FROM projects WHERE slug = ?1",
-            [&slug],
-            |r| r.get::<_, i64>(0),
-        ).map(|count| count > 0).map_err(|e| e.to_string())?;
+        let slug_exists: bool = conn
+            .query_row(
+                "SELECT count(*) FROM projects WHERE slug = ?1",
+                [&slug],
+                |r| r.get::<_, i64>(0),
+            )
+            .map(|count| count > 0)
+            .map_err(|e| e.to_string())?;
 
         if slug_exists {
-            return Err(format!("A project with slug '{}' already exists in the database", slug));
+            return Err(format!(
+                "A project with slug '{}' already exists in the database",
+                slug
+            ));
         }
 
         // 1. Scaffold filesystem vault and resolve canonical storage root
-        let (vault_path, canonical_storage_root) = ProjectManager::create_project_vault(&base_dir, &slug)
-            .map_err(|e| format!("Failed to create project filesystem vault: {}", e))?;
+        let (vault_path, canonical_storage_root) =
+            ProjectManager::create_project_vault(&base_dir, &slug)
+                .map_err(|e| format!("Failed to create project filesystem vault: {}", e))?;
 
         let now = chrono::Utc::now().timestamp_millis();
         let project = ProjectMetadata {
@@ -56,7 +65,9 @@ impl ProjectService {
             name: clean_name.to_string(),
             slug: slug.clone(),
             synopsis: input.synopsis.unwrap_or_default(),
-            target_aspect_ratio: input.target_aspect_ratio.unwrap_or_else(|| "16:9".to_string()),
+            target_aspect_ratio: input
+                .target_aspect_ratio
+                .unwrap_or_else(|| "16:9".to_string()),
             target_fps: input.target_fps.unwrap_or(24.0),
             target_duration_seconds: input.target_duration_seconds.unwrap_or(600),
             project_dir_path: vault_path.to_string_lossy().to_string(),
@@ -107,7 +118,10 @@ impl ProjectService {
 
         if let Err(e) = insert_result {
             let _ = std::fs::remove_dir_all(&vault_path);
-            return Err(format!("Database transaction failed; rolled back project: {}", e));
+            return Err(format!(
+                "Database transaction failed; rolled back project: {}",
+                e
+            ));
         }
 
         let _ = set_last_active_project_id(conn, Some(&project.id));
@@ -120,22 +134,24 @@ impl ProjectService {
              FROM projects WHERE status != 'DELETING' ORDER BY updated_at DESC"
         ).map_err(|e| e.to_string())?;
 
-        let rows = stmt.query_map([], |row| {
-            Ok(ProjectMetadata {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                slug: row.get(2)?,
-                synopsis: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
-                target_aspect_ratio: row.get(4)?,
-                target_fps: row.get(5)?,
-                target_duration_seconds: row.get(6)?,
-                project_dir_path: row.get(7)?,
-                storage_root: row.get(8)?,
-                status: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(ProjectMetadata {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    slug: row.get(2)?,
+                    synopsis: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
+                    target_aspect_ratio: row.get(4)?,
+                    target_fps: row.get(5)?,
+                    target_duration_seconds: row.get(6)?,
+                    project_dir_path: row.get(7)?,
+                    storage_root: row.get(8)?,
+                    status: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                })
             })
-        }).map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())?;
 
         let mut projects = Vec::new();
         for p in rows {
@@ -150,28 +166,30 @@ impl ProjectService {
              FROM projects WHERE id = ?1 AND status != 'DELETING'"
         ).map_err(|e| e.to_string())?;
 
-        let project = stmt.query_row([project_id], |row| {
-            Ok(ProjectMetadata {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                slug: row.get(2)?,
-                synopsis: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
-                target_aspect_ratio: row.get(4)?,
-                target_fps: row.get(5)?,
-                target_duration_seconds: row.get(6)?,
-                project_dir_path: row.get(7)?,
-                storage_root: row.get(8)?,
-                status: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+        let project = stmt
+            .query_row([project_id], |row| {
+                Ok(ProjectMetadata {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    slug: row.get(2)?,
+                    synopsis: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
+                    target_aspect_ratio: row.get(4)?,
+                    target_fps: row.get(5)?,
+                    target_duration_seconds: row.get(6)?,
+                    project_dir_path: row.get(7)?,
+                    storage_root: row.get(8)?,
+                    status: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                })
             })
-        }).map_err(|e| format!("Project not found or marked for deletion: {}", e))?;
+            .map_err(|e| format!("Project not found or marked for deletion: {}", e))?;
 
         // Explicit vault recovery error handling
         let (intact, missing) = ProjectManager::verify_vault_integrity(&project.project_dir_path);
         if !intact {
             match ProjectManager::heal_vault_directories(&project.project_dir_path) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     return Err(format!(
                         "Vault integrity recovery failed for project '{}' (missing subdirectories: {}): {}. Directory integrity could not be restored.",
@@ -189,7 +207,10 @@ impl ProjectService {
         Ok(project)
     }
 
-    pub fn get_active_project(conn: &Connection, in_memory: Option<ProjectMetadata>) -> Result<Option<ProjectMetadata>, String> {
+    pub fn get_active_project(
+        conn: &Connection,
+        in_memory: Option<ProjectMetadata>,
+    ) -> Result<Option<ProjectMetadata>, String> {
         if let Some(p) = in_memory {
             return Ok(Some(p));
         }
@@ -207,7 +228,11 @@ impl ProjectService {
         Ok(None)
     }
 
-    pub fn rename_project(conn: &mut Connection, project_id: &str, new_name: &str) -> Result<ProjectMetadata, String> {
+    pub fn rename_project(
+        conn: &mut Connection,
+        project_id: &str,
+        new_name: &str,
+    ) -> Result<ProjectMetadata, String> {
         let clean_name = new_name.trim();
         if clean_name.is_empty() {
             return Err("Project name cannot be empty".to_string());
@@ -244,7 +269,10 @@ impl ProjectService {
         Ok(current)
     }
 
-    pub fn save_project(conn: &mut Connection, project: SaveProjectDto) -> Result<ProjectMetadata, String> {
+    pub fn save_project(
+        conn: &mut Connection,
+        project: SaveProjectDto,
+    ) -> Result<ProjectMetadata, String> {
         // 1. Retrieve authoritative project record from SQLite using project ID
         let mut db_meta: ProjectMetadata = conn.query_row(
             "SELECT id, name, slug, synopsis, target_aspect_ratio, target_fps, target_duration_seconds, project_dir_path, storage_root, status, created_at, updated_at
@@ -269,8 +297,11 @@ impl ProjectService {
         ).map_err(|_| format!("Project with ID '{}' not found in database", project.id))?;
 
         // 2. Authoritative path validation: verify containment against registered storage root
-        let root = ProjectManager::resolve_trusted_storage_root(&db_meta.project_dir_path, &db_meta.storage_root)
-            .map_err(|e| format!("Storage containment verification failed: {}", e))?;
+        let root = ProjectManager::resolve_trusted_storage_root(
+            &db_meta.project_dir_path,
+            &db_meta.storage_root,
+        )
+        .map_err(|e| format!("Storage containment verification failed: {}", e))?;
 
         ProjectManager::verify_containment(&db_meta.project_dir_path, &root)
             .map_err(|e| format!("Storage containment check failed for project path: {}", e))?;
@@ -344,29 +375,40 @@ impl ProjectService {
         })();
 
         if let Err(e) = db_update_res {
-            let _ = ProjectManager::save_metadata_atomic(&db_meta.project_dir_path, &on_disk_manifest);
+            let _ =
+                ProjectManager::save_metadata_atomic(&db_meta.project_dir_path, &on_disk_manifest);
             return Err(format!("Database update failed; reverted manifest: {}", e));
         }
 
         Ok(db_meta)
     }
 
-    pub fn delete_project(conn: &mut Connection, project_id: &str, confirmation_name: &str) -> Result<(), String> {
+    pub fn delete_project(
+        conn: &mut Connection,
+        project_id: &str,
+        confirmation_name: &str,
+    ) -> Result<(), String> {
         // 1. Retrieve project record from trusted database
-        let (name, dir_path, storage_root): (String, String, String) = conn.query_row(
-            "SELECT name, project_dir_path, storage_root FROM projects WHERE id = ?1",
-            [project_id],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-        ).map_err(|_| "Project not found in database".to_string())?;
+        let (name, dir_path, storage_root): (String, String, String) = conn
+            .query_row(
+                "SELECT name, project_dir_path, storage_root FROM projects WHERE id = ?1",
+                [project_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .map_err(|_| "Project not found in database".to_string())?;
 
         // 2. Verify exact confirmation name match
         if confirmation_name.trim() != name.trim() {
-            return Err("Confirmation name does not match project name. Deletion aborted.".to_string());
+            return Err(
+                "Confirmation name does not match project name. Deletion aborted.".to_string(),
+            );
         }
 
         // 3. Resolve trusted authorized storage root (handles legacy empty root safely)
-        let authorized_root = ProjectManager::resolve_trusted_storage_root(&dir_path, &storage_root)
-            .map_err(|e| format!("Cannot resolve trusted authorized root for deletion: {}", e))?;
+        let authorized_root =
+            ProjectManager::resolve_trusted_storage_root(&dir_path, &storage_root).map_err(
+                |e| format!("Cannot resolve trusted authorized root for deletion: {}", e),
+            )?;
 
         let now = chrono::Utc::now().timestamp_millis();
 
@@ -378,13 +420,19 @@ impl ProjectService {
                  VALUES (?1, ?2, ?3, ?4, 'INTENT_RECORDED', ?5, ?5)",
                 (project_id, &name, &dir_path, &storage_root, now),
             )?;
-            tx.execute("UPDATE projects SET status = 'DELETING' WHERE id = ?1", [project_id])?;
+            tx.execute(
+                "UPDATE projects SET status = 'DELETING' WHERE id = ?1",
+                [project_id],
+            )?;
             tx.commit()?;
             Ok(())
         })();
 
         if let Err(e) = record_intent {
-            return Err(format!("Failed to record deletion intent in database journal: {}", e));
+            return Err(format!(
+                "Failed to record deletion intent in database journal: {}",
+                e
+            ));
         }
 
         // 5. Safely delete physical vault directory (enforcing canonical registered root containment)
@@ -408,7 +456,10 @@ impl ProjectService {
         let db_delete_result = (|| -> Result<(), rusqlite::Error> {
             let tx = conn.transaction()?;
             tx.execute("DELETE FROM projects WHERE id = ?1", [project_id])?;
-            tx.execute("DELETE FROM project_deletion_journal WHERE project_id = ?1", [project_id])?;
+            tx.execute(
+                "DELETE FROM project_deletion_journal WHERE project_id = ?1",
+                [project_id],
+            )?;
             tx.commit()?;
             Ok(())
         })();
@@ -435,7 +486,9 @@ impl ProjectService {
     }
 
     pub fn update_settings(conn: &Connection, settings: AppSettings) -> Result<(), String> {
-        settings.validate().map_err(|e| format!("Settings validation error: {}", e))?;
+        settings
+            .validate()
+            .map_err(|e| format!("Settings validation error: {}", e))?;
         save_app_settings(conn, &settings).map_err(|e| format!("Failed to save settings: {}", e))
     }
 }

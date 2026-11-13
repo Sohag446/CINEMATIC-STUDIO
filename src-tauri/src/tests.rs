@@ -1,24 +1,18 @@
-use std::fs;
-use std::path::PathBuf;
-use rusqlite::Connection;
+use crate::chrome_service::crypto::{constant_time_eq, hmac_sha256, sha256_digest, to_hex};
+use crate::chrome_service::discovery::ChromeDiscoveryService;
+use crate::chrome_service::ipc::{IpcMessage, NativeMessagingIpc, MAX_MESSAGE_SIZE};
+use crate::chrome_service::pairing::{PairingService, VerifyPairingDto};
+use crate::chrome_service::profile_manager::{ProfileManager, RegisterProfileDto};
+use crate::commands::{CreateProjectDto, SaveProjectDto};
 use crate::database::{
-    init_db, 
-    run_integrity_check, 
-    apply_all_migrations, 
-    get_app_settings, 
-    save_app_settings, 
-    get_last_active_project_id, 
-    set_last_active_project_id, 
-    AppSettings
+    apply_all_migrations, get_app_settings, get_last_active_project_id, init_db,
+    run_integrity_check, save_app_settings, set_last_active_project_id, AppSettings,
 };
 use crate::project_manager::{ProjectManager, ProjectMetadata, VaultDeletionOutcome};
 use crate::project_service::ProjectService;
-use crate::commands::{CreateProjectDto, SaveProjectDto};
-use crate::chrome_service::crypto::{sha256_digest, hmac_sha256, to_hex, constant_time_eq};
-use crate::chrome_service::profile_manager::{ProfileManager, RegisterProfileDto};
-use crate::chrome_service::pairing::{PairingService, VerifyPairingDto};
-use crate::chrome_service::ipc::{NativeMessagingIpc, IpcMessage, MAX_MESSAGE_SIZE};
-use crate::chrome_service::discovery::ChromeDiscoveryService;
+use rusqlite::Connection;
+use std::fs;
+use std::path::PathBuf;
 
 fn setup_test_db() -> (tempfile::TempDir, crate::database::DbPool) {
     let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory for test DB");
@@ -56,15 +50,23 @@ fn test_deletion_failure_intent_recorded_and_preserved_on_fs_failure() {
 
     // Attempt delete
     let result = ProjectService::delete_project(&mut conn, &project.id, "Lock Test Project");
-    assert!(result.is_err(), "Deletion must fail when safe_delete_vault cannot safely proceed");
+    assert!(
+        result.is_err(),
+        "Deletion must fail when safe_delete_vault cannot safely proceed"
+    );
 
     // CRITICAL: Database record MUST STILL EXIST!
-    let db_count: i64 = conn.query_row(
-        "SELECT count(*) FROM projects WHERE id = ?1",
-        [&project.id],
-        |r| r.get(0),
-    ).unwrap();
-    assert_eq!(db_count, 1, "Database record must not be deleted when filesystem deletion fails");
+    let db_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM projects WHERE id = ?1",
+            [&project.id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        db_count, 1,
+        "Database record must not be deleted when filesystem deletion fails"
+    );
 
     // CRITICAL: Deletion journal entry must exist with error details!
     let (state, err_details): (String, Option<String>) = conn.query_row(
@@ -73,7 +75,10 @@ fn test_deletion_failure_intent_recorded_and_preserved_on_fs_failure() {
         |r| Ok((r.get(0)?, r.get(1)?)),
     ).unwrap();
     assert_eq!(state, "INTENT_RECORDED");
-    assert!(err_details.is_some(), "Journal must contain actionable error details");
+    assert!(
+        err_details.is_some(),
+        "Journal must contain actionable error details"
+    );
 }
 
 #[test]
@@ -106,13 +111,31 @@ fn test_deletion_recovery_retry_after_previous_failure() {
     let report = ProjectService::recover_deletions(&mut conn).unwrap();
     assert_eq!(report.successful_recoveries.len(), 1);
     assert!(report.pending_failures.is_empty());
-    assert!(!proj_dir.exists(), "Filesystem directory must be cleaned up by recovery");
+    assert!(
+        !proj_dir.exists(),
+        "Filesystem directory must be cleaned up by recovery"
+    );
 
-    let count: i64 = conn.query_row("SELECT count(*) FROM projects WHERE id = ?1", [&project.id], |r| r.get(0)).unwrap();
+    let count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM projects WHERE id = ?1",
+            [&project.id],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(count, 0, "Database record must be purged by recovery");
 
-    let journal_count: i64 = conn.query_row("SELECT count(*) FROM project_deletion_journal WHERE project_id = ?1", [&project.id], |r| r.get(0)).unwrap();
-    assert_eq!(journal_count, 0, "Journal entry must be purged after complete recovery");
+    let journal_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM project_deletion_journal WHERE project_id = ?1",
+            [&project.id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        journal_count, 0,
+        "Journal entry must be purged after complete recovery"
+    );
 }
 
 #[test]
@@ -144,7 +167,13 @@ fn test_deletion_crash_after_filesystem_deleted_recovery() {
     let report = ProjectService::recover_deletions(&mut conn).unwrap();
     assert_eq!(report.successful_recoveries.len(), 1);
 
-    let p_count: i64 = conn.query_row("SELECT count(*) FROM projects WHERE id = ?1", [proj_id], |r| r.get(0)).unwrap();
+    let p_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM projects WHERE id = ?1",
+            [proj_id],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(p_count, 0);
 }
 
@@ -160,20 +189,25 @@ fn test_fresh_database_migration_v1_and_v2() {
     apply_all_migrations(&mut conn).expect("Fresh migration execution failed");
 
     // Check version 2 is recorded
-    let version: i32 = conn.query_row(
-        "SELECT MAX(version) FROM _schema_migrations",
-        [],
-        |r| r.get(0),
-    ).unwrap();
+    let version: i32 = conn
+        .query_row("SELECT MAX(version) FROM _schema_migrations", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     assert_eq!(version, 2, "Database must upgrade to version 2");
 
     // Verify projects table has storage_root column
-    let col_count: i64 = conn.query_row(
-        "SELECT count(*) FROM pragma_table_info('projects') WHERE name = 'storage_root'",
-        [],
-        |r| r.get(0),
-    ).unwrap();
-    assert_eq!(col_count, 1, "projects table must have storage_root column in v2");
+    let col_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM pragma_table_info('projects') WHERE name = 'storage_root'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        col_count, 1,
+        "projects table must have storage_root column in v2"
+    );
 
     // Verify project_deletion_journal exists
     let journal_exists: bool = conn.query_row(
@@ -181,7 +215,10 @@ fn test_fresh_database_migration_v1_and_v2() {
         [],
         |r| r.get::<_, i64>(0),
     ).map(|c| c > 0).unwrap();
-    assert!(journal_exists, "project_deletion_journal table must exist in v2");
+    assert!(
+        journal_exists,
+        "project_deletion_journal table must exist in v2"
+    );
 }
 
 #[test]
@@ -195,7 +232,8 @@ fn test_legacy_database_migration_upgrade_preserves_records() {
 
     let v1_sql = include_str!("../migrations/001_initial_schema.sql");
     conn.execute_batch(v1_sql).unwrap();
-    conn.execute("INSERT INTO _schema_migrations VALUES (1, 1000);", ()).unwrap();
+    conn.execute("INSERT INTO _schema_migrations VALUES (1, 1000);", ())
+        .unwrap();
 
     // 2. Insert representative records in legacy v1 database
     conn.execute(
@@ -208,7 +246,8 @@ fn test_legacy_database_migration_upgrade_preserves_records() {
         "INSERT INTO scenes (id, project_id, sequence_number, title, created_at, updated_at)
          VALUES ('scene_leg_01', 'leg_01', 1, 'Legacy Scene 1', 1000, 1000)",
         (),
-    ).unwrap();
+    )
+    .unwrap();
 
     conn.execute(
         "INSERT INTO clips (id, scene_id, project_id, clip_number, target_duration_seconds, subject_action, created_at, updated_at)
@@ -220,22 +259,43 @@ fn test_legacy_database_migration_upgrade_preserves_records() {
     apply_all_migrations(&mut conn).expect("Upgrade from v1 to v2 failed");
 
     // 4. Verify version 2 recorded
-    let max_v: i32 = conn.query_row("SELECT MAX(version) FROM _schema_migrations", [], |r| r.get(0)).unwrap();
+    let max_v: i32 = conn
+        .query_row("SELECT MAX(version) FROM _schema_migrations", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     assert_eq!(max_v, 2);
 
     // 5. CRITICAL: Verify all representative records are 100% intact!
-    let (p_name, p_root): (String, String) = conn.query_row(
-        "SELECT name, storage_root FROM projects WHERE id = 'leg_01'",
-        [],
-        |r| Ok((r.get(0)?, r.get(1)?)),
-    ).unwrap();
+    let (p_name, p_root): (String, String) = conn
+        .query_row(
+            "SELECT name, storage_root FROM projects WHERE id = 'leg_01'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
     assert_eq!(p_name, "Legacy Noir");
-    assert_eq!(p_root, "", "Legacy projects receive default empty storage_root");
+    assert_eq!(
+        p_root, "",
+        "Legacy projects receive default empty storage_root"
+    );
 
-    let s_count: i64 = conn.query_row("SELECT count(*) FROM scenes WHERE project_id = 'leg_01'", [], |r| r.get(0)).unwrap();
+    let s_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM scenes WHERE project_id = 'leg_01'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(s_count, 1);
 
-    let c_count: i64 = conn.query_row("SELECT count(*) FROM clips WHERE project_id = 'leg_01'", [], |r| r.get(0)).unwrap();
+    let c_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM clips WHERE project_id = 'leg_01'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(c_count, 1);
 }
 
@@ -315,11 +375,13 @@ fn test_secure_save_project_real_service() {
     assert_eq!(on_disk.synopsis, "Updated synopsis content");
 
     // Verify in database updated
-    let (db_name, db_aspect): (String, String) = conn.query_row(
-        "SELECT name, target_aspect_ratio FROM projects WHERE id = ?1",
-        [&project.id],
-        |r| Ok((r.get(0)?, r.get(1)?)),
-    ).unwrap();
+    let (db_name, db_aspect): (String, String) = conn
+        .query_row(
+            "SELECT name, target_aspect_ratio FROM projects WHERE id = ?1",
+            [&project.id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
     assert_eq!(db_name, "Updated Title");
     assert_eq!(db_aspect, "2.39:1");
 }
@@ -357,7 +419,10 @@ fn test_secure_save_manifest_identity_mismatch_rejected() {
     };
 
     let result = ProjectService::save_project(&mut conn, save_dto);
-    assert!(result.is_err(), "Must reject saving when manifest ID mismatches database ID");
+    assert!(
+        result.is_err(),
+        "Must reject saving when manifest ID mismatches database ID"
+    );
 }
 
 // ============================================================================
@@ -391,7 +456,10 @@ fn test_open_project_vault_healing_error_propagation() {
 
     // Open project must fail and propagate explicit recovery error!
     let open_res = ProjectService::open_project(&conn, &project.id);
-    assert!(open_res.is_err(), "open_project must fail when vault healing cannot recreate directory");
+    assert!(
+        open_res.is_err(),
+        "open_project must fail when vault healing cannot recreate directory"
+    );
 }
 
 #[test]
@@ -431,8 +499,14 @@ fn test_crypto_sha256_and_hmac_sha256_known_vectors() {
     );
 
     // 4. Constant time equality check
-    assert!(constant_time_eq(b"secret_signature_123", b"secret_signature_123"));
-    assert!(!constant_time_eq(b"secret_signature_123", b"secret_signature_124"));
+    assert!(constant_time_eq(
+        b"secret_signature_123",
+        b"secret_signature_123"
+    ));
+    assert!(!constant_time_eq(
+        b"secret_signature_123",
+        b"secret_signature_124"
+    ));
     assert!(!constant_time_eq(b"short", b"longer_string"));
 }
 
@@ -442,19 +516,21 @@ fn test_migration_v3_creates_chrome_tables() {
     apply_all_migrations(&mut conn).expect("Fresh migration execution failed");
 
     // Version 3 recorded
-    let version: i32 = conn.query_row(
-        "SELECT MAX(version) FROM _schema_migrations",
-        [],
-        |r| r.get(0),
-    ).unwrap();
+    let version: i32 = conn
+        .query_row("SELECT MAX(version) FROM _schema_migrations", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
     assert_eq!(version, 3, "Database must upgrade to version 3");
 
     // Tables exist
-    let profiles_count: i64 = conn.query_row(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='chrome_profiles'",
-        [],
-        |r| r.get(0),
-    ).unwrap();
+    let profiles_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='chrome_profiles'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(profiles_count, 1, "chrome_profiles table must exist in v3");
 
     let sessions_count: i64 = conn.query_row(
@@ -462,7 +538,10 @@ fn test_migration_v3_creates_chrome_tables() {
         [],
         |r| r.get(0),
     ).unwrap();
-    assert_eq!(sessions_count, 1, "chrome_pairing_sessions table must exist in v3");
+    assert_eq!(
+        sessions_count, 1,
+        "chrome_pairing_sessions table must exist in v3"
+    );
 }
 
 #[test]
@@ -493,7 +572,10 @@ fn test_profile_registration_and_duplicate_prevention() {
         assigned_provider: None,
     };
     let duplicate_res = ProfileManager::register_profile(&mut conn, duplicate_input);
-    assert!(duplicate_res.is_err(), "Duplicate profile directory key registration must be rejected");
+    assert!(
+        duplicate_res.is_err(),
+        "Duplicate profile directory key registration must be rejected"
+    );
 }
 
 #[test]
@@ -510,12 +592,27 @@ fn test_profile_unregister_behavior() {
     };
 
     let registered = ProfileManager::register_profile(&mut conn, input).unwrap();
-    let count: i64 = conn.query_row("SELECT count(*) FROM chrome_profiles WHERE id = ?1", [&registered.id], |r| r.get(0)).unwrap();
+    let count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM chrome_profiles WHERE id = ?1",
+            [&registered.id],
+            |r| r.get(0),
+        )
+        .unwrap();
     assert_eq!(count, 1);
 
     ProfileManager::unregister_profile(&mut conn, &registered.id).unwrap();
-    let after_count: i64 = conn.query_row("SELECT count(*) FROM chrome_profiles WHERE id = ?1", [&registered.id], |r| r.get(0)).unwrap();
-    assert_eq!(after_count, 0, "Unregistering profile must delete database record");
+    let after_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM chrome_profiles WHERE id = ?1",
+            [&registered.id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        after_count, 0,
+        "Unregistering profile must delete database record"
+    );
 }
 
 #[test]
@@ -523,13 +620,17 @@ fn test_pairing_handshake_success() {
     let (_db_temp, pool) = setup_test_db();
     let mut conn = pool.get().unwrap();
 
-    let reg = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
-        profile_dir_key: "Profile 3".to_string(),
-        display_name: "Handshake Test".to_string(),
-        user_data_dir: None,
-        assigned_purpose: None,
-        assigned_provider: None,
-    }).unwrap();
+    let reg = ProfileManager::register_profile(
+        &mut conn,
+        RegisterProfileDto {
+            profile_dir_key: "Profile 3".to_string(),
+            display_name: "Handshake Test".to_string(),
+            user_data_dir: None,
+            assigned_purpose: None,
+            assigned_provider: None,
+        },
+    )
+    .unwrap();
 
     // 1. Initiate pairing
     let challenge = PairingService::initiate_pairing(&mut conn, &reg.id).unwrap();
@@ -555,11 +656,13 @@ fn test_pairing_handshake_success() {
     assert!(result.success);
 
     // 4. Check profile updated to PAIRED & EXTENSION_CONNECTED
-    let (pairing_state, conn_state): (String, String) = conn.query_row(
-        "SELECT pairing_state, connection_state FROM chrome_profiles WHERE id = ?1",
-        [&reg.id],
-        |r| Ok((r.get(0)?, r.get(1)?)),
-    ).unwrap();
+    let (pairing_state, conn_state): (String, String) = conn
+        .query_row(
+            "SELECT pairing_state, connection_state FROM chrome_profiles WHERE id = ?1",
+            [&reg.id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
     assert_eq!(pairing_state, "PAIRED");
     assert_eq!(conn_state, "EXTENSION_CONNECTED");
 }
@@ -569,13 +672,17 @@ fn test_pairing_wrong_profile_identity_rejected() {
     let (_db_temp, pool) = setup_test_db();
     let mut conn = pool.get().unwrap();
 
-    let reg1 = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
-        profile_dir_key: "Profile A".to_string(),
-        display_name: "Profile A".to_string(),
-        user_data_dir: None,
-        assigned_purpose: None,
-        assigned_provider: None,
-    }).unwrap();
+    let reg1 = ProfileManager::register_profile(
+        &mut conn,
+        RegisterProfileDto {
+            profile_dir_key: "Profile A".to_string(),
+            display_name: "Profile A".to_string(),
+            user_data_dir: None,
+            assigned_purpose: None,
+            assigned_provider: None,
+        },
+    )
+    .unwrap();
 
     let challenge = PairingService::initiate_pairing(&mut conn, &reg1.id).unwrap();
 
@@ -588,7 +695,10 @@ fn test_pairing_wrong_profile_identity_rejected() {
     };
 
     let res = PairingService::verify_pairing(&mut conn, verify_dto);
-    assert!(res.is_err(), "Mismatched profile ID in pairing must be rejected");
+    assert!(
+        res.is_err(),
+        "Mismatched profile ID in pairing must be rejected"
+    );
 }
 
 #[test]
@@ -596,18 +706,25 @@ fn test_pairing_replay_attack_rejected() {
     let (_db_temp, pool) = setup_test_db();
     let mut conn = pool.get().unwrap();
 
-    let reg = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
-        profile_dir_key: "Profile Replay".to_string(),
-        display_name: "Replay Test".to_string(),
-        user_data_dir: None,
-        assigned_purpose: None,
-        assigned_provider: None,
-    }).unwrap();
+    let reg = ProfileManager::register_profile(
+        &mut conn,
+        RegisterProfileDto {
+            profile_dir_key: "Profile Replay".to_string(),
+            display_name: "Replay Test".to_string(),
+            user_data_dir: None,
+            assigned_purpose: None,
+            assigned_provider: None,
+        },
+    )
+    .unwrap();
 
     let challenge = PairingService::initiate_pairing(&mut conn, &reg.id).unwrap();
     let client_nonce = "client_nonce_replay";
     let message = format!("{}:{}", challenge.server_nonce, client_nonce);
-    let sig = to_hex(&hmac_sha256(challenge.pairing_secret.as_bytes(), message.as_bytes()));
+    let sig = to_hex(&hmac_sha256(
+        challenge.pairing_secret.as_bytes(),
+        message.as_bytes(),
+    ));
 
     let dto1 = VerifyPairingDto {
         session_id: challenge.session_id.clone(),
@@ -615,7 +732,11 @@ fn test_pairing_replay_attack_rejected() {
         client_nonce: client_nonce.to_string(),
         client_signature_hex: sig.clone(),
     };
-    assert!(PairingService::verify_pairing(&mut conn, dto1).unwrap().success);
+    assert!(
+        PairingService::verify_pairing(&mut conn, dto1)
+            .unwrap()
+            .success
+    );
 
     // Second attempt with exact same session ID must fail as a replay attack!
     let dto2 = VerifyPairingDto {
@@ -625,7 +746,10 @@ fn test_pairing_replay_attack_rejected() {
         client_signature_hex: sig,
     };
     let res = PairingService::verify_pairing(&mut conn, dto2);
-    assert!(res.is_err(), "Replay attack using consumed pairing session must be rejected");
+    assert!(
+        res.is_err(),
+        "Replay attack using consumed pairing session must be rejected"
+    );
 }
 
 #[test]
@@ -633,23 +757,34 @@ fn test_pairing_expiration_enforced() {
     let (_db_temp, pool) = setup_test_db();
     let mut conn = pool.get().unwrap();
 
-    let reg = ProfileManager::register_profile(&mut conn, RegisterProfileDto {
-        profile_dir_key: "Profile Expired".to_string(),
-        display_name: "Expired Test".to_string(),
-        user_data_dir: None,
-        assigned_purpose: None,
-        assigned_provider: None,
-    }).unwrap();
+    let reg = ProfileManager::register_profile(
+        &mut conn,
+        RegisterProfileDto {
+            profile_dir_key: "Profile Expired".to_string(),
+            display_name: "Expired Test".to_string(),
+            user_data_dir: None,
+            assigned_purpose: None,
+            assigned_provider: None,
+        },
+    )
+    .unwrap();
 
     let challenge = PairingService::initiate_pairing(&mut conn, &reg.id).unwrap();
 
     // Manually expire session in DB
     let past = chrono::Utc::now().timestamp_millis() - 10000;
-    conn.execute("UPDATE chrome_pairing_sessions SET expires_at = ?1 WHERE id = ?2", (past, &challenge.session_id)).unwrap();
+    conn.execute(
+        "UPDATE chrome_pairing_sessions SET expires_at = ?1 WHERE id = ?2",
+        (past, &challenge.session_id),
+    )
+    .unwrap();
 
     let client_nonce = "nonce_expired";
     let message = format!("{}:{}", challenge.server_nonce, client_nonce);
-    let sig = to_hex(&hmac_sha256(challenge.pairing_secret.as_bytes(), message.as_bytes()));
+    let sig = to_hex(&hmac_sha256(
+        challenge.pairing_secret.as_bytes(),
+        message.as_bytes(),
+    ));
 
     let dto = VerifyPairingDto {
         session_id: challenge.session_id,
@@ -692,7 +827,10 @@ fn test_ipc_packet_framing_and_size_bounds() {
     // Test rejecting oversized packet (> 1 MB)
     let fake_len = (MAX_MESSAGE_SIZE as u32 + 10).to_le_bytes();
     let mut oversized = std::io::Cursor::new(fake_len);
-    assert!(NativeMessagingIpc::read_packet(&mut oversized).is_err(), "Packets exceeding 1MB must be rejected");
+    assert!(
+        NativeMessagingIpc::read_packet(&mut oversized).is_err(),
+        "Packets exceeding 1MB must be rejected"
+    );
 }
 
 #[test]
@@ -720,11 +858,23 @@ fn test_chrome_discovery_local_state_parsing() {
     let profiles = ChromeDiscoveryService::discover_profiles(Some(temp_dir.path())).unwrap();
     assert_eq!(profiles.len(), 2);
 
-    let default_prof = profiles.iter().find(|p| p.profile_dir_key == "Default").unwrap();
+    let default_prof = profiles
+        .iter()
+        .find(|p| p.profile_dir_key == "Default")
+        .unwrap();
     assert_eq!(default_prof.display_name, "Main Personal Account");
-    assert_eq!(default_prof.google_account_label.as_deref(), Some("director@cinematic.studio"));
+    assert_eq!(
+        default_prof.google_account_label.as_deref(),
+        Some("director@cinematic.studio")
+    );
 
-    let prof1 = profiles.iter().find(|p| p.profile_dir_key == "Profile 1").unwrap();
+    let prof1 = profiles
+        .iter()
+        .find(|p| p.profile_dir_key == "Profile 1")
+        .unwrap();
     assert_eq!(prof1.display_name, "Veo Video Account");
-    assert_eq!(prof1.google_account_label.as_deref(), Some("veo-producer@cinematic.studio"));
+    assert_eq!(
+        prof1.google_account_label.as_deref(),
+        Some("veo-producer@cinematic.studio")
+    );
 }

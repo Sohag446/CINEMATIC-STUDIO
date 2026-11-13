@@ -1,17 +1,17 @@
+pub mod chrome_service;
+pub mod commands;
 pub mod database;
+pub mod media_service;
 pub mod project_manager;
 pub mod project_service;
-pub mod chrome_service;
-pub mod media_service;
 pub mod telemetry;
-pub mod commands;
 
 #[cfg(test)]
 pub mod tests;
 
+use commands::AppState;
 use std::fs;
 use std::sync::Mutex;
-use commands::AppState;
 use telemetry::TelemetryCollector;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -87,4 +87,3 @@ pub fn run() {
 fn dirs_fallback() -> Option<std::path::PathBuf> {
     std::env::var_os("LOCALAPPDATA").map(std::path::PathBuf::from)
 }
-
