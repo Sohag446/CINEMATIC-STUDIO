@@ -145,12 +145,19 @@ jobs:
             exit 1
           }
 
-          Get-FileHash -Path $releaseDir/* -Algorithm SHA256 | ForEach-Object {
-            "$($_.Hash)  $($_.Path | Split-Path -Leaf)"
-          } | Out-File -FilePath "$releaseDir/SHA256SUMS.txt" -Encoding utf8
+          $hashLines = @()
+          $files = Get-ChildItem -Path $releaseDir -File
+          foreach ($file in $files) {
+            if ($file.Name -ne "SHA256SUMS.txt") {
+              $hash = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash
+              $hashLines += "$hash  $($file.Name)"
+            }
+          }
+          $hashFile = Join-Path $releaseDir "SHA256SUMS.txt"
+          Set-Content -Path $hashFile -Value $hashLines -Encoding utf8
 
           Write-Host "Generated SHA256SUMS.txt:"
-          Get-Content "$releaseDir/SHA256SUMS.txt"
+          Get-Content $hashFile
 
       - name: Upload Installer Packages Artifacts
         uses: actions/upload-artifact@v4
