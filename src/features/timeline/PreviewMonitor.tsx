@@ -110,6 +110,35 @@ export const PreviewMonitor: React.FC = () => {
     }
   }, [isPlaying, setIsPlaying]);
 
+  // Master timeline playback clock: smoothly advances playhead across all clips & gaps
+  useEffect(() => {
+    let animId: number;
+    let lastTime: number | null = null;
+
+    if (isPlaying) {
+      const tick = (now: number) => {
+        if (lastTime !== null) {
+          const delta = (now - lastTime) / 1000;
+          setPlayheadTimeSeconds(prev => {
+            const next = prev + delta;
+            if (next >= totalTimelineDuration) {
+              setIsPlaying(false);
+              return totalTimelineDuration;
+            }
+            return next;
+          });
+        }
+        lastTime = now;
+        animId = requestAnimationFrame(tick);
+      };
+      animId = requestAnimationFrame(tick);
+    }
+
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isPlaying, totalTimelineDuration, setIsPlaying, setPlayheadTimeSeconds]);
+
   // Sync volume & mute & playback rate
   useEffect(() => {
     const video = videoRef.current;

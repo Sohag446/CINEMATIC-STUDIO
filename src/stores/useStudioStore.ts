@@ -205,7 +205,7 @@ interface StudioState {
   checkFFmpegStatus: (customFFmpeg?: string, customFFprobe?: string) => Promise<void>;
   setExportModalOpen: (open: boolean) => void;
   setMediaLibraryModalOpen: (open: boolean) => void;
-  setPlayheadTimeSeconds: (time: number) => void;
+  setPlayheadTimeSeconds: (time: number | ((prev: number) => number)) => void;
   setIsPlaying: (playing: boolean) => void;
   setSelectedTimelineClipId: (id: string | null) => void;
 
@@ -901,7 +901,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   setExportModalOpen: (open) => set({ isExportModalOpen: open }),
   setMediaLibraryModalOpen: (open) => set({ isMediaLibraryModalOpen: open }),
-  setPlayheadTimeSeconds: (time) => set({ playheadTimeSeconds: time }),
+  setPlayheadTimeSeconds: (time) =>
+    set((s) => ({
+      playheadTimeSeconds: typeof time === 'function' ? time(s.playheadTimeSeconds) : time,
+    })),
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setSelectedTimelineClipId: (id) => set({ selectedTimelineClipId: id }),
 

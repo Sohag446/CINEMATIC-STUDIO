@@ -4,8 +4,10 @@
  * Supports Tauri 2 convertFileSrc (asset://) and browser object URLs / blob fallbacks
  */
 
+import { convertFileSrc } from '@tauri-apps/api/core';
+
 export function resolveMediaUrl(filePath?: string | null, proxyPath?: string | null): string {
-  // 1. If a valid blob:, http:, or data: proxy path exists, prefer it for instant preview
+  // 1. If a valid blob:, http:, https:, or data: proxy path exists, prefer it for instant preview
   if (proxyPath) {
     if (
       proxyPath.startsWith('blob:') ||
@@ -18,7 +20,7 @@ export function resolveMediaUrl(filePath?: string | null, proxyPath?: string | n
     }
   }
 
-  // 2. If no filePath, return empty
+  // 2. If no filePath, return proxyPath or empty string
   if (!filePath) {
     return proxyPath || '';
   }
@@ -34,19 +36,12 @@ export function resolveMediaUrl(filePath?: string | null, proxyPath?: string | n
     return filePath;
   }
 
-  // 4. In Tauri environment, attempt convertFileSrc
-  if (typeof window !== 'undefined') {
-    const tauriInternals = (window as any).__TAURI_INTERNALS__;
-    if (tauriInternals && typeof tauriInternals.convertFileSrc === 'function') {
-      try {
-        return tauriInternals.convertFileSrc(filePath, 'asset');
-      } catch (err) {
-        console.warn('Tauri convertFileSrc failed, falling back:', err);
-      }
-    }
+  // 4. In Tauri desktop context, use convertFileSrc
+  try {
+    return convertFileSrc(filePath);
+  } catch {
+    // 5. Standard Tauri 2 Windows asset URL fallback
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    return `https://asset.localhost/${encodeURI(normalizedPath)}`;
   }
-
-  // 5. Standard Tauri 2 Windows asset URL fallback
-  const normalizedPath = filePath.replace(/\\/g, '/');
-  return `http://asset.localhost/${encodeURI(normalizedPath)}`;
 }
