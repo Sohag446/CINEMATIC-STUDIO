@@ -7,6 +7,8 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+*.zip
+release_artifacts/
 src-tauri/target/
 
 # Large Binaries (> 100 MB GitHub file limit)

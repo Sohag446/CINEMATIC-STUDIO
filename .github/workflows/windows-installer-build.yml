@@ -134,7 +134,16 @@ jobs:
           Copy-Item src-tauri/target/release/bundle/nsis/*.exe $releaseDir/ -Force
           Copy-Item src-tauri/target/release/bundle/msi/*.msi $releaseDir/ -Force
           Copy-Item src-tauri/target/release/cinematic-studio-host.exe $releaseDir/ -Force
-          Copy-Item dist/cinematic-studio-chrome-extension.zip $releaseDir/ -Force
+
+          node scripts/package_extension.cjs
+          if (Test-Path "dist/cinematic-studio-chrome-extension.zip") {
+            Copy-Item dist/cinematic-studio-chrome-extension.zip $releaseDir/ -Force
+          } elseif (Test-Path "chrome-extension/cinematic-studio-chrome-extension.zip") {
+            Copy-Item chrome-extension/cinematic-studio-chrome-extension.zip $releaseDir/ -Force
+          } else {
+            Write-Error "Chrome Extension package not found!"
+            exit 1
+          }
 
           Get-FileHash -Path $releaseDir/* -Algorithm SHA256 | ForEach-Object {
             "$($_.Hash)  $($_.Path | Split-Path -Leaf)"

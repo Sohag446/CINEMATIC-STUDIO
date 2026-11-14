@@ -70,8 +70,13 @@ function packageExtension() {
 
   if (fs.existsSync(zipOutput)) {
     const stats = fs.statSync(zipOutput);
+    // Also copy to persistent extension folder so frontend rebuilds do not erase it
+    const persistentZip = path.join(extDir, 'cinematic-studio-chrome-extension.zip');
+    fs.copyFileSync(zipOutput, persistentZip);
+
     console.log(`[PASS] Successfully created Chrome Extension package!`);
     console.log(`       File: ${zipOutput}`);
+    console.log(`       Backup: ${persistentZip}`);
     console.log(`       Size: ${(stats.size / 1024).toFixed(2)} KB\n`);
   } else {
     throw new Error('Failed to create extension zip archive');
