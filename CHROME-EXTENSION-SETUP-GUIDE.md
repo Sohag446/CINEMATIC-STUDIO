@@ -1,94 +1,107 @@
-# CINEMATIC STUDIO — CHROME EXTENSION SETUP & PAIRING GUIDE
+# CINEMATIC STUDIO — CHROME EXTENSION SETUP & RECOVERY GUIDE
 
-The **Cinematic Studio Production Agent** Chrome Extension connects your desktop studio with web-based AI generation providers (ChatGPT, Claude, Gemini, Google Flow / Veo).
-
----
-
-## 1. EXTENSION PACKAGE INFORMATION
-
-- **Extension Name:** Cinematic Studio Production Agent
-- **Version:** `1.0.0`
-- **Manifest Version:** Manifest V3
-- **Deterministic Extension ID:** `olfkacbfbgihonffpmnmnhmfmonfhmpf`
-  *(Generated deterministically from the embedded RSA public key in `manifest.json`)*
-- **Package Archives:**
-  - **Pre-packaged ZIP:** `dist/cinematic-studio-chrome-extension.zip`
-  - **Source Directory:** `chrome-extension/`
+**Application:** CINEMATIC STUDIO
+**Extension ID:** `olfkacbfbgihonffpmnmnhmfmonfhmpf`
+**Native Messaging Host:** `com.cinematic.studio`
+**Manifest Version:** Manifest V3 (MV3)
+**Developer:** Md. Sohag Hossen ([GitHub Profile](https://github.com/Sohag446))
+**Repository:** https://github.com/Sohag446/CINEMATIC-STUDIO
 
 ---
 
-## 2. HOW TO INSTALL IN GOOGLE CHROME
+## 1. Overview & Architecture
 
-1. Open **Google Chrome** using the specific Chrome profile you intend to use for AI generations (e.g., Profile with your ChatGPT / Claude / Gemini / Google accounts).
-2. Navigate to the Extensions management page:
-   ```text
-   chrome://extensions/
-   ```
-3. Enable **Developer mode** using the toggle in the top-right corner.
-4. Install the extension using either of these two methods:
-   - **Option A (Unpacked Source - Recommended for development/local use):**
-     Click **Load unpacked** in the top-left, browse to the Cinematic Studio workspace, and select the `chrome-extension` directory.
-   - **Option B (From ZIP Package):**
-     Extract `dist/cinematic-studio-chrome-extension.zip` into a local folder (e.g. `C:\Users\<User>\Documents\CinematicExtension`), then click **Load unpacked** and select that extracted folder.
-5. Confirm the extension appears with ID:
-   ```text
-   olfkacbfbgihonffpmnmnhmfmonfhmpf
-   ```
-6. Pin the extension to your Chrome toolbar for easy access.
+CINEMATIC STUDIO uses a lightweight Google Chrome extension to bridge your desktop creative suite directly to your real Chrome browser sessions.
 
----
+```
+┌─────────────────────────────────┐         ┌─────────────────────────────────┐
+│     CINEMATIC STUDIO DESKTOP    │         │       GOOGLE CHROME BROWSER     │
+│       (Tauri 2 + Rust Core)     │         │                                 │
+└────────────────┬────────────────┘         └────────────────┬────────────────┘
+                 │ Stdio IPC (32-bit LE)                     │ Web Navigation & State
+                 ▼                                           ▼
+┌─────────────────────────────────┐         ┌─────────────────────────────────┐
+│   Native Messaging Host Binary  │◄───────►│    Cinematic Studio Extension   │
+│   (cinematic-studio-host.exe)   │         │ (ID: olfkacbfbgihonffpmnmnh...) │
+└─────────────────────────────────┘         └─────────────────────────────────┘
+```
 
-## 3. NATIVE MESSAGING HOST REGISTRATION
-
-The extension communicates with the desktop application via Chrome Native Messaging:
-- If you installed Cinematic Studio via the official Windows installer (`.exe` or `.msi`), the Native Messaging host is registered automatically.
-- If you run from source, register it once by running:
-  ```powershell
-  node scripts/register_native_host.cjs
-  ```
-- To verify registration, run:
-  ```powershell
-  reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.cinematic.studio" /ve
-  ```
+### Why Native Messaging?
+- **No Fragile Scraping:** It connects directly to your active browser tabs.
+- **Privacy & Security:** The desktop application never asks for, reads, or stores your passwords, cookies, or account tokens. You stay signed in to your preferred AI tools (ChatGPT, Gemini, Claude, Google Veo / Flow) in your own browser.
+- **No Anti-Bot Interference:** Operates within your authenticated user session, respecting website rate limits and terms of service.
 
 ---
 
-## 4. SECURE PROFILE PAIRING (STEP-BY-STEP)
+## 2. Step-by-Step Extension Installation
 
-Cinematic Studio uses mutual HMAC-SHA256 challenge-response authentication with anti-replay protection.
+### Method 1: Loading from Source / Sideloading (Recommended)
 
-1. **Open Desktop App:** In Cinematic Studio, click the **Profiles** button in the top navigation bar to open the **Chrome Profile Manager**.
-2. **Discover Profiles:** The manager automatically detects all local Chrome profiles.
-3. **Initiate Pairing:**
-   - Locate the target profile and click **Pair Profile**.
-   - The desktop app generates a cryptographic challenge with a 5-minute validity window and displays a pairing token or URI:
-     `cinematic://pair?profile=<PROFILE_UUID>&secret=<SECRET_HEX>`
-   - Click **Copy Pairing Token**.
-4. **Open Extension Popup:**
-   - In Chrome, click the **Cinematic Studio** extension icon.
-   - The popup will display status: `UNPAIRED`.
-5. **Paste and Confirm:**
-   - Paste the copied pairing token into the **Pairing Token / URI** input field.
-   - Click **Pair with Desktop**.
-6. **Verification Complete:**
-   - The extension and native host perform a mutual HMAC-SHA256 handshake.
-   - Status updates to **CONNECTED** (green badge).
-   - The desktop app updates the profile status to **PAIRED & CONNECTED**.
+1. **Locate or Extract the Extension:**
+   - In CINEMATIC STUDIO, open the **First-Launch Setup Wizard** or click the **Chrome Pill** in the top navigation bar.
+   - Click **Copy Path** to copy the extension folder path on your computer:
+     ```
+     <ProjectDirectory>\chrome-extension
+     ```
+   - Alternatively, if you downloaded `cinematic-studio-chrome-extension.zip` from the release assets, extract it into a permanent folder (e.g., `Documents\CinematicStudioExtension`).
 
----
+2. **Open Chrome Extensions Manager:**
+   - In Google Chrome, type `chrome://extensions` in the address bar and press **Enter**.
 
-## 5. TESTING COMMUNICATION
+3. **Enable Developer Mode:**
+   - Toggle the **Developer mode** switch in the top-right corner to **ON**.
 
-- In the Chrome extension popup, click **Test Connection**.
-- The extension dispatches a `PING` packet across the Native Messaging bridge.
-- The desktop host receives it and returns a `PONG` packet with server timestamp and `HEALTHY` status.
+4. **Load Unpacked Extension:**
+   - Click the **Load unpacked** button in the top-left corner.
+   - Select the `chrome-extension` directory (or extracted folder).
+   - Verify that **Cinematic Studio Production Agent** appears in your extensions list with:
+     - **ID:** `olfkacbfbgihonffpmnmnhmfmonfhmpf`
+     - **Version:** `2.0.1`
 
 ---
 
-## 6. SECURITY & PRIVACY PROMISES
+## 3. Native Messaging Host Registration
 
-- **Zero Credential Scraping:** The extension never inspects, accesses, or saves cookies, passwords, or authentication tokens.
-- **No CAPTCHA Circumvention:** Anti-bot challenges (Cloudflare Turnstile, reCAPTCHA) are never bypassed. When human intervention is required, the extension escalates the task to `NEEDS_HUMAN_ACTION` and prompts the user.
-- **Strict Profile Isolation:** The extension drops packets intended for other Chrome profile IDs.
-- **Timed Expiry:** Pairing sessions expire automatically after inactivity and can be revoked at any time from the desktop application.
+The installer automatically registers the Native Messaging Host in your Windows Registry under Current User (`HKCU`).
 
+### Verifying Windows Registry Key
+Open PowerShell or Command Prompt and run:
+```cmd
+reg query HKCU\Software\Google\Chrome\NativeMessagingHosts\com.cinematic.studio
+```
+The output should report:
+```
+(Default)    REG_SZ    C:\Users\<YourUser>\AppData\Local\CinematicStudio\NativeMessaging\com.cinematic.studio.json
+```
+
+### 1-Click Repair / Re-registration
+If the registry key is ever missing or pointing to an old location:
+1. Open CINEMATIC STUDIO.
+2. Click **Chrome: Connect** in the top navigation bar (or press `Ctrl+3` $\rightarrow$ click the Shield icon).
+3. Click **1-Click Auto-Repair**.
+4. The application automatically re-writes the JSON manifest and registers the Windows Registry key.
+
+---
+
+## 4. Multi-Profile Support
+
+Many creators maintain multiple Google Chrome profiles (e.g., Personal, Work, Studio).
+
+1. In CINEMATIC STUDIO, navigate to the **AI Video** workspace.
+2. In the right panel (Google Veo generator), locate the **Chrome Profile** dropdown.
+3. Select the specific profile that has your active Google DeepMind / Veo account.
+4. Click **Launch Session** to open that exact profile with the paired extension.
+
+---
+
+## 5. Bidirectional Communication & Heartbeat Verification
+
+To test that the desktop application and Chrome extension are communicating:
+
+1. Click the **Cinematic Studio extension icon** in your Chrome toolbar.
+2. The popup will display:
+   - **Host Connection:** `Connected to com.cinematic.studio ✓`
+   - **Protocol:** `32-bit LE Stdio IPC`
+   - **Heartbeat:** `Active (Latency < 2ms)`
+   - **Pairing Status:** `Paired with Desktop Studio`
+3. In CINEMATIC STUDIO, open the **Property Inspector** (`Ctrl+I`) $\rightarrow$ under Chrome Integration, the status will show **EXTENSION_CONNECTED**.

@@ -85,6 +85,8 @@ interface StudioState {
   isRenameModalOpen: boolean;
   isDeleteModalOpen: boolean;
   isChromeProfileModalOpen: boolean;
+  isDiagnosticsModalOpen: boolean;
+  isFirstLaunchModalOpen: boolean;
   projectToDelete: Project | null;
 
   // Telemetry & Settings
@@ -199,6 +201,8 @@ interface StudioState {
   setRenameModalOpen: (open: boolean) => void;
   setDeleteModalOpen: (open: boolean, project?: Project | null) => void;
   setChromeProfileModalOpen: (open: boolean) => void;
+  setDiagnosticsModalOpen: (open: boolean) => void;
+  setFirstLaunchModalOpen: (open: boolean) => void;
   clearActivePairingChallenge: () => void;
 
   // Master Rebuild: Story & AI Video Actions
@@ -392,6 +396,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   isRenameModalOpen: false,
   isDeleteModalOpen: false,
   isChromeProfileModalOpen: false,
+  isDiagnosticsModalOpen: false,
+  isFirstLaunchModalOpen: false,
   projectToDelete: null,
 
   telemetry: null,
@@ -751,6 +757,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   setRenameModalOpen: (open) => set({ isRenameModalOpen: open }),
   setDeleteModalOpen: (open, project = null) => set({ isDeleteModalOpen: open, projectToDelete: project }),
   setChromeProfileModalOpen: (open) => set({ isChromeProfileModalOpen: open }),
+  setDiagnosticsModalOpen: (open) => set({ isDiagnosticsModalOpen: open }),
+  setFirstLaunchModalOpen: (open) => set({ isFirstLaunchModalOpen: open }),
   clearActivePairingChallenge: () => set({ activePairingChallenge: null }),
 
   // Master Rebuild: Story & AI Video Actions

@@ -14,6 +14,9 @@ import { DeleteProjectModal } from './features/projects/DeleteProjectModal';
 import { SettingsModal } from './features/settings/SettingsModal';
 import { ChromeProfileManagerModal } from './features/profiles/ChromeProfileManagerModal';
 import { ChromeSetupWizardModal } from './features/profiles/ChromeSetupWizardModal';
+import { InstallationDiagnosticsModal } from './features/settings/InstallationDiagnosticsModal';
+import { FirstLaunchSetupModal } from './features/setup/FirstLaunchSetupModal';
+import { AboutModal } from './components/AboutModal';
 import { MediaLibraryModal } from './features/media/MediaLibraryModal';
 import { ExportModal } from './features/export/ExportModal';
 import { useStudioStore } from './stores/useStudioStore';
@@ -31,7 +34,11 @@ export const App: React.FC = () => {
     fetchSettings,
     refreshTelemetry,
     fetchRegisteredProfiles,
-    checkFFmpegStatus
+    checkFFmpegStatus,
+    isDiagnosticsModalOpen,
+    setDiagnosticsModalOpen,
+    isFirstLaunchModalOpen,
+    setFirstLaunchModalOpen
   } = useStudioStore();
 
   useEffect(() => {
@@ -40,6 +47,11 @@ export const App: React.FC = () => {
     refreshTelemetry();
     fetchRegisteredProfiles();
     checkFFmpegStatus();
+
+    // Check first-time setup
+    if (!localStorage.getItem('cinematic_studio_setup_complete')) {
+      setFirstLaunchModalOpen(true);
+    }
 
     // Low-frequency telemetry interval (5 seconds - low CPU/memory impact)
     const interval = setInterval(() => {
@@ -151,6 +163,15 @@ export const App: React.FC = () => {
       <SettingsModal />
       <ChromeProfileManagerModal />
       <ChromeSetupWizardModal />
+      <InstallationDiagnosticsModal
+        isOpen={isDiagnosticsModalOpen}
+        onClose={() => setDiagnosticsModalOpen(false)}
+      />
+      <FirstLaunchSetupModal
+        isOpen={isFirstLaunchModalOpen}
+        onClose={() => setFirstLaunchModalOpen(false)}
+      />
+      <AboutModal />
       <MediaLibraryModal />
       <ExportModal />
     </div>

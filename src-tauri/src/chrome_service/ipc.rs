@@ -93,15 +93,49 @@ impl NativeMessagingIpc {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| {
                 let bin_dir = app_data.join("CinematicStudio").join("bin");
-                let bin_path = bin_dir.join("cinematic-studio-host.exe");
-                if bin_path.exists() {
-                    bin_path.to_string_lossy().to_string()
-                } else {
-                    manifest_dir
-                        .join("cinematic-studio-host.exe")
-                        .to_string_lossy()
-                        .to_string()
+                let standard_host = bin_dir.join("cinematic-studio-host.exe");
+
+                // Check standard user bin location
+                if standard_host.exists() {
+                    return standard_host.to_string_lossy().to_string();
                 }
+
+                // Check relative to current application executable
+                if let Ok(cur_exe) = std::env::current_exe() {
+                    if let Some(parent) = cur_exe.parent() {
+                        let installed_resource_host = parent.join("resources").join("bin").join("cinematic-studio-host.exe");
+                        if installed_resource_host.exists() {
+                            // Copy to standard bin for persistence
+                            let _ = fs::create_dir_all(&bin_dir);
+                            let _ = fs::copy(&installed_resource_host, &standard_host);
+                            return standard_host.to_string_lossy().to_string();
+                        }
+
+                        let adjacent_host = parent.join("cinematic-studio-host.exe");
+                        if adjacent_host.exists() {
+                            let _ = fs::create_dir_all(&bin_dir);
+                            let _ = fs::copy(&adjacent_host, &standard_host);
+                            return standard_host.to_string_lossy().to_string();
+                        }
+                    }
+                }
+
+                // Check development build paths
+                let dev_paths = [
+                    PathBuf::from(r"src-tauri\target\release\cinematic-studio-host.exe"),
+                    PathBuf::from(r"target\release\cinematic-studio-host.exe"),
+                    manifest_dir.join("cinematic-studio-host.exe"),
+                ];
+
+                for dev_path in &dev_paths {
+                    if dev_path.exists() {
+                        let _ = fs::create_dir_all(&bin_dir);
+                        let _ = fs::copy(dev_path, &standard_host);
+                        return standard_host.to_string_lossy().to_string();
+                    }
+                }
+
+                standard_host.to_string_lossy().to_string()
             });
 
         let ext_origin = if let Some(id) = extension_id {

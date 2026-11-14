@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows-installer:
@@ -57,6 +57,9 @@ jobs:
       - name: Build Frontend Production Bundle
         run: npm run build
 
+      - name: Package Chrome Extension ZIP
+        run: node scripts/package_extension.cjs
+
       - name: Build Chrome Native Messaging Host Binary
         run: cargo build --release --bin cinematic-studio-host --manifest-path src-tauri/Cargo.toml
 
@@ -83,12 +86,116 @@ jobs:
             exit 1
           }
 
+      - name: Authenticode Code Signing & Signature Verification
+        shell: pwsh
+        env:
+          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK || secrets.CSC_LINK }}
+          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if ($env:WINDOWS_CSC_LINK -and $env:WINDOWS_CSC_KEY_PASSWORD) {
+            Write-Host "Authenticode code-signing certificate detected. Preparing signtool..."
+            $pfxPath = "$env:RUNNER_TEMP\authenticode_cert.pfx"
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CSC_LINK))
+
+            $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter "signtool.exe" -Recurse | Select-Object -First 1).FullName
+            if (!$signtool) {
+              Write-Error "signtool.exe not found on runner!"
+              exit 1
+            }
+
+            $filesToSign = Get-ChildItem -Path "src-tauri/target/release/bundle" -Include *.exe,*.msi -Recurse
+            foreach ($file in $filesToSign) {
+              Write-Host "Signing $($file.FullName)..."
+              & $signtool sign /f $pfxPath /p $env:WINDOWS_CSC_KEY_PASSWORD /fd SHA256 /tr "http://timestamp.digicert.com" /td SHA256 /d "Cinematic Studio" $file.FullName
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Signing failed for $($file.FullName)!"
+                exit 1
+              }
+              Write-Host "Verifying signature..."
+              & $signtool verify /pa /v $file.FullName
+            }
+            Remove-Item $pfxPath -Force
+          } else {
+            Write-Host "=========================================================================="
+            Write-Host "[NOTICE] Authenticode signing secret (WINDOWS_CSC_LINK) is not configured."
+            Write-Host "[NOTICE] Generating release packages with verified SHA-256 integrity checksums."
+            Write-Host "[NOTICE] Smart App Control / SmartScreen reputation guidance provided in docs."
+            Write-Host "=========================================================================="
+          }
+
+      - name: Prepare Staged Release Artifacts & Checksums
+        shell: pwsh
+        run: |
+          $releaseDir = "release_artifacts"
+          New-Item -ItemType Directory -Force -Path $releaseDir
+
+          Copy-Item src-tauri/target/release/bundle/nsis/*.exe $releaseDir/ -Force
+          Copy-Item src-tauri/target/release/bundle/msi/*.msi $releaseDir/ -Force
+          Copy-Item src-tauri/target/release/cinematic-studio-host.exe $releaseDir/ -Force
+          Copy-Item dist/cinematic-studio-chrome-extension.zip $releaseDir/ -Force
+
+          Get-FileHash -Path $releaseDir/* -Algorithm SHA256 | ForEach-Object {
+            "$($_.Hash)  $($_.Path | Split-Path -Leaf)"
+          } | Out-File -FilePath "$releaseDir/SHA256SUMS.txt" -Encoding utf8
+
+          Write-Host "Generated SHA256SUMS.txt:"
+          Get-Content "$releaseDir/SHA256SUMS.txt"
+
       - name: Upload Installer Packages Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cinematic-studio-windows-installer
+          name: cinematic-studio-windows-installer-v2.0.1
           path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/cinematic-studio-host.exe
+            release_artifacts/*
           retention-days: 30
+
+      - name: Publish Official GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release_artifacts/*
+          name: CINEMATIC STUDIO ${{ github.ref_name }} — Windows Desktop & Extension Release
+          body: |
+            # CINEMATIC STUDIO ${{ github.ref_name }} — Windows Desktop & Chrome Extension Release
+
+            **Developer & Architect:** Md. Sohag Hossen
+            **Repository:** https://github.com/Sohag446/CINEMATIC-STUDIO
+            **Operating System:** Windows 11 / Windows 10 x64
+
+            ---
+
+            ## 📦 Installation Packages & Downloads
+
+            | Deliverable | Package File | Scope & Recommended Use |
+            | :--- | :--- | :--- |
+            | **Windows NSIS Setup (Recommended)** | `Cinematic Studio_2.0.1_x64-setup.exe` | Per-user desktop installation (%LOCALAPPDATA%\Programs), no UAC admin required, clean uninstallation |
+            | **Windows MSI Installer** | `Cinematic Studio_2.0.1_x64_en-US.msi` | Windows Installer package with stable WiX UpgradeCode for managed deployments |
+            | **Chrome Extension (MV3)** | `cinematic-studio-chrome-extension.zip` | Manifest V3 Chrome Extension package for side-loading (`chrome://extensions`) |
+            | **Native Messaging Host** | `cinematic-studio-host.exe` | Standalone Chrome native messaging host binary |
+            | **Integrity Checksums** | `SHA256SUMS.txt` | SHA-256 cryptographic hashes for all release artifacts |
+
+            ---
+
+            ## 🛠️ Key Improvements & Fixes in v2.0.1
+
+            1. **Clean Installation & Uninstallation Lifecycle:**
+               - Configured per-user (`currentUser`) installation into `%LOCALAPPDATA%\Programs\Cinematic Studio` eliminating administrative file-access barriers.
+               - Added NSIS lifecycle hooks to terminate lingering application processes before file copy/deletion, preventing file locks.
+               - Automatic registration and unregistration of Chrome Native Messaging Host (`HKCU\Software\Google\Chrome\NativeMessagingHosts\com.cinematic.studio`).
+               - **User Project Preservation:** User project files in `C:\CinematicStudio\Projects` and SQLite databases survive upgrades and uninstallation by default.
+
+            2. **Unified Version Synchronization (v2.0.1):**
+               - Installer filenames, package.json, tauri.conf.json, Cargo.toml, MV3 manifest, and in-app About dialog all strictly report version **2.0.1**.
+
+            3. **Native Messaging Host Resolution:**
+               - Fixed executable path resolution in `ipc.rs` and setup scripts so the manifest accurately points to the installed host binary on disk.
+
+            4. **In-App Installation Diagnostics & Setup Wizard:**
+               - Integrated System Diagnostics panel checking version, registry, database, FFmpeg, and native messaging connectivity with 1-click auto-repair.
+               - Beginner-friendly First-Launch Setup Wizard guiding users through Chrome extension pairing.
+
+            5. **Windows Smart App Control & Security Guidance:**
+               - Built with Authenticode signing CI pipeline. For unsigned community builds, comprehensive troubleshooting and smart-screen guidance are documented in `WINDOWS-INSTALLATION-GUIDE.md`.
+          draft: false
+          prerelease: false

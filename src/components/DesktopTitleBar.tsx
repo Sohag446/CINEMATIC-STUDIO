@@ -41,7 +41,9 @@ export const DesktopTitleBar: React.FC = () => {
     setMainView,
     isBeginnerMode,
     toggleBeginnerMode,
-    toggleInspector
+    toggleInspector,
+    setDiagnosticsModalOpen,
+    setFirstLaunchModalOpen
   } = useStudioStore();
 
   const [isMaximized, setIsMaximized] = useState(false);
@@ -158,7 +160,12 @@ export const DesktopTitleBar: React.FC = () => {
       id: 'help',
       label: 'Help',
       children: [
-        { label: 'About Cinematic Studio...', action: () => setIsAboutModalOpen(true), icon: Info },
+        { label: 'Installation & Chrome Diagnostics...', action: () => setDiagnosticsModalOpen(true) },
+        { label: 'First-Launch Setup Wizard...', action: () => setFirstLaunchModalOpen(true) },
+        { type: 'separator' },
+        { label: 'Check for Updates...', action: () => window.open('https://github.com/Sohag446/CINEMATIC-STUDIO/releases', '_blank') },
+        { type: 'separator' },
+        { label: 'About Cinematic Studio (v2.0.1)...', action: () => setIsAboutModalOpen(true), icon: Info },
         { label: 'Developer: Md. Sohag Hossen', action: () => window.open('https://github.com/Sohag446', '_blank') },
         { label: 'Official GitHub Repository', action: () => window.open('https://github.com/Sohag446/CINEMATIC-STUDIO', '_blank') }
       ]

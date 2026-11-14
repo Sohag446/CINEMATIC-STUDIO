@@ -21,8 +21,44 @@ function registerNativeHost(customExePath) {
   if (!fs.existsSync(manifestDir)) {
     fs.mkdirSync(manifestDir, { recursive: true });
   }
+  if (!fs.existsSync(binDir)) {
+    fs.mkdirSync(binDir, { recursive: true });
+  }
 
-  const exePath = customExePath || path.join(binDir, 'cinematic-studio-host.exe');
+  let exePath = customExePath;
+  const standardHost = path.join(binDir, 'cinematic-studio-host.exe');
+
+  if (!exePath) {
+    if (fs.existsSync(standardHost)) {
+      exePath = standardHost;
+    } else {
+      const candidatePaths = [
+        path.resolve(__dirname, '..', 'src-tauri', 'target', 'release', 'cinematic-studio-host.exe'),
+        path.resolve(__dirname, '..', 'src-tauri', 'resources', 'bin', 'cinematic-studio-host.exe'),
+        path.join(localAppData, 'Programs', 'Cinematic Studio', 'resources', 'bin', 'cinematic-studio-host.exe'),
+        path.join(localAppData, 'Programs', 'Cinematic Studio', 'cinematic-studio-host.exe')
+      ];
+
+      for (const cand of candidatePaths) {
+        if (fs.existsSync(cand)) {
+          try {
+            fs.copyFileSync(cand, standardHost);
+            exePath = standardHost;
+            console.log(`[PASS] Staged host executable from ${cand} to ${standardHost}`);
+            break;
+          } catch (e) {
+            exePath = cand;
+            break;
+          }
+        }
+      }
+
+      if (!exePath) {
+        exePath = standardHost;
+      }
+    }
+  }
+
   const manifestPath = path.join(manifestDir, `${HOST_NAME}.json`);
 
   const manifest = {
