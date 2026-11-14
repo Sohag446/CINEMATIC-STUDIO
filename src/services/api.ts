@@ -262,6 +262,28 @@ export const apiService = {
     return newClips;
   },
 
+  async saveScenesAndClips(projectId: string, newScenes: Scene[], newClips: Clip[]): Promise<void> {
+    const existingScenes = this.getLocalScenes().filter(s => s.project_id !== projectId);
+    existingScenes.push(...newScenes);
+    localStorage.setItem(STORAGE_SCENES_KEY, JSON.stringify(existingScenes));
+
+    const existingClips = this.getLocalClips().filter(c => c.project_id !== projectId);
+    existingClips.push(...newClips);
+    localStorage.setItem(STORAGE_CLIPS_KEY, JSON.stringify(existingClips));
+  },
+
+  async updateClip(clip: Clip): Promise<Clip> {
+    const all = this.getLocalClips();
+    const idx = all.findIndex(c => c.id === clip.id);
+    if (idx >= 0) {
+      all[idx] = { ...clip, updated_at: Date.now() };
+    } else {
+      all.push({ ...clip, updated_at: Date.now() });
+    }
+    localStorage.setItem(STORAGE_CLIPS_KEY, JSON.stringify(all));
+    return clip;
+  },
+
   // ==========================================
   // SYSTEM TELEMETRY & RESOURCES
   // ==========================================

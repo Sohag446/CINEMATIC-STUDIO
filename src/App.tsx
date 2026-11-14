@@ -2,8 +2,9 @@ import React, { useEffect } from 'react';
 import { DesktopTitleBar } from './components/DesktopTitleBar';
 import { TopNav } from './components/TopNav';
 import { DesktopStatusBar } from './components/DesktopStatusBar';
-import { HomeDashboard } from './features/dashboard/HomeDashboard';
-import { ProjectWorkspace } from './features/workspace/ProjectWorkspace';
+import { SimpleProjectHome } from './features/home/SimpleProjectHome';
+import { AIVideoWorkspace } from './features/aivideo/AIVideoWorkspace';
+import { StudioNLEWorkspace } from './features/studio/StudioNLEWorkspace';
 import { AIProviderCenter } from './features/providers/AIProviderCenter';
 import { MediaVaultView } from './features/media/MediaVaultView';
 import { NewProjectModal } from './features/projects/NewProjectModal';
@@ -12,6 +13,7 @@ import { RenameProjectModal } from './features/projects/RenameProjectModal';
 import { DeleteProjectModal } from './features/projects/DeleteProjectModal';
 import { SettingsModal } from './features/settings/SettingsModal';
 import { ChromeProfileManagerModal } from './features/profiles/ChromeProfileManagerModal';
+import { ChromeSetupWizardModal } from './features/profiles/ChromeSetupWizardModal';
 import { MediaLibraryModal } from './features/media/MediaLibraryModal';
 import { ExportModal } from './features/export/ExportModal';
 import { useStudioStore } from './stores/useStudioStore';
@@ -76,19 +78,25 @@ export const App: React.FC = () => {
             break;
           case '1':
             e.preventDefault();
-            setMainView('PRODUCTIONS');
+            setMainView('HOME');
             break;
           case '2':
+            if (activeProject) {
+              e.preventDefault();
+              setMainView('AI_VIDEO');
+            }
+            break;
+          case '3':
             if (activeProject) {
               e.preventDefault();
               setMainView('STUDIO');
             }
             break;
-          case '3':
+          case '4':
             e.preventDefault();
             setMainView('AI_PROVIDERS');
             break;
-          case '4':
+          case '5':
             e.preventDefault();
             setMainView('MEDIA_VAULT');
             break;
@@ -103,16 +111,19 @@ export const App: React.FC = () => {
   // Main Studio View routing
   const renderMainView = () => {
     switch (mainView) {
+      case 'HOME':
       case 'PRODUCTIONS':
-        return <HomeDashboard />;
+        return <SimpleProjectHome />;
+      case 'AI_VIDEO':
+        return activeProject ? <AIVideoWorkspace /> : <SimpleProjectHome />;
       case 'STUDIO':
-        return activeProject ? <ProjectWorkspace /> : <HomeDashboard />;
+        return activeProject ? <StudioNLEWorkspace /> : <SimpleProjectHome />;
       case 'AI_PROVIDERS':
         return <AIProviderCenter />;
       case 'MEDIA_VAULT':
         return <MediaVaultView />;
       default:
-        return <HomeDashboard />;
+        return <SimpleProjectHome />;
     }
   };
 
@@ -139,6 +150,7 @@ export const App: React.FC = () => {
       <DeleteProjectModal />
       <SettingsModal />
       <ChromeProfileManagerModal />
+      <ChromeSetupWizardModal />
       <MediaLibraryModal />
       <ExportModal />
     </div>

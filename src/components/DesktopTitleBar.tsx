@@ -41,7 +41,6 @@ export const DesktopTitleBar: React.FC = () => {
     setMainView,
     isBeginnerMode,
     toggleBeginnerMode,
-    setCurrentWorkspaceSection,
     toggleInspector
   } = useStudioStore();
 
@@ -137,27 +136,22 @@ export const DesktopTitleBar: React.FC = () => {
       id: 'view',
       label: 'View',
       children: [
-        { label: 'Productions Library', shortcut: 'Ctrl+1', action: () => setMainView('PRODUCTIONS') },
-        { label: 'Studio Workspace', shortcut: 'Ctrl+2', action: () => setMainView('STUDIO'), disabled: !activeProject },
-        { label: 'AI Provider Automation Hub', shortcut: 'Ctrl+3', action: () => setMainView('AI_PROVIDERS') },
-        { label: 'Central Media Vault', shortcut: 'Ctrl+4', action: () => setMainView('MEDIA_VAULT') },
+        { label: '1. Home Dashboard', shortcut: 'Ctrl+1', action: () => setMainView('HOME') },
+        { label: '2. AI Video Production Workspace', shortcut: 'Ctrl+2', action: () => setMainView('AI_VIDEO'), disabled: !activeProject },
+        { label: '3. Studio Multitrack Timeline', shortcut: 'Ctrl+3', action: () => setMainView('STUDIO'), disabled: !activeProject },
+        { label: '4. AI Provider Center', shortcut: 'Ctrl+4', action: () => setMainView('AI_PROVIDERS') },
+        { label: '5. Media Vault', shortcut: 'Ctrl+5', action: () => setMainView('MEDIA_VAULT') },
         { type: 'separator' },
         { label: 'Toggle Fullscreen', shortcut: 'F11', action: () => { handleToggleMaximize(); } }
       ]
     },
     {
       id: 'pipeline',
-      label: 'Pipeline',
+      label: 'Workflow',
       children: [
-        { label: '1. Production Overview', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('OVERVIEW'); } },
-        { label: '2. Story & Screenplay', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('STORY'); } },
-        { label: '3. Character Vault', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('CHARACTERS'); } },
-        { label: '4. Environment Vault', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('ENVIRONMENTS'); } },
-        { label: '5. Storyboard & Shots', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('STORYBOARD'); } },
-        { label: '6. AI Video Generation Queue', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('GENERATION'); } },
-        { label: '7. Continuity Inspector', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('CONTINUITY'); } },
-        { label: '8. Timeline & Assembly NLE', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('TIMELINE'); } },
-        { label: '9. Master Render & Export', action: () => { setMainView('STUDIO'); setCurrentWorkspaceSection('EXPORT'); } }
+        { label: '1. Project Home', action: () => setMainView('HOME') },
+        { label: '2. AI Story & Shot Generation', action: () => { if (activeProject) setMainView('AI_VIDEO'); else setNewProjectModalOpen(true); } },
+        { label: '3. Multitrack NLE Timeline', action: () => { if (activeProject) setMainView('STUDIO'); else setNewProjectModalOpen(true); } }
       ]
     },
     {
@@ -166,7 +160,7 @@ export const DesktopTitleBar: React.FC = () => {
       children: [
         { label: 'About Cinematic Studio...', action: () => setIsAboutModalOpen(true), icon: Info },
         { label: 'Developer: Md. Sohag Hossen', action: () => window.open('https://github.com/Sohag446', '_blank') },
-        { label: 'Official GitHub Repository', action: () => window.open('https://github.com/Sohag446', '_blank') }
+        { label: 'Official GitHub Repository', action: () => window.open('https://github.com/Sohag446/CINEMATIC-STUDIO', '_blank') }
       ]
     }
   ];
@@ -179,7 +173,7 @@ export const DesktopTitleBar: React.FC = () => {
       {/* 1. Left: Brand Icon + Desktop Menu Bar */}
       <div className="flex items-center space-x-1 pl-2">
         <div
-          onClick={() => setMainView('PRODUCTIONS')}
+          onClick={() => setMainView('HOME')}
           className="flex items-center space-x-1.5 px-2 py-1 rounded hover:bg-studio-850 cursor-pointer transition-colors"
           title="Cinematic Studio — Home"
         >

@@ -7,10 +7,11 @@ import {
   SlidersHorizontal,
   Home,
   Compass,
-  FolderTree,
   Info,
-  Bot,
-  Sliders
+  Sliders,
+  Video,
+  ShieldCheck,
+  Share2
 } from 'lucide-react';
 import { useStudioStore } from '../stores/useStudioStore';
 
@@ -27,7 +28,9 @@ export const TopNav: React.FC = () => {
     toggleBeginnerMode,
     registeredProfiles,
     isInspectorOpen,
-    toggleInspector
+    toggleInspector,
+    setChromeWizardOpen,
+    setExportModalOpen
   } = useStudioStore();
 
   const [isSavedRecently, setIsSavedRecently] = React.useState(false);
@@ -38,76 +41,84 @@ export const TopNav: React.FC = () => {
     setTimeout(() => setIsSavedRecently(false), 2000);
   };
 
+  const isHomeActive = mainView === 'HOME' || mainView === 'PRODUCTIONS';
+  const isAIVideoActive = mainView === 'AI_VIDEO';
+  const isStudioActive = mainView === 'STUDIO';
+
   return (
     <header className="h-9 bg-studio-900 border-b border-studio-800 flex items-center justify-between px-3 select-none shrink-0 z-20 font-sans text-xs">
 
-      {/* 1. Left: Workspace Page Switcher */}
-      <div className="flex items-center space-x-1">
+      {/* 1. Left: Primary 3 Workspaces Switcher */}
+      <div className="flex items-center space-x-2">
         <nav className="flex items-center bg-studio-950 p-0.5 rounded-lg border border-studio-800 text-[11px]">
+          {/* Home */}
           <button
-            onClick={() => setMainView('PRODUCTIONS')}
-            className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
-              mainView === 'PRODUCTIONS'
-                ? 'bg-studio-800 text-white font-semibold'
+            onClick={() => setMainView('HOME')}
+            className={`flex items-center space-x-1 px-3 py-1 rounded transition-colors font-medium ${
+              isHomeActive
+                ? 'bg-studio-800 text-white font-semibold shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Home className="w-3 h-3" />
-            <span>Productions</span>
+            <span>Home</span>
           </button>
 
-          {activeProject && (
-            <button
-              onClick={() => setMainView('STUDIO')}
-              className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
-                mainView === 'STUDIO'
-                  ? 'bg-studio-accent text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Compass className="w-3 h-3" />
-              <span className="truncate max-w-[160px]">Studio: {activeProject.name}</span>
-            </button>
-          )}
-
+          {/* AI Video Workspace */}
           <button
-            onClick={() => setMainView('AI_PROVIDERS')}
-            className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
-              mainView === 'AI_PROVIDERS'
-                ? 'bg-studio-800 text-white font-semibold'
+            onClick={() => {
+              if (activeProject) setMainView('AI_VIDEO');
+              else setNewProjectModalOpen(true);
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors font-medium ${
+              isAIVideoActive
+                ? 'bg-studio-accent text-white font-semibold shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Bot className="w-3 h-3 text-purple-400" />
-            <span>AI Providers</span>
-            {registeredProfiles.length > 0 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
-            )}
+            <Video className="w-3 h-3 text-cyan-400" />
+            <span>AI Video</span>
           </button>
 
+          {/* Studio NLE Editor */}
           <button
-            onClick={() => setMainView('MEDIA_VAULT')}
-            className={`flex items-center space-x-1 px-2.5 py-1 rounded transition-colors font-medium ${
-              mainView === 'MEDIA_VAULT'
-                ? 'bg-studio-800 text-white font-semibold'
+            onClick={() => {
+              if (activeProject) setMainView('STUDIO');
+              else setNewProjectModalOpen(true);
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors font-medium ${
+              isStudioActive
+                ? 'bg-studio-cyan text-slate-950 font-bold shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <FolderTree className="w-3 h-3 text-studio-cyan" />
-            <span>Media Vault</span>
+            <Compass className="w-3 h-3" />
+            <span>Studio</span>
           </button>
         </nav>
+
+        {/* Chrome Integration Pill */}
+        <button
+          onClick={() => setChromeWizardOpen(true)}
+          className="flex items-center space-x-1.5 bg-studio-950 hover:bg-studio-850 px-2.5 py-1 rounded-lg border border-studio-800 text-[11px] text-slate-300 transition-colors"
+          title="Open Chrome Pairing Wizard"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Chrome:</span>
+          <span className="text-emerald-400 font-semibold font-mono">
+            {registeredProfiles.length > 0 ? `${registeredProfiles.length} Paired` : 'Connect'}
+          </span>
+        </button>
       </div>
 
       {/* 2. Center: Active Project Specs & Actions */}
       <div className="flex items-center space-x-2 text-[11px]">
-        {activeProject && mainView === 'STUDIO' && (
-          <div className="hidden lg:flex items-center space-x-2 font-mono text-slate-400 mr-2">
+        {activeProject && (
+          <div className="hidden lg:flex items-center space-x-2 font-mono text-slate-400 mr-1">
+            <span className="font-semibold text-white truncate max-w-[140px]">{activeProject.name}</span>
             <span className="px-1.5 py-0.5 rounded bg-studio-950 text-studio-cyan border border-studio-800">
               {activeProject.target_aspect_ratio}
             </span>
-            <span>•</span>
-            <span>{activeProject.target_fps} fps</span>
           </div>
         )}
 
@@ -116,7 +127,7 @@ export const TopNav: React.FC = () => {
           className="flex items-center space-x-1 bg-studio-850 hover:bg-studio-800 text-white px-2.5 py-1 rounded border border-studio-750 transition-colors font-medium text-[11px]"
         >
           <FolderPlus className="w-3 h-3 text-studio-accent" />
-          <span>New Production</span>
+          <span>New</span>
         </button>
 
         {activeProject && (
@@ -130,6 +141,17 @@ export const TopNav: React.FC = () => {
           >
             <Save className="w-3 h-3" />
             <span>{isSavedRecently ? 'Saved!' : 'Save'}</span>
+          </button>
+        )}
+
+        {/* Master Film Export Button */}
+        {activeProject && (
+          <button
+            onClick={() => setExportModalOpen(true)}
+            className="flex items-center space-x-1 bg-studio-accent/20 hover:bg-studio-accent/30 text-studio-accent-light border border-studio-accent/40 px-2.5 py-1 rounded transition-colors font-medium text-[11px]"
+          >
+            <Share2 className="w-3 h-3" />
+            <span>Export</span>
           </button>
         )}
       </div>
