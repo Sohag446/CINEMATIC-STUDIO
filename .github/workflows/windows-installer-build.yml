@@ -2,6 +2,8 @@ name: CINEMATIC STUDIO — Windows Installer Build & Packaging
 
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
   workflow_dispatch:

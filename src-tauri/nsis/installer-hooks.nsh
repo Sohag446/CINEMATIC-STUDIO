@@ -43,8 +43,6 @@
   FileWrite $0 '{\r$\n'
   FileWrite $0 '  "name": "com.cinematic.studio",\r$\n'
   FileWrite $0 '  "description": "Cinematic Studio Chrome Native Messaging Host",\r$\n'
-  ; Escape backslashes in JSON path
-  Push $R0
   ; Use direct formatted path
   FileWrite $0 '  "path": "$LOCALAPPDATA\\CinematicStudio\\bin\\cinematic-studio-host.exe",\r$\n'
   FileWrite $0 '  "type": "stdio",\r$\n'
