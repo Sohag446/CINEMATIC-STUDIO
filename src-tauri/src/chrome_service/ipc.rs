@@ -103,7 +103,10 @@ impl NativeMessagingIpc {
                 // Check relative to current application executable
                 if let Ok(cur_exe) = std::env::current_exe() {
                     if let Some(parent) = cur_exe.parent() {
-                        let installed_resource_host = parent.join("resources").join("bin").join("cinematic-studio-host.exe");
+                        let installed_resource_host = parent
+                            .join("resources")
+                            .join("bin")
+                            .join("cinematic-studio-host.exe");
                         if installed_resource_host.exists() {
                             // Copy to standard bin for persistence
                             let _ = fs::create_dir_all(&bin_dir);

@@ -308,7 +308,9 @@ fn handle_incoming_message(
         }),
 
         "AUTO_DISCOVER_OR_REGISTER_PROFILE" => {
-            eprintln!("[Cinematic Host] Auto-discovering or registering profile for extension pairing...");
+            eprintln!(
+                "[Cinematic Host] Auto-discovering or registering profile for extension pairing..."
+            );
             if let Some(pool) = pool {
                 if let Ok(mut conn) = pool.get() {
                     let profile_opt: Option<(String, String)> = conn
@@ -333,7 +335,8 @@ fn handle_incoming_message(
                         }
                     };
 
-                    if let Ok(challenge) = PairingService::initiate_pairing(&mut conn, &profile_id) {
+                    if let Ok(challenge) = PairingService::initiate_pairing(&mut conn, &profile_id)
+                    {
                         return Some(IpcMessage {
                             id: uuid::Uuid::new_v4().to_string(),
                             msg_type: "PROFILE_REGISTRATION_SUCCESS".to_string(),
