@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Play, 
   Pause, 
@@ -32,6 +32,7 @@ export const MultitrackTimeline: React.FC = () => {
     duplicateTimelineClip,
     trimTimelineClipStart,
     trimTimelineClipEnd,
+    updateTimelineClip,
     addClipToTimeline,
     undoTimeline,
     redoTimeline,
@@ -44,6 +45,61 @@ export const MultitrackTimeline: React.FC = () => {
   } = useStudioStore();
 
   const [zoomLevel, setZoomLevel] = useState<number>(20); // 20px per second
+
+  // Interactive mouse drag & trim state
+  const [dragState, setDragState] = useState<{
+    type: 'MOVE' | 'TRIM_LEFT' | 'TRIM_RIGHT';
+    clipId: string;
+    startX: number;
+    origStart: number;
+    origDuration: number;
+    origIn: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!dragState) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaSeconds = (e.clientX - dragState.startX) / zoomLevel;
+      const clip = timelineClips.find(c => c.id === dragState.clipId);
+      if (!clip) return;
+
+      if (dragState.type === 'MOVE') {
+        const newStart = Math.max(0, Math.round((dragState.origStart + deltaSeconds) * 10) / 10);
+        updateTimelineClip({ id: clip.id, timeline_start_seconds: newStart });
+      } else if (dragState.type === 'TRIM_RIGHT') {
+        const newDuration = Math.max(0.5, Math.round((dragState.origDuration + deltaSeconds) * 10) / 10);
+        updateTimelineClip({
+          id: clip.id,
+          timeline_duration_seconds: newDuration,
+          source_out_seconds: (clip.source_in_seconds || 0) + newDuration
+        });
+      } else if (dragState.type === 'TRIM_LEFT') {
+        const maxDelta = dragState.origDuration - 0.5;
+        const clampedDelta = Math.min(maxDelta, Math.max(-dragState.origStart, deltaSeconds));
+        const newStart = Math.round((dragState.origStart + clampedDelta) * 10) / 10;
+        const newDuration = Math.round((dragState.origDuration - clampedDelta) * 10) / 10;
+        const newIn = Math.round(((dragState.origIn || 0) + clampedDelta) * 10) / 10;
+        updateTimelineClip({
+          id: clip.id,
+          timeline_start_seconds: newStart,
+          timeline_duration_seconds: newDuration,
+          source_in_seconds: Math.max(0, newIn)
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setDragState(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragState, zoomLevel, timelineClips, updateTimelineClip]);
 
   // Calculate total duration from latest clip end
   const totalDuration = Math.max(
@@ -361,15 +417,66 @@ export const MultitrackTimeline: React.FC = () => {
                           e.stopPropagation();
                           setSelectedTimelineClipId(clip.id);
                         }}
-                        className={`absolute top-1 bottom-1 rounded px-2 flex flex-col justify-between cursor-pointer transition-all border text-[11px] overflow-hidden select-none ${
+                        onMouseDown={(e) => {
+                          if ((e.target as HTMLElement).dataset.handle) return;
+                          e.stopPropagation();
+                          setSelectedTimelineClipId(clip.id);
+                          setDragState({
+                            type: 'MOVE',
+                            clipId: clip.id,
+                            startX: e.clientX,
+                            origStart: clip.timeline_start_seconds,
+                            origDuration: clip.timeline_duration_seconds,
+                            origIn: clip.source_in_seconds || 0
+                          });
+                        }}
+                        className={`absolute top-1 bottom-1 rounded px-2 flex flex-col justify-between cursor-grab active:cursor-grabbing transition-shadow border text-[11px] overflow-hidden select-none group ${
                           track.track_type === 'VIDEO'
                             ? 'bg-gradient-to-r from-indigo-950 to-indigo-900 border-indigo-700/80 text-indigo-100 shadow-sm'
                             : 'bg-gradient-to-r from-emerald-950 to-emerald-900 border-emerald-700/80 text-emerald-100 shadow-sm'
                         } ${isSelected ? 'ring-2 ring-studio-cyan shadow-lg shadow-cyan-900/40 border-white' : 'hover:border-slate-400'}`}
                         style={{ left: `${leftPx}px`, width: `${widthPx}px` }}
                       >
+                        {/* Interactive Left Trim Handle */}
+                        <div
+                          data-handle="trim-left"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setSelectedTimelineClipId(clip.id);
+                            setDragState({
+                              type: 'TRIM_LEFT',
+                              clipId: clip.id,
+                              startX: e.clientX,
+                              origStart: clip.timeline_start_seconds,
+                              origDuration: clip.timeline_duration_seconds,
+                              origIn: clip.source_in_seconds || 0
+                            });
+                          }}
+                          className="absolute left-0 top-0 bottom-0 w-2.5 cursor-ew-resize hover:bg-cyan-400/60 transition-colors z-20"
+                          title="Drag to trim start"
+                        />
+
+                        {/* Interactive Right Trim Handle */}
+                        <div
+                          data-handle="trim-right"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setSelectedTimelineClipId(clip.id);
+                            setDragState({
+                              type: 'TRIM_RIGHT',
+                              clipId: clip.id,
+                              startX: e.clientX,
+                              origStart: clip.timeline_start_seconds,
+                              origDuration: clip.timeline_duration_seconds,
+                              origIn: clip.source_in_seconds || 0
+                            });
+                          }}
+                          className="absolute right-0 top-0 bottom-0 w-2.5 cursor-ew-resize hover:bg-cyan-400/60 transition-colors z-20"
+                          title="Drag to trim end"
+                        />
+
                         {/* Clip Top Bar */}
-                        <div className="flex items-center justify-between font-mono truncate pt-0.5">
+                        <div className="flex items-center justify-between font-mono truncate pt-0.5 pointer-events-none">
                           <span className="truncate font-bold text-[11px]">
                             {asset ? asset.file_name : 'Take Clip'}
                           </span>
@@ -379,7 +486,7 @@ export const MultitrackTimeline: React.FC = () => {
                         </div>
 
                         {/* Visual Film Strip / Audio Waveform Pattern */}
-                        <div className="h-3.5 w-full bg-black/40 rounded-sm mb-1 overflow-hidden flex items-center px-1 space-x-1">
+                        <div className="h-3.5 w-full bg-black/40 rounded-sm mb-1 overflow-hidden flex items-center px-1 space-x-1 pointer-events-none">
                           {track.track_type === 'VIDEO' ? (
                             <div className="flex space-x-1 w-full opacity-60">
                               {Array.from({ length: Math.max(1, Math.floor(widthPx / 30)) }).map((_, idx) => (
