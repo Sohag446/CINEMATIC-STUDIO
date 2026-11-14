@@ -70,9 +70,32 @@ export interface TimelineClip {
   source_in_seconds: number;
   source_out_seconds: number;
   volume: number;
+  is_muted?: boolean;
   fade_in_seconds: number;
   fade_out_seconds: number;
   z_order: number;
+  playback_speed?: number;
+  position_x?: number;
+  position_y?: number;
+  scale?: number;
+  rotation?: number;
+  opacity?: number;
+  flip_h?: boolean;
+  flip_v?: boolean;
+  text_content?: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
+  background_color?: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  temperature?: number;
+  blur?: number;
+  transition_in_type?: string;
+  transition_in_duration?: number;
+  transition_out_type?: string;
+  transition_out_duration?: number;
   created_at: number;
   updated_at: number;
 }
@@ -87,9 +110,28 @@ export interface CreateTimelineClipInput {
   source_in_seconds?: number;
   source_out_seconds?: number;
   volume?: number;
+  is_muted?: boolean;
   fade_in_seconds?: number;
   fade_out_seconds?: number;
   z_order?: number;
+  playback_speed?: number;
+  position_x?: number;
+  position_y?: number;
+  scale?: number;
+  rotation?: number;
+  opacity?: number;
+  flip_h?: boolean;
+  flip_v?: boolean;
+  text_content?: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
+  background_color?: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  temperature?: number;
+  blur?: number;
 }
 
 export interface UpdateTimelineClipInput {
@@ -100,8 +142,31 @@ export interface UpdateTimelineClipInput {
   source_in_seconds?: number;
   source_out_seconds?: number;
   volume?: number;
+  is_muted?: boolean;
   fade_in_seconds?: number;
   fade_out_seconds?: number;
+  playback_speed?: number;
+  position_x?: number;
+  position_y?: number;
+  scale?: number;
+  rotation?: number;
+  opacity?: number;
+  flip_h?: boolean;
+  flip_v?: boolean;
+  text_content?: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
+  background_color?: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  temperature?: number;
+  blur?: number;
+  transition_in_type?: string;
+  transition_in_duration?: number;
+  transition_out_type?: string;
+  transition_out_duration?: number;
 }
 
 export type RenderJobState = 

@@ -656,8 +656,10 @@ export const apiService = {
       const defaults: TimelineTrack[] = [
         { id: crypto.randomUUID(), project_id: projectId, track_type: 'VIDEO', track_index: 1, label: 'V1: Main Video', is_muted: false, is_locked: false, volume: 1.0 },
         { id: crypto.randomUUID(), project_id: projectId, track_type: 'VIDEO', track_index: 2, label: 'V2: Overlays / B-Roll', is_muted: false, is_locked: false, volume: 1.0 },
+        { id: crypto.randomUUID(), project_id: projectId, track_type: 'VIDEO', track_index: 3, label: 'V3: VFX & Graphics', is_muted: false, is_locked: false, volume: 1.0 },
         { id: crypto.randomUUID(), project_id: projectId, track_type: 'AUDIO', track_index: 1, label: 'A1: Dialogue / Voiceover', is_muted: false, is_locked: false, volume: 1.0 },
-        { id: crypto.randomUUID(), project_id: projectId, track_type: 'AUDIO', track_index: 2, label: 'A2: Music Score & Foley', is_muted: false, is_locked: false, volume: 1.0 },
+        { id: crypto.randomUUID(), project_id: projectId, track_type: 'AUDIO', track_index: 2, label: 'A2: Music Score & Ambience', is_muted: false, is_locked: false, volume: 1.0 },
+        { id: crypto.randomUUID(), project_id: projectId, track_type: 'AUDIO', track_index: 3, label: 'A3: Sound Effects (SFX)', is_muted: false, is_locked: false, volume: 1.0 },
       ];
       localStorage.setItem('cinematic_studio_timeline_tracks', JSON.stringify([...all, ...defaults]));
       return defaults;

@@ -21,6 +21,7 @@ import { useStudioStore } from '../../stores/useStudioStore';
 
 export const MultitrackTimeline: React.FC = () => {
   const { 
+    activeProject,
     timelineTracks, 
     timelineClips, 
     mediaAssets, 
@@ -31,6 +32,7 @@ export const MultitrackTimeline: React.FC = () => {
     duplicateTimelineClip,
     trimTimelineClipStart,
     trimTimelineClipEnd,
+    addClipToTimeline,
     undoTimeline,
     redoTimeline,
     canUndoTimeline,
@@ -316,6 +318,34 @@ export const MultitrackTimeline: React.FC = () => {
               return (
                 <div 
                   key={track.id} 
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!activeProject) return;
+                    try {
+                      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                      if (!data || !data.assetId) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const dropX = e.clientX - rect.left;
+                      const dropSeconds = Math.max(0, dropX / zoomLevel);
+                      addClipToTimeline({
+                        track_id: track.id,
+                        project_id: activeProject.id,
+                        media_asset_id: data.assetId,
+                        clip_id: data.assetId,
+                        timeline_start_seconds: Math.round(dropSeconds * 10) / 10,
+                        timeline_duration_seconds: data.duration || 5,
+                        source_in_seconds: 0,
+                        source_out_seconds: data.duration || 5,
+                        volume: 1.0
+                      });
+                    } catch (err) {
+                      console.warn('Drop error:', err);
+                    }
+                  }}
                   className="h-16 border-b border-studio-800/40 relative bg-studio-950/40"
                 >
                   {trackClips.map(clip => {

@@ -54,11 +54,14 @@ interface StudioState {
 
   // Master Rebuild: Story & AI Video Workflow State
   storyText: string;
+  storyDurationInput: string;
   isAnalyzingStory: boolean;
   storyAnalysis: StoryAnalysisResult | null;
   activeAIPlatform: 'chatgpt' | 'gemini' | 'claude';
   activeStoryProfileId: string | null;
   activeVideoProfileId: string | null;
+  activeGoogleAccountIndex: number;
+  googleAccounts: { id: string; label: string; email?: string }[];
   selectedShotId: string | null;
   shotQueueState: 'IDLE' | 'RUNNING' | 'PAUSED';
   isChromeWizardOpen: boolean;
@@ -218,18 +221,25 @@ interface StudioState {
 
   // Master Rebuild: Story & AI Video Actions
   setStoryText: (text: string) => void;
+  setStoryDurationInput: (dur: string) => void;
   setActiveAIPlatform: (platform: 'chatgpt' | 'gemini' | 'claude') => void;
   setActiveStoryProfileId: (id: string | null) => void;
   setActiveVideoProfileId: (id: string | null) => void;
+  setActiveGoogleAccountIndex: (idx: number) => void;
+  addGoogleAccount: (label?: string) => void;
   setSelectedShotId: (id: string | null) => void;
   setChromeWizardOpen: (open: boolean) => void;
-  analyzeAndBreakdownStory: (text: string) => Promise<void>;
+  analyzeAndBreakdownStory: (text: string, duration?: string) => Promise<void>;
   generateShotVideo: (clipId: string) => Promise<void>;
   startShotQueue: () => Promise<void>;
   pauseShotQueue: () => void;
   resumeShotQueue: () => void;
   retryFailedShot: (clipId: string) => Promise<void>;
   addClipDirectlyToTimeline: (clipId: string) => Promise<void>;
+  assembleCompletedScenes: () => Promise<void>;
+  markSceneStatus: (clipId: string, status: any) => Promise<void>;
+  attachDownloadedVideoToScene: (clipId: string, filePath: string, proxyUrl?: string) => Promise<void>;
+  detachAudioFromClip: (timelineClipId: string) => Promise<void>;
 }
 
 const getDefaultCharacters = (projectId: string): CharacterProfile[] => [
@@ -296,11 +306,18 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   // Master Rebuild: Story & AI Video Workflow State
   storyText: '',
+  storyDurationInput: '1 minute',
   isAnalyzingStory: false,
   storyAnalysis: null,
   activeAIPlatform: 'chatgpt',
   activeStoryProfileId: null,
   activeVideoProfileId: null,
+  activeGoogleAccountIndex: 0,
+  googleAccounts: [
+    { id: 'google-acc-1', label: 'Google Account 1 (Primary - Veo 2 / Flow)', email: 'primary.creator@gmail.com' },
+    { id: 'google-acc-2', label: 'Google Account 2 (Fast Queue - Veo High-Rate)', email: 'secondary.render@gmail.com' },
+    { id: 'google-acc-3', label: 'Google Account 3 (Reserve - Extended Quota)', email: 'reserve.takes@gmail.com' }
+  ],
   selectedShotId: null,
   shotQueueState: 'IDLE',
   isChromeWizardOpen: false,
@@ -466,7 +483,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       projects: [project, ...state.projects],
       activeProject: project,
       isNewProjectModalOpen: false,
-      mainView: 'STUDIO',
+      mainView: 'AI_WORKSPACE',
       currentView: 'WORKSPACE',
       currentWorkspaceSection: 'OVERVIEW',
     }));
@@ -479,7 +496,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     set({
       activeProject: project,
       isOpenProjectModalOpen: false,
-      mainView: 'STUDIO',
+      mainView: 'AI_WORKSPACE',
       currentView: 'WORKSPACE',
       currentWorkspaceSection: 'OVERVIEW',
     });
@@ -900,26 +917,42 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   // Master Rebuild: Story & AI Video Actions
   setStoryText: (text) => set({ storyText: text }),
+  setStoryDurationInput: (dur) => set({ storyDurationInput: dur }),
   setActiveAIPlatform: (platform) => set({ activeAIPlatform: platform }),
   setActiveStoryProfileId: (id) => set({ activeStoryProfileId: id }),
   setActiveVideoProfileId: (id) => set({ activeVideoProfileId: id }),
+  setActiveGoogleAccountIndex: (idx) => set({ activeGoogleAccountIndex: idx }),
+  addGoogleAccount: (label?: string) => {
+    const { googleAccounts } = get();
+    const newIdx = googleAccounts.length + 1;
+    const newAcc = {
+      id: `google-acc-${newIdx}-${Date.now().toString(36)}`,
+      label: label || `Google Account ${newIdx} (Fast Veo Profile)`,
+      email: `creator.acc${newIdx}@gmail.com`
+    };
+    set({
+      googleAccounts: [...googleAccounts, newAcc],
+      activeGoogleAccountIndex: googleAccounts.length
+    });
+  },
   setSelectedShotId: (id) => set({ selectedShotId: id }),
   setChromeWizardOpen: (open) => set({ isChromeWizardOpen: open }),
 
-  analyzeAndBreakdownStory: async (text: string) => {
-    const { activeProject } = get();
+  analyzeAndBreakdownStory: async (text: string, duration?: string) => {
+    const { activeProject, storyDurationInput } = get();
     if (!activeProject) return;
-    set({ isAnalyzingStory: true, storyText: text });
+    const requestedDuration = duration || storyDurationInput || '1 minute';
+    set({ isAnalyzingStory: true, storyText: text, storyDurationInput: requestedDuration });
 
     try {
-      const analysis = storyAgent.analyzeStory(text, activeProject.name);
+      const analysis = storyAgent.analyzeStory(text, activeProject.name, requestedDuration);
 
       const newChars: CharacterProfile[] = analysis.characters.map((c, idx) => ({
         id: `char-${idx + 1}-${activeProject.id}`,
         project_id: activeProject.id,
         name: c.name,
         role: c.role,
-        physical_description: c.description,
+        physical_description: c.appearance,
         wardrobe: c.wardrobe,
         visual_prompt_lock: c.promptLock,
         assigned_scenes: ['1']
@@ -932,8 +965,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         location_type: e.type,
         time_of_day: e.timeOfDay,
         weather: 'Cinematic Atmosphere',
-        atmosphere: e.lighting,
-        lighting_rules: e.lighting,
+        atmosphere: e.lightingRules,
+        lighting_rules: e.lightingRules,
         visual_prompt_lock: e.promptLock
       }));
 
@@ -948,28 +981,36 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           sequence_number: sc.sceneNumber,
           title: `Scene ${sc.sceneNumber}: ${sc.title}`,
           dramatic_beat: sc.dramaticBeat,
-          estimated_duration_seconds: sc.shots.reduce((acc, s) => acc + s.targetDurationSeconds, 0),
+          estimated_duration_seconds: sc.targetDurationSeconds || 10,
           created_at: Date.now(),
           updated_at: Date.now()
         });
 
-        sc.shots.forEach((sh, shIdx) => {
-          newClips.push({
-            id: `clip-${sc.sceneNumber}-${sh.shotNumber}-${activeProject.id}`,
-            scene_id: sceneId,
-            project_id: activeProject.id,
-            clip_number: sh.shotNumber,
-            target_duration_seconds: sh.targetDurationSeconds,
-            camera_framing: sh.framing,
-            camera_angle: sh.angle,
-            camera_movement: sh.movement,
-            subject_action: sh.compiledPrompt,
-            lighting_setup: sh.lightingSetup,
-            status: 'PROMPT_READY',
-            assigned_provider: 'Google Veo',
-            created_at: Date.now() + shIdx * 10,
-            updated_at: Date.now() + shIdx * 10
-          });
+        newClips.push({
+          id: `clip-${sc.sceneNumber}-${activeProject.id}`,
+          scene_id: sceneId,
+          project_id: activeProject.id,
+          clip_number: sc.sceneNumber,
+          target_duration_seconds: sc.targetDurationSeconds || 10,
+          camera_framing: sc.framing,
+          camera_angle: sc.angle,
+          camera_movement: sc.movement,
+          subject_action: sc.subjectAction,
+          lighting_setup: sc.lightingSetup,
+          status: 'PROMPT_READY',
+          assigned_provider: 'Google Veo',
+          video_prompt: sc.videoPrompt,
+          negative_prompt: sc.negativePrompt,
+          first_frame_description: sc.firstFrameDescription,
+          last_frame_description: sc.lastFrameDescription,
+          character_references: [analysis.characters[0]?.name].filter(Boolean),
+          continuity_instructions: sc.continuityInstructions,
+          continuity_record: sc.continuityRecord,
+          sound_effects: sc.soundEffects,
+          music_cue: sc.musicCue,
+          transition_instruction: sc.transitionInstruction,
+          created_at: Date.now() + scIdx * 10,
+          updated_at: Date.now() + scIdx * 10
         });
       });
 
@@ -1078,6 +1119,121 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       timeline_duration_seconds: clip.target_duration_seconds || 10,
       source_in_seconds: 0,
       source_out_seconds: clip.target_duration_seconds || 10
+    });
+  },
+
+  assembleCompletedScenes: async () => {
+    const { clips, activeProject, timelineTracks, addClipToTimeline, createMediaAsset } = get();
+    if (!activeProject) return;
+
+    let v1Track = timelineTracks.find(t => t.track_type === 'VIDEO' && t.track_index === 1);
+    if (!v1Track) {
+      v1Track = timelineTracks.find(t => t.track_type === 'VIDEO') || timelineTracks[0];
+    }
+    if (!v1Track) return;
+
+    const readyClips = clips.filter(c => ['COMPLETED', 'IMPORTED', 'DOWNLOADED', 'GENERATED'].includes(c.status));
+    const clipsToAssemble = readyClips.length > 0 ? readyClips : clips;
+    const sortedClips = [...clipsToAssemble].sort((a, b) => a.clip_number - b.clip_number);
+
+    let currentTimelineSeconds = 0;
+    for (const clip of sortedClips) {
+      const duration = clip.target_duration_seconds || 10;
+      const mediaPath = clip.output_video_path || clip.proxy_path || `C:\\CinematicStudio\\Projects\\${activeProject.slug}\\takes\\scene_${String(clip.clip_number).padStart(3, '0')}.mp4`;
+      const proxyPath = clip.proxy_path || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+
+      const asset = await createMediaAsset({
+        project_id: activeProject.id,
+        file_name: `Scene_${String(clip.clip_number).padStart(3, '0')}.mp4`,
+        file_path: mediaPath,
+        media_type: 'VIDEO',
+        file_size_bytes: 25000000,
+        duration_seconds: duration,
+        fps: activeProject.target_fps || 24,
+        proxy_path: proxyPath
+      });
+
+      await addClipToTimeline({
+        track_id: v1Track.id,
+        project_id: activeProject.id,
+        media_asset_id: asset.id,
+        clip_id: clip.id,
+        timeline_start_seconds: currentTimelineSeconds,
+        timeline_duration_seconds: duration,
+        source_in_seconds: 0,
+        source_out_seconds: duration,
+        volume: 1.0,
+        scale: 1.0,
+        opacity: 1.0
+      });
+
+      currentTimelineSeconds += duration;
+    }
+
+    set({ mainView: 'VIDEO_EDITOR' });
+  },
+
+  markSceneStatus: async (clipId: string, status: any) => {
+    const { clips } = get();
+    const clip = clips.find(c => c.id === clipId);
+    if (!clip) return;
+    const updated: Clip = {
+      ...clip,
+      status,
+      updated_at: Date.now()
+    };
+    await apiService.updateClip(updated);
+    set(state => ({
+      clips: state.clips.map(c => c.id === clipId ? updated : c)
+    }));
+  },
+
+  attachDownloadedVideoToScene: async (clipId: string, filePath: string, proxyUrl?: string) => {
+    const { clips, activeProject } = get();
+    const clip = clips.find(c => c.id === clipId);
+    if (!clip || !activeProject) return;
+    const updated: Clip = {
+      ...clip,
+      status: 'IMPORTED',
+      output_video_path: filePath,
+      proxy_path: proxyUrl || clip.proxy_path || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      thumbnail_path: clip.thumbnail_path || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=640&q=80',
+      updated_at: Date.now()
+    };
+    await apiService.updateClip(updated);
+    set(state => ({
+      clips: state.clips.map(c => c.id === clipId ? updated : c)
+    }));
+  },
+
+  detachAudioFromClip: async (timelineClipId: string) => {
+    const { timelineClips, timelineTracks, addClipToTimeline, updateTimelineClip, activeProject } = get();
+    if (!activeProject) return;
+    const targetClip = timelineClips.find(c => c.id === timelineClipId);
+    if (!targetClip) return;
+
+    let a1Track = timelineTracks.find(t => t.track_type === 'AUDIO' && t.track_index === 1);
+    if (!a1Track) {
+      a1Track = timelineTracks.find(t => t.track_type === 'AUDIO');
+    }
+    if (!a1Track) return;
+
+    await updateTimelineClip({
+      id: targetClip.id,
+      volume: 0.0,
+      is_muted: true
+    });
+
+    await addClipToTimeline({
+      track_id: a1Track.id,
+      project_id: activeProject.id,
+      media_asset_id: targetClip.media_asset_id,
+      clip_id: targetClip.clip_id,
+      timeline_start_seconds: targetClip.timeline_start_seconds,
+      timeline_duration_seconds: targetClip.timeline_duration_seconds,
+      source_in_seconds: targetClip.source_in_seconds,
+      source_out_seconds: targetClip.source_out_seconds,
+      volume: 1.0
     });
   },
 }));

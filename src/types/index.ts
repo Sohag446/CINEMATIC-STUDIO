@@ -40,7 +40,56 @@ export interface Scene {
 export type CameraFraming = 'WIDE' | 'MEDIUM' | 'CLOSE_UP' | 'EXTREME_CLOSE_UP' | 'OVER_THE_SHOULDER';
 export type CameraAngle = 'EYE_LEVEL' | 'LOW_ANGLE' | 'HIGH_ANGLE' | 'DUTCH' | 'BIRDS_EYE';
 export type CameraMovement = 'STATIC' | 'PAN_LEFT' | 'PAN_RIGHT' | 'DOLLY_IN' | 'DOLLY_OUT' | 'ORBIT' | 'TRACKING';
-export type ClipStatus = 'PLANNED' | 'PROMPT_READY' | 'QUEUED' | 'GENERATING' | 'COMPLETED' | 'FAILED' | 'REJECTED';
+export type ClipStatus =
+  | 'NOT_STARTED'
+  | 'PROMPT_READY'
+  | 'QUEUED'
+  | 'GENERATING'
+  | 'GENERATED'
+  | 'DOWNLOADED'
+  | 'IMPORTED'
+  | 'NEEDS_ATTENTION'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'REJECTED'
+  | 'PLANNED';
+
+export interface SceneContinuityRecord {
+  scene_number: number;
+  scene_purpose: string;
+  previous_scene_connection: string;
+  opening_frame_description: string;
+  closing_frame_description: string;
+  character_states: {
+    character_name: string;
+    wardrobe: string;
+    hair_accessories: string;
+    props: string;
+    emotional_state: string;
+  }[];
+  location_state: {
+    environment_name: string;
+    weather: string;
+    time_of_day: string;
+    lighting: string;
+    color_palette: string;
+  };
+  camera_setup: {
+    framing: CameraFraming;
+    angle: CameraAngle;
+    movement: CameraMovement;
+    style: string;
+  };
+  action_description: string;
+  video_prompt: string;
+  negative_prompt?: string;
+  image_prompt?: string;
+  sound_effects?: string;
+  background_music_cue?: string;
+  color_grading_direction?: string;
+  transition_instruction?: string;
+  expected_duration_seconds: number;
+}
 
 export interface Clip {
   id: string;
@@ -58,6 +107,16 @@ export interface Clip {
   thumbnail_path?: string;
   proxy_path?: string;
   output_video_path?: string;
+  video_prompt?: string;
+  negative_prompt?: string;
+  first_frame_description?: string;
+  last_frame_description?: string;
+  character_references?: string[];
+  continuity_instructions?: string;
+  continuity_record?: SceneContinuityRecord;
+  sound_effects?: string;
+  music_cue?: string;
+  transition_instruction?: string;
   created_at: number;
   updated_at: number;
 }

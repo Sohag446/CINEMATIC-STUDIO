@@ -110,13 +110,18 @@ export const PreviewMonitor: React.FC = () => {
     }
   }, [isPlaying, setIsPlaying]);
 
-  // Sync volume & mute
+  // Sync volume & mute & playback rate
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    video.volume = isMuted ? 0 : volume;
-    video.muted = isMuted;
-  }, [volume, isMuted]);
+    const clipVolume = activeTimelineClip?.volume !== undefined ? activeTimelineClip.volume : volume;
+    const clipMuted = isMuted || !!activeTimelineClip?.is_muted;
+    video.volume = clipMuted ? 0 : Math.min(1.0, clipVolume);
+    video.muted = clipMuted;
+    if (activeTimelineClip?.playback_speed) {
+      video.playbackRate = activeTimelineClip.playback_speed;
+    }
+  }, [volume, isMuted, activeTimelineClip?.volume, activeTimelineClip?.is_muted, activeTimelineClip?.playback_speed]);
 
   // Handle active video time update during playback
   const handleTimeUpdate = () => {
@@ -171,6 +176,14 @@ export const PreviewMonitor: React.FC = () => {
   const isScope = activeProject?.target_aspect_ratio === '2.39:1';
   const isVertical = activeProject?.target_aspect_ratio === '9:16';
   const isSquare = activeProject?.target_aspect_ratio === '1:1';
+
+  // CapCut interactive transform & color filter styles
+  const transformStyle: React.CSSProperties = {
+    transform: `translate(${activeTimelineClip?.position_x || 0}px, ${activeTimelineClip?.position_y || 0}px) scale(${activeTimelineClip?.scale ?? 1.0}) rotate(${activeTimelineClip?.rotation || 0}deg) ${activeTimelineClip?.flip_h ? 'scaleX(-1)' : ''} ${activeTimelineClip?.flip_v ? 'scaleY(-1)' : ''}`,
+    opacity: ((activeTimelineClip?.opacity ?? 100) / 100),
+    filter: `brightness(${activeTimelineClip?.brightness ?? 100}%) contrast(${activeTimelineClip?.contrast ?? 100}%) saturate(${activeTimelineClip?.saturation ?? 100}%)`,
+    transition: 'transform 0.05s ease-out'
+  };
 
   return (
     <div
@@ -336,6 +349,7 @@ export const PreviewMonitor: React.FC = () => {
                 src={videoSrc}
                 playsInline
                 preload="metadata"
+                style={transformStyle}
                 onLoadedMetadata={() => {
                   setIsVideoLoaded(true);
                   setVideoLoadError(null);

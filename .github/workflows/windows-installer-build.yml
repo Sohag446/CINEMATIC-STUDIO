@@ -56,6 +56,7 @@ jobs:
           node tests/real_media_rendering_test.cjs
           node tests/final_rendering_regression_suite.cjs
           node tests/option_a_chrome_embedding_suite.cjs
+          node tests/v4_ultimate_rebuild_suite.cjs
 
       - name: Build Frontend Production Bundle
         run: npm run build

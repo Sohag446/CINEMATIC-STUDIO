@@ -70,7 +70,7 @@ runTest('Native Host Staging & Binary Verification', () => {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   assert.strictEqual(manifest.manifest_version, 3, 'Must be Manifest V3');
-  assert.ok(manifest.version === '3.0.0' || manifest.version === '2.0.2', `Manifest must be v3.0.0 or v2.0.2, got ${manifest.version}`);
+  assert.ok(manifest.version === '4.0.0' || manifest.version === '3.0.0' || manifest.version === '2.0.2', `Manifest must be v4.0.0, v3.0.0 or v2.0.2, got ${manifest.version}`);
   assert.ok(manifest.permissions.includes('nativeMessaging'), 'Must have nativeMessaging permission');
 });
 

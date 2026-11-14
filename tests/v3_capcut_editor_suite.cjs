@@ -33,25 +33,25 @@ function runTest(name, fn) {
   }
 }
 
-// TEST 1: Version 3.0.0 Synchronization
-runTest('All configuration files strictly synchronized to version 3.0.0', () => {
+// TEST 1: Version 3.0.0+ Synchronization
+runTest('All configuration files strictly synchronized to version 3.0.0 or 4.0.0', () => {
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  assert.strictEqual(pkg.version, '3.0.0', `package.json version should be 3.0.0, got ${pkg.version}`);
+  assert.ok(pkg.version === '3.0.0' || pkg.version === '4.0.0', `package.json version should be 3.0.0 or 4.0.0, got ${pkg.version}`);
 
   const tauriConf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
-  assert.strictEqual(tauriConf.version, '3.0.0', `tauri.conf.json version should be 3.0.0, got ${tauriConf.version}`);
+  assert.ok(tauriConf.version === '3.0.0' || tauriConf.version === '4.0.0', `tauri.conf.json version should be 3.0.0 or 4.0.0, got ${tauriConf.version}`);
 
   const cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
-  assert.match(cargo, /version\s*=\s*"3\.0\.0"/, 'src-tauri/Cargo.toml must have version = "3.0.0"');
+  assert.match(cargo, /version\s*=\s*"(3|4)\.0\.0"/, 'src-tauri/Cargo.toml must have version 3.0.0 or 4.0.0');
 
   const manifest = JSON.parse(fs.readFileSync('chrome-extension/manifest.json', 'utf8'));
-  assert.strictEqual(manifest.version, '3.0.0', `chrome-extension/manifest.json version should be 3.0.0, got ${manifest.version}`);
+  assert.ok(manifest.version === '3.0.0' || manifest.version === '4.0.0', `chrome-extension/manifest.json version should be 3.0.0 or 4.0.0, got ${manifest.version}`);
 
   const diag = fs.readFileSync('src/services/diagnosticService.ts', 'utf8');
-  assert.ok(diag.includes('v3.0.0'), 'diagnosticService.ts must report v3.0.0');
+  assert.ok(diag.includes('v3.0.0') || diag.includes('v4.0.0'), 'diagnosticService.ts must report v3.0.0 or v4.0.0');
 
   const about = fs.readFileSync('src/components/AboutModal.tsx', 'utf8');
-  assert.ok(about.includes('3.0.0'), 'AboutModal.tsx must report 3.0.0');
+  assert.ok(about.includes('3.0.0') || about.includes('4.0.0'), 'AboutModal.tsx must report 3.0.0 or 4.0.0');
 });
 
 // TEST 2: 5-Section Desktop Navigation

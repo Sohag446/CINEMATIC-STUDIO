@@ -237,8 +237,16 @@ export const StudioNLEWorkspace: React.FC = () => {
               return (
                 <div
                   key={clip.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                      assetId: clip.id,
+                      duration: clip.target_duration_seconds || 10,
+                      isAudio: false
+                    }));
+                  }}
                   onClick={() => selectClip(clip.id)}
-                  className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                  className={`p-2.5 rounded-lg border text-xs cursor-grab active:cursor-grabbing transition-colors ${
                     isSelected
                       ? 'bg-studio-800 border-studio-accent text-white'
                       : 'bg-studio-950 border-studio-800/80 hover:border-studio-750 text-slate-300'
@@ -284,7 +292,15 @@ export const StudioNLEWorkspace: React.FC = () => {
               return (
                 <div
                   key={asset.id}
-                  className="p-2.5 rounded-lg bg-studio-950 border border-studio-800 text-xs text-slate-300 hover:border-studio-750 transition-colors space-y-1.5"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                      assetId: asset.id,
+                      duration: asset.duration_seconds || 5,
+                      isAudio
+                    }));
+                  }}
+                  className="p-2.5 rounded-lg bg-studio-950 border border-studio-800 text-xs text-slate-300 hover:border-studio-750 transition-colors space-y-1.5 cursor-grab active:cursor-grabbing"
                 >
                   <div className="flex items-center justify-between text-[11px] font-mono">
                     <span className="font-bold flex items-center space-x-1.5 truncate max-w-[170px]">
