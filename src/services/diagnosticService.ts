@@ -32,7 +32,7 @@ export const diagnosticService = {
       category: 'APPLICATION',
       title: 'Application Version & Integrity',
       status: 'PASS',
-      message: 'Cinematic Studio Desktop v4.0.0 (Production Release)',
+      message: 'Cinematic Studio Desktop v4.0.1 (Production Release)',
       details: 'All core modules synchronized: package.json, tauri.conf.json, Cargo.toml, MV3 manifest.',
       canAutoRepair: false
     });

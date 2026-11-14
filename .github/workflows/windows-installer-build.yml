@@ -164,7 +164,7 @@ jobs:
       - name: Upload Installer Packages Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cinematic-studio-windows-installer-v3.0.0
+          name: cinematic-studio-windows-installer-v4.0.1
           path: |
             release_artifacts/*
           retention-days: 30
@@ -175,43 +175,43 @@ jobs:
         with:
           files: |
             release_artifacts/*
-          name: CINEMATIC STUDIO ${{ github.ref_name }} — CapCut-Style AI Video Production Studio
+          name: CINEMATIC STUDIO ${{ github.ref_name }} — AI Film Production Studio & Professional Video Editor
           body: |
-            # CINEMATIC STUDIO ${{ github.ref_name }} — CapCut-Style AI Video Production Studio
+            # CINEMATIC STUDIO ${{ github.ref_name }} — AI Film Production Studio & Professional Video Editor
 
             **Developer & Architect:** Md. Sohag Hossen
             **Repository:** https://github.com/Sohag446/CINEMATIC-STUDIO
             **Operating System:** Windows 11 / Windows 10 x64
+            **Release Target:** ${{ github.ref_name }} (Corrected Patch Release)
 
             ---
 
-            ## 🚀 Major Features in v3.0.0
+            ## 🚀 What's New in ${{ github.ref_name }}
 
-            1. **Simplified 5-Section Desktop Navigation:**
-               - **Home:** Getting started overview, recent projects, workflow guide, and quick templates.
-               - **AI Workspace:** Exactly two primary browser tabs:
-                 - **Tab 1: AI Assistant** (ChatGPT Plus, Google Gemini, Claude 3.7).
-                 - **Tab 2: AI Video Generator** (Google Flow / DeepMind Veo, Luma Dream Machine, Runway Gen-3).
-                 - 5-Stage Story-to-Shot Breakdown drawer (Story -> Analysis -> Shots -> Direct -> Assemble).
-               - **Projects:** Complete project catalog & canvas settings (16:9, 9:16, 1:1, 2.39:1, 24/30/60 FPS).
-               - **Video Editor:** CapCut-style multitrack NLE video editor.
-               - **Settings:** Clean settings, FFmpeg diagnostics, and system telemetry.
+            1. **Decoupled Real-Time Playback Clock:**
+               - Replaced element-dependent playback ticks with an independent `requestAnimationFrame` master timeline clock.
+               - Video plays smoothly across cuts, gaps, and transitions without freezing.
+               - CSP hardened to explicitly allow `blob:`, `asset:`, `http://asset.localhost`, and `https://asset.localhost`.
 
-            2. **Real Video Preview & Decoding Player:**
-               - Replaced static placeholder frames with a genuine HTML5 `<video ref={videoRef}>` decoding player.
-               - Frame-accurate seek synchronization with timeline playhead.
-               - Play/Pause, Frame-by-frame stepping (1/24s), Scrubbing slider, Timecode display, Volume slider, Mute toggle, and Safe Areas guide.
+            2. **Real Chrome Integration & Win32 Architecture:**
+               - Companion Chrome process management with dedicated user data directories.
+               - Multi-account Google profile switching (Google 1, Google 2, etc.) for generation services.
+               - Secure Manifest V3 Extension & Native Messaging Host (`cinematic-studio-host.exe`) integration.
 
-            3. **Functional CapCut-Style Multitrack Timeline:**
-               - **Working Clip Split at Playhead:** Correctly divides clip into left and right segments, preserving both on the timeline.
-               - **Trim Start & Trim End:** Precision trimming to current playhead position.
-               - **Undo / Redo:** Full timeline state history with keyboard shortcuts (`Ctrl+Z`, `Ctrl+Y`).
-               - **Duplicate & Delete:** Quick clip duplication and non-destructive deletion.
-               - **Track Controls:** Track-level volume, mute, and lock controls.
+            3. **23-Point AI Film Production Engine:**
+               - Natural language duration parsing supporting $30\text{s}$ (3 scenes), $1\text{m}$ (6 scenes), $10\text{m}$ (60 scenes), up to $2\text{h}$ (720 scenes).
+               - Generates complete cinematography, camera framing, lighting setups, dialogue, foley, and first-to-previous-last frame continuity locks.
 
-            4. **Real FFmpeg Master MP4 Export:**
-               - Direct export to H.264 / AAC MP4 with presets for 1080p Landscape, 9:16 Social Reels, 2K QHD, and 4K UHD.
-               - Fully integrated bundled FFmpeg essentials.
+            4. **CapCut-Grade Professional Multi-Track Video Editor:**
+               - Multi-track timeline (Tracks V1-V3, A1-A3, and Text Overlay) with drag-and-drop from the Media Library.
+               - Clip Split at Playhead (`Ctrl+B`), Trim Start / End, Duplicate, Delete, and Full Undo / Redo (`Ctrl+Z`, `Ctrl+Y`).
+               - Comprehensive Desktop Inspector with Transform (scale, rotation, position X/Y, opacity), Speed (0.25x-4.0x), Audio Detach to A1, and Color Grading (brightness, contrast, saturation, hue).
+
+            5. **One-Click Scene Assembly Bridge:**
+               - "Assemble Takes" automatically places all completed scene takes sequentially onto Track V1 and opens the Video Editor.
+
+            6. **Production FFmpeg Master MP4 Rendering:**
+               - Multi-track composite rendering with picture-in-picture, audio mixing, and stream normalization via bundled Gyan FFmpeg 9.0.2.
 
             ---
 
@@ -219,8 +219,8 @@ jobs:
 
             | Deliverable | Package File | Scope & Recommended Use |
             | :--- | :--- | :--- |
-            | **Windows NSIS Setup (Recommended)** | `Cinematic Studio_3.0.0_x64-setup.exe` | Per-user desktop installation (%LOCALAPPDATA%\Programs), no UAC admin required |
-            | **Windows MSI Installer** | `Cinematic Studio_3.0.0_x64_en-US.msi` | Windows Installer package with stable WiX UpgradeCode |
+            | **Windows NSIS Setup (Recommended)** | `Cinematic Studio_4.0.1_x64-setup.exe` | Per-user desktop installation (%LOCALAPPDATA%\Programs), no UAC admin required |
+            | **Windows MSI Installer** | `Cinematic Studio_4.0.1_x64_en-US.msi` | Windows Installer package with stable WiX UpgradeCode |
             | **Chrome Extension (MV3)** | `cinematic-studio-chrome-extension.zip` | Manifest V3 Chrome Extension package for side-loading (`chrome://extensions`) |
             | **Native Messaging Host** | `cinematic-studio-host.exe` | Standalone Chrome native messaging host binary |
             | **Integrity Checksums** | `SHA256SUMS.txt` | SHA-256 cryptographic hashes for all release artifacts |

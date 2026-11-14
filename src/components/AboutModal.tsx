@@ -18,7 +18,7 @@ export const AboutModal: React.FC = () => {
   const handleCopyInfo = () => {
     const info = [
       'CINEMATIC STUDIO',
-      'Version: 4.0.0 (Production Release)',
+      'Version: 4.0.1 (Production Release)',
       'Developer: Md. Sohag Hossen',
       'Repository: https://github.com/Sohag446/CINEMATIC-STUDIO',
       'Architecture: Windows x64 (Tauri 2 + Rust + React + SQLite + FFmpeg)',
@@ -65,7 +65,7 @@ export const AboutModal: React.FC = () => {
               CINEMATIC STUDIO
             </h1>
             <p className="text-xs font-mono text-studio-accent-light font-semibold mt-0.5">
-              Version 4.0.0 (Production Release)
+              Version 4.0.1 (Production Release)
             </p>
             <p className="text-[11px] text-slate-400 mt-1">
               Desktop AI Cinematic Video Production Application

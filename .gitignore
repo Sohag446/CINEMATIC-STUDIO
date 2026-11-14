@@ -33,6 +33,8 @@ temp_download/
 # Test Fixtures & Render Outputs (Large Audio/Video files)
 tests/test_media/
 tests/test_output/
+tests/acceptance_media/
+tests/acceptance_output/
 
 # Environment & Secrets (Anti-Leak Guards)
 .env
