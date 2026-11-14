@@ -5,6 +5,7 @@ import { DesktopStatusBar } from './components/DesktopStatusBar';
 import { SimpleProjectHome } from './features/home/SimpleProjectHome';
 import { AIVideoWorkspace } from './features/aivideo/AIVideoWorkspace';
 import { StudioNLEWorkspace } from './features/studio/StudioNLEWorkspace';
+import { ProjectsManagerView } from './features/projects/ProjectsManagerView';
 import { AIProviderCenter } from './features/providers/AIProviderCenter';
 import { MediaVaultView } from './features/media/MediaVaultView';
 import { NewProjectModal } from './features/projects/NewProjectModal';
@@ -35,6 +36,9 @@ export const App: React.FC = () => {
     refreshTelemetry,
     fetchRegisteredProfiles,
     checkFFmpegStatus,
+    undoTimeline,
+    redoTimeline,
+    setSettingsModalOpen,
     isDiagnosticsModalOpen,
     setDiagnosticsModalOpen,
     isFirstLaunchModalOpen,
@@ -88,6 +92,14 @@ export const App: React.FC = () => {
             e.preventDefault();
             toggleInspector();
             break;
+          case 'z':
+            e.preventDefault();
+            undoTimeline();
+            break;
+          case 'y':
+            e.preventDefault();
+            redoTimeline();
+            break;
           case '1':
             e.preventDefault();
             setMainView('HOME');
@@ -95,22 +107,27 @@ export const App: React.FC = () => {
           case '2':
             if (activeProject) {
               e.preventDefault();
-              setMainView('AI_VIDEO');
+              setMainView('AI_WORKSPACE');
+            } else {
+              setNewProjectModalOpen(true);
             }
             break;
           case '3':
-            if (activeProject) {
-              e.preventDefault();
-              setMainView('STUDIO');
-            }
+            e.preventDefault();
+            setMainView('PROJECTS');
             break;
           case '4':
-            e.preventDefault();
-            setMainView('AI_PROVIDERS');
+            if (activeProject) {
+              e.preventDefault();
+              setMainView('VIDEO_EDITOR');
+            } else {
+              setNewProjectModalOpen(true);
+            }
             break;
           case '5':
             e.preventDefault();
-            setMainView('MEDIA_VAULT');
+            setMainView('SETTINGS');
+            setSettingsModalOpen(true);
             break;
         }
       }
@@ -118,18 +135,24 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [saveCurrentProject, setNewProjectModalOpen, toggleBeginnerMode, toggleInspector, setMainView, activeProject]);
+  }, [saveCurrentProject, setNewProjectModalOpen, toggleBeginnerMode, toggleInspector, setMainView, activeProject, undoTimeline, redoTimeline, setSettingsModalOpen]);
 
-  // Main Studio View routing
+  // Main Studio View routing: Strict 5-Section Architecture + Backward Compatibility
   const renderMainView = () => {
     switch (mainView) {
       case 'HOME':
       case 'PRODUCTIONS':
         return <SimpleProjectHome />;
+      case 'AI_WORKSPACE':
       case 'AI_VIDEO':
         return activeProject ? <AIVideoWorkspace /> : <SimpleProjectHome />;
+      case 'PROJECTS':
+        return <ProjectsManagerView />;
+      case 'VIDEO_EDITOR':
       case 'STUDIO':
         return activeProject ? <StudioNLEWorkspace /> : <SimpleProjectHome />;
+      case 'SETTINGS':
+        return <ProjectsManagerView />;
       case 'AI_PROVIDERS':
         return <AIProviderCenter />;
       case 'MEDIA_VAULT':

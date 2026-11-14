@@ -6,12 +6,12 @@ import {
   Sparkles,
   SlidersHorizontal,
   Home,
-  Compass,
-  Info,
+  Film,
+  FolderTree,
   Sliders,
-  Video,
   ShieldCheck,
-  Share2
+  Share2,
+  Info
 } from 'lucide-react';
 import { useStudioStore } from '../stores/useStudioStore';
 
@@ -42,58 +42,94 @@ export const TopNav: React.FC = () => {
   };
 
   const isHomeActive = mainView === 'HOME' || mainView === 'PRODUCTIONS';
-  const isAIVideoActive = mainView === 'AI_VIDEO';
-  const isStudioActive = mainView === 'STUDIO';
+  const isAIWorkspaceActive = mainView === 'AI_WORKSPACE' || mainView === 'AI_VIDEO';
+  const isProjectsActive = mainView === 'PROJECTS';
+  const isVideoEditorActive = mainView === 'VIDEO_EDITOR' || mainView === 'STUDIO';
+  const isSettingsActive = mainView === 'SETTINGS';
 
   return (
-    <header className="h-9 bg-studio-900 border-b border-studio-800 flex items-center justify-between px-3 select-none shrink-0 z-20 font-sans text-xs">
+    <header className="h-10 bg-studio-900 border-b border-studio-800 flex items-center justify-between px-3 select-none shrink-0 z-20 font-sans text-xs">
 
-      {/* 1. Left: Primary 3 Workspaces Switcher */}
+      {/* 1. Left: Exact 5-Section Primary Desktop Navigation */}
       <div className="flex items-center space-x-2">
-        <nav className="flex items-center bg-studio-950 p-0.5 rounded-lg border border-studio-800 text-[11px]">
-          {/* Home */}
+        <nav className="flex items-center bg-studio-950 p-0.5 rounded-lg border border-studio-800 text-[11px] space-x-0.5">
+          {/* 1. Home */}
           <button
             onClick={() => setMainView('HOME')}
-            className={`flex items-center space-x-1 px-3 py-1 rounded transition-colors font-medium ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors font-medium ${
               isHomeActive
                 ? 'bg-studio-800 text-white font-semibold shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
+            title="Dashboard Overview & Getting Started (Ctrl+1)"
           >
-            <Home className="w-3 h-3" />
+            <Home className="w-3.5 h-3.5" />
             <span>Home</span>
           </button>
 
-          {/* AI Video Workspace */}
+          {/* 2. AI Workspace */}
           <button
             onClick={() => {
-              if (activeProject) setMainView('AI_VIDEO');
+              if (activeProject) setMainView('AI_WORKSPACE');
               else setNewProjectModalOpen(true);
             }}
-            className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors font-medium ${
-              isAIVideoActive
-                ? 'bg-studio-accent text-white font-semibold shadow-sm'
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors font-medium ${
+              isAIWorkspaceActive
+                ? 'bg-purple-900 text-white font-semibold shadow-sm border border-purple-700'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
+            title="AI Story & Video Generator (Ctrl+2)"
           >
-            <Video className="w-3 h-3 text-cyan-400" />
-            <span>AI Video</span>
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>AI Workspace</span>
           </button>
 
-          {/* Studio NLE Editor */}
+          {/* 3. Projects */}
+          <button
+            onClick={() => setMainView('PROJECTS')}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors font-medium ${
+              isProjectsActive
+                ? 'bg-blue-900 text-white font-semibold shadow-sm border border-blue-700'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Manage Projects & Canvas Settings (Ctrl+3)"
+          >
+            <FolderTree className="w-3.5 h-3.5 text-blue-400" />
+            <span>Projects</span>
+          </button>
+
+          {/* 4. Video Editor */}
           <button
             onClick={() => {
-              if (activeProject) setMainView('STUDIO');
+              if (activeProject) setMainView('VIDEO_EDITOR');
               else setNewProjectModalOpen(true);
             }}
-            className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors font-medium ${
-              isStudioActive
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors font-medium ${
+              isVideoEditorActive
                 ? 'bg-studio-cyan text-slate-950 font-bold shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
+            title="CapCut-Style Multitrack Video Editor (Ctrl+4)"
           >
-            <Compass className="w-3 h-3" />
-            <span>Studio</span>
+            <Film className="w-3.5 h-3.5 text-slate-950" />
+            <span>Video Editor</span>
+          </button>
+
+          {/* 5. Settings */}
+          <button
+            onClick={() => {
+              setMainView('SETTINGS');
+              setSettingsModalOpen(true);
+            }}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded transition-colors font-medium ${
+              isSettingsActive
+                ? 'bg-studio-800 text-white font-semibold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Settings, Storage & Engine Setup (Ctrl+5)"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-400" />
+            <span>Settings</span>
           </button>
         </nav>
 
@@ -104,7 +140,7 @@ export const TopNav: React.FC = () => {
           title="Open Chrome Pairing Wizard"
         >
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Chrome:</span>
+          <span className="hidden xl:inline">Chrome:</span>
           <span className="text-emerald-400 font-semibold font-mono">
             {registeredProfiles.length > 0 ? `${registeredProfiles.length} Paired` : 'Connect'}
           </span>
@@ -193,15 +229,6 @@ export const TopNav: React.FC = () => {
               <span>Engineer Mode</span>
             </>
           )}
-        </button>
-
-        {/* Global Settings Shortcut */}
-        <button
-          onClick={() => setSettingsModalOpen(true)}
-          title="Studio Settings"
-          className="p-1 rounded text-slate-400 hover:text-white bg-studio-850 hover:bg-studio-800 border border-studio-800 transition-colors"
-        >
-          <Settings className="w-3.5 h-3.5" />
         </button>
 
         {/* About Shortcut */}

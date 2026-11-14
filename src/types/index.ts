@@ -229,6 +229,18 @@ export interface ContinuityWarning {
   remedy: string;
 }
 
+export type MainStudioView =
+  | 'HOME'
+  | 'AI_WORKSPACE'
+  | 'PROJECTS'
+  | 'VIDEO_EDITOR'
+  | 'SETTINGS'
+  | 'AI_VIDEO'
+  | 'STUDIO'
+  | 'AI_PROVIDERS'
+  | 'MEDIA_VAULT'
+  | 'PRODUCTIONS';
+
 export * from './provider';
 export * from './media';
 

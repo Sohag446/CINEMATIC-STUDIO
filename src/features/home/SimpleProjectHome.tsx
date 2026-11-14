@@ -62,7 +62,7 @@ export const SimpleProjectHome: React.FC = () => {
 
   const handleOpenProject = async (projectId: string) => {
     await openProject(projectId);
-    setMainView('AI_VIDEO');
+    setMainView('AI_WORKSPACE');
   };
 
   return (
@@ -80,7 +80,7 @@ export const SimpleProjectHome: React.FC = () => {
                 <h1 className="text-2xl font-bold text-white tracking-tight flex items-center space-x-2.5">
                   <span>CINEMATIC STUDIO</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-studio-800 text-purple-300 border border-purple-800/50 uppercase tracking-widest">
-                    Desktop v2.0
+                    Desktop v3.0.0
                   </span>
                 </h1>
                 <p className="text-slate-400 text-xs mt-0.5">

@@ -22,12 +22,13 @@ import {
   CreateRenderJobInput,
   FFmpegStatus,
   CharacterProfile,
-  EnvironmentProfile
+  EnvironmentProfile,
+  MainStudioView
 } from '../types';
 import { apiService } from '../services/api';
 import { storyAgent, StoryAnalysisResult } from '../services/storyAgent';
 
-export type MainStudioView = 'HOME' | 'AI_VIDEO' | 'STUDIO' | 'AI_PROVIDERS' | 'MEDIA_VAULT' | 'PRODUCTIONS';
+export type { MainStudioView };
 
 export type WorkspaceSection =
   | 'OVERVIEW'
@@ -178,7 +179,7 @@ interface StudioState {
   resumeHumanTask: (taskId: string) => Promise<void>;
   setActiveHumanPromptTask: (task: ProductionTask | null) => void;
 
-  // Phase 4 Actions
+  // Phase 4 Actions & CapCut-Style Timeline Operations
   fetchMediaAssets: (projectId: string) => Promise<void>;
   createMediaAsset: (input: CreateMediaAssetInput) => Promise<MediaAsset>;
   deleteMediaAsset: (assetId: string) => Promise<void>;
@@ -186,6 +187,16 @@ interface StudioState {
   addClipToTimeline: (input: CreateTimelineClipInput) => Promise<TimelineClip>;
   updateTimelineClip: (input: UpdateTimelineClipInput) => Promise<void>;
   deleteTimelineClip: (clipId: string) => Promise<void>;
+  splitTimelineClip: (clipId: string, splitTimeSeconds: number) => Promise<void>;
+  duplicateTimelineClip: (clipId: string) => Promise<TimelineClip | null>;
+  trimTimelineClipStart: (clipId: string, newStartSeconds: number) => Promise<void>;
+  trimTimelineClipEnd: (clipId: string, newDurationSeconds: number) => Promise<void>;
+  timelineHistory: TimelineClip[][];
+  timelineHistoryIndex: number;
+  canUndoTimeline: boolean;
+  canRedoTimeline: boolean;
+  undoTimeline: () => void;
+  redoTimeline: () => void;
   fetchRenderJobs: (projectId: string) => Promise<void>;
   createRenderJob: (input: CreateRenderJobInput) => Promise<RenderJob>;
   checkFFmpegStatus: (customFFmpeg?: string, customFFprobe?: string) => Promise<void>;
@@ -416,6 +427,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   mediaAssets: [],
   timelineTracks: [],
   timelineClips: [],
+  timelineHistory: [],
+  timelineHistoryIndex: -1,
+  canUndoTimeline: false,
+  canRedoTimeline: false,
   selectedTimelineClipId: null,
   renderJobs: [],
   ffmpegStatus: null,
@@ -726,6 +741,128 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       timelineClips: timelineClips.filter(c => c.id !== clipId),
       selectedTimelineClipId: selectedTimelineClipId === clipId ? null : selectedTimelineClipId
     });
+  },
+
+  splitTimelineClip: async (clipId: string, splitTimeSeconds: number) => {
+    const { timelineClips, updateTimelineClip, addClipToTimeline } = get();
+    const clip = timelineClips.find(c => c.id === clipId);
+    if (!clip) return;
+
+    if (
+      splitTimeSeconds <= clip.timeline_start_seconds + 0.05 ||
+      splitTimeSeconds >= clip.timeline_start_seconds + clip.timeline_duration_seconds - 0.05
+    ) {
+      return;
+    }
+
+    const splitOffset = splitTimeSeconds - clip.timeline_start_seconds;
+    const originalDuration = clip.timeline_duration_seconds;
+    const originalSourceIn = clip.source_in_seconds;
+    const originalSourceOut = clip.source_out_seconds;
+
+    // 1. Update left half
+    await updateTimelineClip({
+      id: clip.id,
+      timeline_duration_seconds: splitOffset,
+      source_out_seconds: originalSourceIn + splitOffset
+    });
+
+    // 2. Create right half
+    const newClip = await addClipToTimeline({
+      track_id: clip.track_id,
+      project_id: clip.project_id,
+      media_asset_id: clip.media_asset_id,
+      clip_id: clip.clip_id,
+      timeline_start_seconds: splitTimeSeconds,
+      timeline_duration_seconds: originalDuration - splitOffset,
+      source_in_seconds: originalSourceIn + splitOffset,
+      source_out_seconds: originalSourceOut,
+      volume: clip.volume,
+      fade_in_seconds: 0,
+      fade_out_seconds: clip.fade_out_seconds,
+      z_order: clip.z_order
+    });
+
+    set({ selectedTimelineClipId: newClip.id });
+  },
+
+  duplicateTimelineClip: async (clipId: string) => {
+    const { timelineClips, addClipToTimeline } = get();
+    const clip = timelineClips.find(c => c.id === clipId);
+    if (!clip) return null;
+
+    const newStart = clip.timeline_start_seconds + clip.timeline_duration_seconds;
+    const newClip = await addClipToTimeline({
+      track_id: clip.track_id,
+      project_id: clip.project_id,
+      media_asset_id: clip.media_asset_id,
+      clip_id: clip.clip_id,
+      timeline_start_seconds: newStart,
+      timeline_duration_seconds: clip.timeline_duration_seconds,
+      source_in_seconds: clip.source_in_seconds,
+      source_out_seconds: clip.source_out_seconds,
+      volume: clip.volume,
+      fade_in_seconds: clip.fade_in_seconds,
+      fade_out_seconds: clip.fade_out_seconds,
+      z_order: clip.z_order
+    });
+
+    set({ selectedTimelineClipId: newClip.id });
+    return newClip;
+  },
+
+  trimTimelineClipStart: async (clipId: string, newStartSeconds: number) => {
+    const { timelineClips, updateTimelineClip } = get();
+    const clip = timelineClips.find(c => c.id === clipId);
+    if (!clip) return;
+    const delta = newStartSeconds - clip.timeline_start_seconds;
+    if (delta >= clip.timeline_duration_seconds - 0.1) return;
+
+    await updateTimelineClip({
+      id: clip.id,
+      timeline_start_seconds: newStartSeconds,
+      timeline_duration_seconds: clip.timeline_duration_seconds - delta,
+      source_in_seconds: clip.source_in_seconds + delta
+    });
+  },
+
+  trimTimelineClipEnd: async (clipId: string, newDurationSeconds: number) => {
+    const { timelineClips, updateTimelineClip } = get();
+    const clip = timelineClips.find(c => c.id === clipId);
+    if (!clip) return;
+    if (newDurationSeconds < 0.1) return;
+
+    await updateTimelineClip({
+      id: clip.id,
+      timeline_duration_seconds: newDurationSeconds,
+      source_out_seconds: clip.source_in_seconds + newDurationSeconds
+    });
+  },
+
+  undoTimeline: () => {
+    const { timelineHistory, timelineHistoryIndex } = get();
+    if (timelineHistoryIndex > 0) {
+      const newIndex = timelineHistoryIndex - 1;
+      set({
+        timelineClips: timelineHistory[newIndex],
+        timelineHistoryIndex: newIndex,
+        canUndoTimeline: newIndex > 0,
+        canRedoTimeline: true
+      });
+    }
+  },
+
+  redoTimeline: () => {
+    const { timelineHistory, timelineHistoryIndex } = get();
+    if (timelineHistoryIndex < timelineHistory.length - 1) {
+      const newIndex = timelineHistoryIndex + 1;
+      set({
+        timelineClips: timelineHistory[newIndex],
+        timelineHistoryIndex: newIndex,
+        canUndoTimeline: true,
+        canRedoTimeline: newIndex < timelineHistory.length - 1
+      });
+    }
   },
 
   fetchRenderJobs: async (projectId) => {

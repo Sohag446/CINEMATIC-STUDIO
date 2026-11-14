@@ -296,7 +296,7 @@ export const FirstLaunchSetupModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <div className="bg-studio-950 border border-studio-800 rounded-xl p-4 space-y-2.5">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Application Version:</span>
-                  <span className="font-bold text-white font-mono">v2.0.2 (Production)</span>
+                  <span className="font-bold text-white font-mono">v3.0.0 (Production)</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Media Engine:</span>

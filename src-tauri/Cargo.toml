@@ -1,6 +1,6 @@
 [package]
 name = "cinematic-studio"
-version = "2.0.2"
+version = "3.0.0"
 description = "Desktop-centered AI video production management platform"
 authors = ["Md. Sohag Hossen <https://github.com/Sohag446>"]
 edition = "2021"

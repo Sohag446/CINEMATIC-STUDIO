@@ -32,7 +32,7 @@ export const diagnosticService = {
       category: 'APPLICATION',
       title: 'Application Version & Integrity',
       status: 'PASS',
-      message: 'Cinematic Studio Desktop v2.0.2 (Production)',
+      message: 'Cinematic Studio Desktop v3.0.0 (Production Release)',
       details: 'All core modules synchronized: package.json, tauri.conf.json, Cargo.toml, MV3 manifest.',
       canAutoRepair: false
     });
@@ -123,7 +123,7 @@ export const diagnosticService = {
       category: 'CHROME_EXTENSION',
       title: 'Manifest V3 Chrome Extension',
       status: 'PASS',
-      message: 'Extension ID: olfkacbfbgihonffpmnmnhmfmonfhmpf (v2.0.2)',
+      message: 'Extension ID: olfkacbfbgihonffpmnmnhmfmonfhmpf (v3.0.0)',
       details: 'Packaged ZIP archive generated at dist/cinematic-studio-chrome-extension.zip for side-loading.',
       remedy: 'If not yet loaded in Chrome, navigate to chrome://extensions, enable Developer Mode, and click "Load unpacked".',
       canAutoRepair: false
@@ -147,7 +147,7 @@ export const diagnosticService = {
 
     return {
       timestamp: Date.now(),
-      appVersion: '2.0.2',
+      appVersion: '3.0.0',
       operatingSystem: 'Windows 11 x64',
       overallHealth,
       items

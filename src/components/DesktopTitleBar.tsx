@@ -43,7 +43,11 @@ export const DesktopTitleBar: React.FC = () => {
     toggleBeginnerMode,
     toggleInspector,
     setDiagnosticsModalOpen,
-    setFirstLaunchModalOpen
+    setFirstLaunchModalOpen,
+    undoTimeline,
+    redoTimeline,
+    canUndoTimeline,
+    canRedoTimeline
   } = useStudioStore();
 
   const [isMaximized, setIsMaximized] = useState(false);
@@ -127,8 +131,8 @@ export const DesktopTitleBar: React.FC = () => {
       id: 'edit',
       label: 'Edit',
       children: [
-        { label: 'Undo', shortcut: 'Ctrl+Z', disabled: true },
-        { label: 'Redo', shortcut: 'Ctrl+Y', disabled: true },
+        { label: 'Undo Timeline Edit', shortcut: 'Ctrl+Z', disabled: !canUndoTimeline, action: () => undoTimeline() },
+        { label: 'Redo Timeline Edit', shortcut: 'Ctrl+Y', disabled: !canRedoTimeline, action: () => redoTimeline() },
         { type: 'separator' },
         { label: 'Toggle Director / Engineer Mode', shortcut: 'Ctrl+B', action: () => toggleBeginnerMode(), icon: isBeginnerMode ? Sparkles : SlidersHorizontal },
         { label: 'Toggle Property Inspector', shortcut: 'Ctrl+I', action: () => toggleInspector() }
@@ -139,10 +143,10 @@ export const DesktopTitleBar: React.FC = () => {
       label: 'View',
       children: [
         { label: '1. Home Dashboard', shortcut: 'Ctrl+1', action: () => setMainView('HOME') },
-        { label: '2. AI Video Production Workspace', shortcut: 'Ctrl+2', action: () => setMainView('AI_VIDEO'), disabled: !activeProject },
-        { label: '3. Studio Multitrack Timeline', shortcut: 'Ctrl+3', action: () => setMainView('STUDIO'), disabled: !activeProject },
-        { label: '4. AI Provider Center', shortcut: 'Ctrl+4', action: () => setMainView('AI_PROVIDERS') },
-        { label: '5. Media Vault', shortcut: 'Ctrl+5', action: () => setMainView('MEDIA_VAULT') },
+        { label: '2. AI Workspace (Story & Video)', shortcut: 'Ctrl+2', action: () => { if (activeProject) setMainView('AI_WORKSPACE'); else setNewProjectModalOpen(true); } },
+        { label: '3. Projects & Canvas Settings', shortcut: 'Ctrl+3', action: () => setMainView('PROJECTS') },
+        { label: '4. Video Editor (CapCut Multitrack)', shortcut: 'Ctrl+4', action: () => { if (activeProject) setMainView('VIDEO_EDITOR'); else setNewProjectModalOpen(true); } },
+        { label: '5. Settings & Diagnostics', shortcut: 'Ctrl+5', action: () => { setMainView('SETTINGS'); setSettingsModalOpen(true); } },
         { type: 'separator' },
         { label: 'Toggle Fullscreen', shortcut: 'F11', action: () => { handleToggleMaximize(); } }
       ]
@@ -152,8 +156,10 @@ export const DesktopTitleBar: React.FC = () => {
       label: 'Workflow',
       children: [
         { label: '1. Project Home', action: () => setMainView('HOME') },
-        { label: '2. AI Story & Shot Generation', action: () => { if (activeProject) setMainView('AI_VIDEO'); else setNewProjectModalOpen(true); } },
-        { label: '3. Multitrack NLE Timeline', action: () => { if (activeProject) setMainView('STUDIO'); else setNewProjectModalOpen(true); } }
+        { label: '2. AI Assistant & Video Generator', action: () => { if (activeProject) setMainView('AI_WORKSPACE'); else setNewProjectModalOpen(true); } },
+        { label: '3. Projects Manager', action: () => setMainView('PROJECTS') },
+        { label: '4. CapCut Multitrack Video Editor', action: () => { if (activeProject) setMainView('VIDEO_EDITOR'); else setNewProjectModalOpen(true); } },
+        { label: '5. Engine Settings', action: () => { setMainView('SETTINGS'); setSettingsModalOpen(true); } }
       ]
     },
     {
@@ -165,7 +171,7 @@ export const DesktopTitleBar: React.FC = () => {
         { type: 'separator' },
         { label: 'Check for Updates...', action: () => window.open('https://github.com/Sohag446/CINEMATIC-STUDIO/releases', '_blank') },
         { type: 'separator' },
-        { label: 'About Cinematic Studio (v2.0.1)...', action: () => setIsAboutModalOpen(true), icon: Info },
+        { label: 'About Cinematic Studio (v3.0.0)...', action: () => setIsAboutModalOpen(true), icon: Info },
         { label: 'Developer: Md. Sohag Hossen', action: () => window.open('https://github.com/Sohag446', '_blank') },
         { label: 'Official GitHub Repository', action: () => window.open('https://github.com/Sohag446/CINEMATIC-STUDIO', '_blank') }
       ]

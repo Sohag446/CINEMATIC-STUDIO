@@ -163,7 +163,7 @@ jobs:
       - name: Upload Installer Packages Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cinematic-studio-windows-installer-v2.0.2
+          name: cinematic-studio-windows-installer-v3.0.0
           path: |
             release_artifacts/*
           retention-days: 30
@@ -174,9 +174,9 @@ jobs:
         with:
           files: |
             release_artifacts/*
-          name: CINEMATIC STUDIO ${{ github.ref_name }} — Windows Desktop & Extension Release
+          name: CINEMATIC STUDIO ${{ github.ref_name }} — CapCut-Style AI Video Production Studio
           body: |
-            # CINEMATIC STUDIO ${{ github.ref_name }} — Windows Desktop & Chrome Extension Release
+            # CINEMATIC STUDIO ${{ github.ref_name }} — CapCut-Style AI Video Production Studio
 
             **Developer & Architect:** Md. Sohag Hossen
             **Repository:** https://github.com/Sohag446/CINEMATIC-STUDIO
@@ -184,37 +184,44 @@ jobs:
 
             ---
 
+            ## 🚀 Major Features in v3.0.0
+
+            1. **Simplified 5-Section Desktop Navigation:**
+               - **Home:** Getting started overview, recent projects, workflow guide, and quick templates.
+               - **AI Workspace:** Exactly two primary browser tabs:
+                 - **Tab 1: AI Assistant** (ChatGPT Plus, Google Gemini, Claude 3.7).
+                 - **Tab 2: AI Video Generator** (Google Flow / DeepMind Veo, Luma Dream Machine, Runway Gen-3).
+                 - 5-Stage Story-to-Shot Breakdown drawer (Story -> Analysis -> Shots -> Direct -> Assemble).
+               - **Projects:** Complete project catalog & canvas settings (16:9, 9:16, 1:1, 2.39:1, 24/30/60 FPS).
+               - **Video Editor:** CapCut-style multitrack NLE video editor.
+               - **Settings:** Clean settings, FFmpeg diagnostics, and system telemetry.
+
+            2. **Real Video Preview & Decoding Player:**
+               - Replaced static placeholder frames with a genuine HTML5 `<video ref={videoRef}>` decoding player.
+               - Frame-accurate seek synchronization with timeline playhead.
+               - Play/Pause, Frame-by-frame stepping (1/24s), Scrubbing slider, Timecode display, Volume slider, Mute toggle, and Safe Areas guide.
+
+            3. **Functional CapCut-Style Multitrack Timeline:**
+               - **Working Clip Split at Playhead:** Correctly divides clip into left and right segments, preserving both on the timeline.
+               - **Trim Start & Trim End:** Precision trimming to current playhead position.
+               - **Undo / Redo:** Full timeline state history with keyboard shortcuts (`Ctrl+Z`, `Ctrl+Y`).
+               - **Duplicate & Delete:** Quick clip duplication and non-destructive deletion.
+               - **Track Controls:** Track-level volume, mute, and lock controls.
+
+            4. **Real FFmpeg Master MP4 Export:**
+               - Direct export to H.264 / AAC MP4 with presets for 1080p Landscape, 9:16 Social Reels, 2K QHD, and 4K UHD.
+               - Fully integrated bundled FFmpeg essentials.
+
+            ---
+
             ## 📦 Installation Packages & Downloads
 
             | Deliverable | Package File | Scope & Recommended Use |
             | :--- | :--- | :--- |
-            | **Windows NSIS Setup (Recommended)** | `Cinematic Studio_2.0.1_x64-setup.exe` | Per-user desktop installation (%LOCALAPPDATA%\Programs), no UAC admin required, clean uninstallation |
-            | **Windows MSI Installer** | `Cinematic Studio_2.0.1_x64_en-US.msi` | Windows Installer package with stable WiX UpgradeCode for managed deployments |
+            | **Windows NSIS Setup (Recommended)** | `Cinematic Studio_3.0.0_x64-setup.exe` | Per-user desktop installation (%LOCALAPPDATA%\Programs), no UAC admin required |
+            | **Windows MSI Installer** | `Cinematic Studio_3.0.0_x64_en-US.msi` | Windows Installer package with stable WiX UpgradeCode |
             | **Chrome Extension (MV3)** | `cinematic-studio-chrome-extension.zip` | Manifest V3 Chrome Extension package for side-loading (`chrome://extensions`) |
             | **Native Messaging Host** | `cinematic-studio-host.exe` | Standalone Chrome native messaging host binary |
             | **Integrity Checksums** | `SHA256SUMS.txt` | SHA-256 cryptographic hashes for all release artifacts |
-
-            ---
-
-            ## 🛠️ Key Improvements & Fixes in v2.0.1
-
-            1. **Clean Installation & Uninstallation Lifecycle:**
-               - Configured per-user (`currentUser`) installation into `%LOCALAPPDATA%\Programs\Cinematic Studio` eliminating administrative file-access barriers.
-               - Added NSIS lifecycle hooks to terminate lingering application processes before file copy/deletion, preventing file locks.
-               - Automatic registration and unregistration of Chrome Native Messaging Host (`HKCU\Software\Google\Chrome\NativeMessagingHosts\com.cinematic.studio`).
-               - **User Project Preservation:** User project files in `C:\CinematicStudio\Projects` and SQLite databases survive upgrades and uninstallation by default.
-
-            2. **Unified Version Synchronization (v2.0.1):**
-               - Installer filenames, package.json, tauri.conf.json, Cargo.toml, MV3 manifest, and in-app About dialog all strictly report version **2.0.1**.
-
-            3. **Native Messaging Host Resolution:**
-               - Fixed executable path resolution in `ipc.rs` and setup scripts so the manifest accurately points to the installed host binary on disk.
-
-            4. **In-App Installation Diagnostics & Setup Wizard:**
-               - Integrated System Diagnostics panel checking version, registry, database, FFmpeg, and native messaging connectivity with 1-click auto-repair.
-               - Beginner-friendly First-Launch Setup Wizard guiding users through Chrome extension pairing.
-
-            5. **Windows Smart App Control & Security Guidance:**
-               - Built with Authenticode signing CI pipeline. For unsigned community builds, comprehensive troubleshooting and smart-screen guidance are documented in `WINDOWS-INSTALLATION-GUIDE.md`.
           draft: false
           prerelease: false

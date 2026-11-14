@@ -87,6 +87,9 @@ export interface CreateTimelineClipInput {
   source_in_seconds?: number;
   source_out_seconds?: number;
   volume?: number;
+  fade_in_seconds?: number;
+  fade_out_seconds?: number;
+  z_order?: number;
 }
 
 export interface UpdateTimelineClipInput {

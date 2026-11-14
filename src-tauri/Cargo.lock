@@ -414,7 +414,7 @@ dependencies = [
 
 [[package]]
 name = "cinematic-studio"
-version = "1.0.0"
+version = "3.0.0"
 dependencies = [
  "chrono",
  "env_logger",
