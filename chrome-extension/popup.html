@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cinematic Studio Agent</title>
+  <title>Cinematic Studio Bridge</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      width: 320px;
+      width: 340px;
       background: #090d16;
-      color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 14px;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 16px;
       font-size: 13px;
       user-select: none;
     }
@@ -19,136 +19,240 @@
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid #1e293b;
-      padding-bottom: 10px;
-      margin-bottom: 12px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
     }
     .brand {
-      font-family: monospace;
-      font-weight: 700;
-      color: #f1f5f9;
-      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .brand span { color: #e50914; }
+    .brand-icon {
+      width: 22px;
+      height: 22px;
+      background: linear-gradient(135deg, #e50914, #991b1b);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 11px;
+      color: white;
+    }
+    .brand-text {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #f8fafc;
+    }
+    .brand-text span { color: #e50914; }
+
     .badge {
       font-size: 10px;
-      font-family: monospace;
-      padding: 2px 6px;
-      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 3px 8px;
+      border-radius: 12px;
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 700;
+      letter-spacing: 0.04em;
     }
     .badge-connected { background: #064e3b; color: #34d399; border: 1px solid #059669; }
-    .badge-pending { background: #78350f; color: #fcd34d; border: 1px solid #d97706; }
+    .badge-connecting { background: #78350f; color: #fcd34d; border: 1px solid #d97706; }
     .badge-disconnected { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+    .badge-error { background: #450a0a; color: #f87171; border: 1px solid #dc2626; }
+
+    /* Main Connection Card */
     .card {
       background: #0f172a;
       border: 1px solid #1e293b;
-      border-radius: 6px;
-      padding: 10px;
-      margin-bottom: 10px;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
     }
-    .field {
-      margin-bottom: 8px;
-    }
-    .field label {
-      display: block;
-      font-size: 11px;
-      color: #94a3b8;
-      font-family: monospace;
-      margin-bottom: 4px;
-    }
-    .field input {
-      width: 100%;
-      background: #020617;
-      border: 1px solid #334155;
-      color: #f8fafc;
-      padding: 6px 8px;
-      border-radius: 4px;
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
       font-size: 12px;
-      font-family: monospace;
+      border-bottom: 1px solid #1e293b/60;
     }
-    .field input:focus {
-      outline: none;
-      border-color: #e50914;
-    }
-    .btn {
-      display: block;
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #94a3b8; }
+    .info-value { font-weight: 600; color: #f1f5f9; text-align: right; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .info-value.mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; }
+
+    /* Primary Action Button */
+    .btn-connect {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       width: 100%;
-      padding: 7px;
-      background: #e50914;
+      padding: 11px 16px;
+      background: linear-gradient(135deg, #e50914, #b91c1c);
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(229, 9, 20, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-connect:hover {
+      background: linear-gradient(135deg, #f43f5e, #dc2626);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(229, 9, 20, 0.45);
+    }
+    .btn-connect:active {
+      transform: translateY(0);
+    }
+    .btn-connect:disabled {
+      background: #334155;
+      color: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn-secondary {
+      flex: 1;
+      padding: 8px 10px;
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      font-size: 11px;
       font-weight: 600;
-      font-size: 12px;
       cursor: pointer;
       text-align: center;
       transition: background 0.15s;
     }
-    .btn:hover { background: #b80710; }
-    .btn-secondary {
-      background: #1e293b;
-      color: #cbd5e1;
-      border: 1px solid #334155;
-      margin-top: 6px;
-    }
-    .btn-secondary:hover { background: #334155; }
+    .btn-secondary:hover { background: #334155; color: white; }
+
     .btn-danger {
+      padding: 8px 12px;
       background: #450a0a;
       color: #fca5a5;
-      border: 1px solid #991b1b;
-      margin-top: 6px;
-    }
-    .btn-danger:hover { background: #7f1d1d; }
-    .status-row {
-      display: flex;
-      justify-content: space-between;
+      border: 1px solid #7f1d1d;
+      border-radius: 5px;
       font-size: 11px;
-      margin-bottom: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-danger:hover { background: #7f1d1d; color: white; }
+
+    /* Active Tab Box */
+    .tab-box {
+      background: #050811;
+      border: 1px dashed #334155;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-top: 10px;
+      font-size: 11px;
+    }
+    .tab-domain {
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tab-title {
       color: #94a3b8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 2px;
     }
-    .status-val {
-      color: #f1f5f9;
-      font-family: monospace;
+
+    /* Status Notification Message */
+    .notice {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
+      text-align: center;
+      margin-top: 8px;
     }
+    .notice.error { color: #f87171; }
+    .notice.success { color: #34d399; }
   </style>
 </head>
 <body>
+
   <div class="header">
-    <div class="brand">CINEMATIC<span>STUDIO</span></div>
-    <div id="statusBadge" class="badge badge-disconnected">Checking...</div>
+    <div class="brand">
+      <div class="brand-icon">CS</div>
+      <div class="brand-text">CINEMATIC <span>STUDIO</span></div>
+    </div>
+    <div id="statusBadge" class="badge badge-disconnected">DISCONNECTED</div>
   </div>
 
-  <div id="pairedView" style="display: none;">
-    <div class="card">
-      <div class="status-row">
-        <span>Assigned Profile:</span>
-        <span id="profileIdVal" class="status-val">--</span>
-      </div>
-      <div class="status-row">
-        <span>Native Messaging:</span>
-        <span id="nativeStatusVal" class="status-val">--</span>
-      </div>
-      <div class="status-row">
-        <span>HMAC Handshake:</span>
-        <span id="handshakeVal" class="status-val">--</span>
-      </div>
-    </div>
-    <button id="btnTestConn" class="btn">Test Connection</button>
-    <button id="btnUnpair" class="btn btn-danger">Unpair Profile</button>
+  <!-- Primary Action Container -->
+  <div id="connectContainer">
+    <button id="btnConnect" class="btn-connect">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>
+      <span>CONNECT TO CINEMATIC STUDIO</span>
+    </button>
   </div>
 
-  <div id="unpairedView" style="display: none;">
-    <div class="card">
-      <div class="field">
-        <label for="pairingInput">Paste Pairing Link or Token</label>
-        <input type="text" id="pairingInput" placeholder="cinematic://pair?profile=...&secret=...">
-      </div>
-      <button id="btnPair" class="btn">Pair with Desktop</button>
+  <!-- Connection Status Card -->
+  <div class="card" style="margin-top: 12px;">
+    <div class="info-row">
+      <span class="info-label">Desktop App</span>
+      <span id="appStatusVal" class="info-value">Checking...</span>
     </div>
-    <p style="font-size: 11px; color: #64748b; line-height: 1.4;">
-      Initiate pairing from the CINEMATIC STUDIO desktop app under <strong>Chrome Profiles</strong>.
-    </p>
+    <div class="info-row">
+      <span class="info-label">Host Protocol</span>
+      <span id="hostStatusVal" class="info-value mono">com.cinematic.studio</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Profile Binding</span>
+      <span id="profileVal" class="info-value mono">Default Studio Profile</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Handshake Status</span>
+      <span id="handshakeVal" class="info-value mono">STANDBY</span>
+    </div>
+
+    <!-- Active Tab Inspection (With User Permission) -->
+    <div class="tab-box" id="activeTabBox">
+      <div class="tab-domain">
+        <span>🌐</span>
+        <span id="tabDomainVal">Detecting Active Tab...</span>
+      </div>
+      <div id="tabTitleVal" class="tab-title">Inspecting active browser tab...</div>
+    </div>
+  </div>
+
+  <!-- Secondary Controls (Visible when paired / connected) -->
+  <div id="actionControls" class="btn-row" style="display: none;">
+    <button id="btnReconnect" class="btn-secondary">
+      ↻ Reconnect
+    </button>
+    <button id="btnOpenStudio" class="btn-secondary">
+      ⤢ Focus Studio
+    </button>
+    <button id="btnDisconnect" class="btn-danger">
+      Disconnect
+    </button>
+  </div>
+
+  <div id="statusNotice" class="notice">
+    Click Connect to bridge your Chrome session directly with the desktop AI Video Studio.
   </div>
 
   <script src="popup.js"></script>

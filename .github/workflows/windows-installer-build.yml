@@ -55,6 +55,7 @@ jobs:
           node tests/media_engine_resolver_test.cjs
           node tests/real_media_rendering_test.cjs
           node tests/final_rendering_regression_suite.cjs
+          node tests/option_a_chrome_embedding_suite.cjs
 
       - name: Build Frontend Production Bundle
         run: npm run build
@@ -162,7 +163,7 @@ jobs:
       - name: Upload Installer Packages Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cinematic-studio-windows-installer-v2.0.1
+          name: cinematic-studio-windows-installer-v2.0.2
           path: |
             release_artifacts/*
           retention-days: 30

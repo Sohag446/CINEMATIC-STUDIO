@@ -293,6 +293,113 @@ fn handle_incoming_message(
             timestamp: now,
         }),
 
+        "GET_APP_STATUS" => Some(IpcMessage {
+            id: msg.id.clone(),
+            msg_type: "APP_STATUS_RESPONSE".to_string(),
+            profile_id: msg.profile_id.clone(),
+            payload: serde_json::json!({
+                "app_installed": true,
+                "app_name": "CINEMATIC STUDIO",
+                "version": "2.0.2",
+                "host_active": true,
+                "timestamp": now
+            }),
+            timestamp: now,
+        }),
+
+        "AUTO_DISCOVER_OR_REGISTER_PROFILE" => {
+            eprintln!("[Cinematic Host] Auto-discovering or registering profile for extension pairing...");
+            if let Some(pool) = pool {
+                if let Ok(mut conn) = pool.get() {
+                    let profile_opt: Option<(String, String)> = conn
+                        .query_row(
+                            "SELECT id, display_name FROM chrome_profiles ORDER BY created_at ASC LIMIT 1",
+                            [],
+                            |r| Ok((r.get(0)?, r.get(1)?)),
+                        )
+                        .ok();
+
+                    let (profile_id, display_name) = match profile_opt {
+                        Some((id, name)) => (id, name),
+                        None => {
+                            let new_id = uuid::Uuid::new_v4().to_string();
+                            let default_name = "Studio Dedicated Chrome Session".to_string();
+                            let _ = conn.execute(
+                                "INSERT INTO chrome_profiles (id, profile_dir_key, display_name, user_data_dir, assigned_purpose, assigned_provider, created_at, updated_at) \
+                                 VALUES (?1, 'Default', ?2, '', 'VIDEO_GENERATION', 'Google Veo', ?3, ?3)",
+                                rusqlite::params![new_id, default_name, now],
+                            );
+                            (new_id, default_name)
+                        }
+                    };
+
+                    if let Ok(challenge) = PairingService::initiate_pairing(&mut conn, &profile_id) {
+                        return Some(IpcMessage {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            msg_type: "PROFILE_REGISTRATION_SUCCESS".to_string(),
+                            profile_id: Some(profile_id.clone()),
+                            payload: serde_json::json!({
+                                "profile_id": profile_id,
+                                "display_name": display_name,
+                                "session_id": challenge.session_id,
+                                "server_nonce": challenge.server_nonce,
+                                "pairing_secret": challenge.pairing_secret,
+                                "expires_at": challenge.expires_at
+                            }),
+                            timestamp: now,
+                        });
+                    }
+                }
+            }
+            None
+        }
+
+        "LAUNCH_OR_FOCUS_STUDIO" | "FOCUS_AND_NAVIGATE_WORKSPACE" => {
+            eprintln!("[Cinematic Host] Received request to focus or launch Cinematic Studio desktop window");
+            let target_workspace = msg
+                .payload
+                .get("workspace")
+                .and_then(|v| v.as_str())
+                .unwrap_or("aivideo");
+
+            if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
+                let exe_candidate = PathBuf::from(&local_app_data)
+                    .join("Programs")
+                    .join("Cinematic Studio")
+                    .join("Cinematic Studio.exe");
+
+                if exe_candidate.exists() {
+                    let _ = std::process::Command::new("powershell")
+                        .args([
+                            "-WindowStyle", "Hidden",
+                            "-Command",
+                            "$proc = Get-Process -Name 'Cinematic Studio','cinematic-studio' -ErrorAction SilentlyContinue | Select-Object -First 1; \
+                             if ($proc) { \
+                               $w = $proc.MainWindowHandle; \
+                               if ($w -and $w -ne [IntPtr]::Zero) { \
+                                 $sig = '[DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);'; \
+                                 $t = Add-Type -MemberDefinition $sig -Name Win32Utils -Namespace Win32Utils -PassThru; \
+                                 $t::SetForegroundWindow($w); \
+                               } \
+                             }"
+                        ])
+                        .spawn();
+                }
+            }
+
+            Some(IpcMessage {
+                id: msg.id.clone(),
+                msg_type: "STUDIO_FOCUS_ACK".to_string(),
+                profile_id: msg.profile_id.clone(),
+                payload: serde_json::json!({
+                    "success": true,
+                    "target_workspace": target_workspace,
+                    "timestamp": now
+                }),
+                timestamp: now,
+            })
+        }
+
         other => {
             eprintln!("[Cinematic Host] Unhandled message type: {}", other);
             None
