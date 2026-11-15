@@ -5,8 +5,8 @@ const assets = [
   'SHA256SUMS.txt',
   'cinematic-studio-chrome-extension.zip',
   'cinematic-studio-host.exe',
-  'Cinematic.Studio_4.0.1_x64-setup.exe',
-  'Cinematic.Studio_4.0.1_x64_en-US.msi'
+  'Cinematic.Studio_4.0.2_x64-setup.exe',
+  'Cinematic.Studio_4.0.2_x64_en-US.msi'
 ];
 
 function downloadAndHash(url) {
@@ -38,9 +38,9 @@ function downloadAndHash(url) {
 }
 
 async function main() {
-  console.log('Downloading and verifying official v4.0.1 assets from GitHub Releases...\n');
+  console.log('Downloading and verifying official v4.0.2 assets from GitHub Releases...\n');
   for (const name of assets) {
-    const url = `https://github.com/Sohag446/CINEMATIC-STUDIO/releases/download/v4.0.1/${name}`;
+    const url = `https://github.com/Sohag446/CINEMATIC-STUDIO/releases/download/v4.0.2/${name}`;
     try {
       const result = await downloadAndHash(url);
       console.log(`Asset: ${name}`);

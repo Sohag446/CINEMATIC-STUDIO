@@ -16,7 +16,7 @@ function getGitHubToken() {
 
 async function main() {
   const token = getGitHubToken();
-  const runId = '43695910783';
+  const runId = '43696292146';
   const url = `https://api.github.com/repos/Sohag446/CINEMATIC-STUDIO/actions/runs/${runId}/jobs`;
   
   https.get(url, { headers: { 'User-Agent': 'Node.js', 'Authorization': `token ${token}` } }, res => {
