@@ -95,3 +95,4 @@ if ($jsonDir -and -not (Test-Path $jsonDir)) {
 }
 $parsedRecords | ConvertTo-Json -Depth 5 | Set-Content -Path $OutputJson -Encoding utf8
 Write-Host "Event audit saved to $OutputJson"
+

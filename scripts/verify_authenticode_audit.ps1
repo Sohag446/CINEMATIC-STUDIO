@@ -137,3 +137,4 @@ if ($jsonDir -and -not (Test-Path $jsonDir)) {
 }
 $results | ConvertTo-Json -Depth 5 | Set-Content -Path $OutputJson -Encoding utf8
 Write-Host "`nMachine-readable audit report saved to $OutputJson"
+

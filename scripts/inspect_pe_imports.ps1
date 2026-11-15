@@ -84,3 +84,4 @@ foreach ($t in $targets) {
 $jsonPath = "docs/EXECUTABLE_DEPENDENCIES_AUDIT.json"
 $report | ConvertTo-Json -Depth 4 | Set-Content -Path $jsonPath -Encoding utf8
 Write-Host "`nMachine-readable audit written to $jsonPath"
+
