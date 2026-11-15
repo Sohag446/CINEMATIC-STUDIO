@@ -90,44 +90,7 @@ jobs:
             exit 1
           }
 
-      - name: Authenticode Code Signing & Signature Verification
-        shell: pwsh
-        env:
-          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK || secrets.CSC_LINK }}
-          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
-        run: |
-          if ($env:WINDOWS_CSC_LINK -and $env:WINDOWS_CSC_KEY_PASSWORD) {
-            Write-Host "Authenticode code-signing certificate detected. Preparing signtool..."
-            $pfxPath = "$env:RUNNER_TEMP\authenticode_cert.pfx"
-            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CSC_LINK))
-
-            $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter "signtool.exe" -Recurse | Select-Object -First 1).FullName
-            if (!$signtool) {
-              Write-Error "signtool.exe not found on runner!"
-              exit 1
-            }
-
-            $filesToSign = Get-ChildItem -Path "src-tauri/target/release/bundle" -Include *.exe,*.msi -Recurse
-            foreach ($file in $filesToSign) {
-              Write-Host "Signing $($file.FullName)..."
-              & $signtool sign /f $pfxPath /p $env:WINDOWS_CSC_KEY_PASSWORD /fd SHA256 /tr "http://timestamp.digicert.com" /td SHA256 /d "Cinematic Studio" $file.FullName
-              if ($LASTEXITCODE -ne 0) {
-                Write-Error "Signing failed for $($file.FullName)!"
-                exit 1
-              }
-              Write-Host "Verifying signature..."
-              & $signtool verify /pa /v $file.FullName
-            }
-            Remove-Item $pfxPath -Force
-          } else {
-            Write-Host "=========================================================================="
-            Write-Host "[NOTICE] Authenticode signing secret (WINDOWS_CSC_LINK) is not configured."
-            Write-Host "[NOTICE] Generating release packages with verified SHA-256 integrity checksums."
-            Write-Host "[NOTICE] Smart App Control / SmartScreen reputation guidance provided in docs."
-            Write-Host "=========================================================================="
-          }
-
-      - name: Prepare Staged Release Artifacts & Checksums
+      - name: Stage Release Artifacts & Extension Package
         shell: pwsh
         run: |
           $releaseDir = "release_artifacts"
@@ -157,6 +120,99 @@ jobs:
             }
           }
 
+      # Option 1: Microsoft Trusted Signing (formerly Azure Code Signing / Artifact Signing)
+      - name: Sign Executables with Microsoft Trusted Signing
+        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME != ''
+        uses: azure/trusted-signing-action@v0.5.1
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TRUSTED_SIGNING_ACCOUNT_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT || 'https://wus.codesigning.azure.net/' }}
+          code-signing-account-name: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_TRUSTED_SIGNING_PROFILE_NAME }}
+          files-folder: release_artifacts
+          files-folder-filter: exe,msi
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.digicert.com
+          timestamp-digest: SHA256
+
+      # Option 2: Standard Authenticode PFX via signtool.exe (OV/EV Certificate)
+      - name: Sign Executables with Authenticode PFX
+        if: env.HAS_AZURE_SIGNING != 'true'
+        shell: pwsh
+        env:
+          HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME != '' }}
+          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK || secrets.CSC_LINK }}
+          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if ($env:WINDOWS_CSC_LINK -and $env:WINDOWS_CSC_KEY_PASSWORD) {
+            Write-Host "Authenticode PFX code-signing certificate detected. Preparing signtool..."
+            $pfxPath = "$env:RUNNER_TEMP\authenticode_cert.pfx"
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CSC_LINK))
+
+            $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter "signtool.exe" -Recurse | Select-Object -First 1).FullName
+            if (!$signtool) {
+              Write-Error "signtool.exe not found on runner!"
+              exit 1
+            }
+
+            $filesToSign = Get-ChildItem -Path "release_artifacts" -Include *.exe,*.msi -Recurse
+            foreach ($file in $filesToSign) {
+              Write-Host "Signing $($file.Name) with RFC 3161 timestamp..."
+              & $signtool sign /f $pfxPath /p $env:WINDOWS_CSC_KEY_PASSWORD /fd SHA256 /tr "http://timestamp.digicert.com" /td SHA256 /d "Cinematic Studio" $file.FullName
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Signing failed for $($file.FullName)!"
+                exit 1
+              }
+            }
+            Remove-Item $pfxPath -Force
+            Write-Host "Authenticode PFX signing completed successfully."
+          } else {
+            Write-Host "=========================================================================="
+            Write-Host "[WARNING] No Code-Signing Credentials Configured in GitHub Secrets."
+            Write-Host "  - Neither Microsoft Trusted Signing (AZURE_*) nor Authenticode PFX (WINDOWS_CSC_*)"
+            Write-Host "    secrets were detected."
+            Write-Host "  - Generated release packages will be UNSIGNED."
+            Write-Host "  - Windows 11 Smart App Control will BLOCK installation with:"
+            Write-Host "    'We blocked this app because we could not verify its publisher.'"
+            Write-Host "=========================================================================="
+          }
+
+      - name: Verify Authenticode Signatures & Certificate Chain
+        shell: pwsh
+        run: |
+          Write-Host "=========================================================================="
+          Write-Host "AUTHENTICODE SIGNATURE VERIFICATION AUDIT"
+          Write-Host "=========================================================================="
+          $files = Get-ChildItem -Path "release_artifacts" -Include *.exe,*.msi -Recurse
+          $allSigned = $true
+          foreach ($file in $files) {
+            $sig = Get-AuthenticodeSignature -FilePath $file.FullName
+            Write-Host "File: $($file.Name)"
+            Write-Host "  Status:      $($sig.Status)"
+            Write-Host "  Signer:      $($sig.SignerCertificate.Subject)"
+            Write-Host "  Issuer:      $($sig.SignerCertificate.Issuer)"
+            Write-Host "  TimeStamper: $($sig.TimeStamperCertificate.Subject)"
+            Write-Host "  Thumbprint:  $($sig.SignerCertificate.Thumbprint)"
+            Write-Host ""
+            if ($sig.Status -ne "Valid") {
+              $allSigned = $false
+            }
+          }
+          if (!$allSigned) {
+            Write-Host "[AUDIT NOTICE] Some or all binaries are not signed with a valid trusted Authenticode signature."
+          } else {
+            Write-Host "[SUCCESS] All distributed executables have valid Authenticode digital signatures."
+          }
+
+      - name: Generate Release Checksums (SHA256SUMS.txt)
+        shell: pwsh
+        run: |
+          $releaseDir = "release_artifacts"
           $hashLines = @()
           $files = Get-ChildItem -Path $releaseDir -File
           foreach ($file in $files) {

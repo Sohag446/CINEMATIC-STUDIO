@@ -83,3 +83,4 @@ The release is live at:
 - Option B native Win32 Chrome docking is fully implemented in both the Rust desktop engine and the React UI.
 - All 11 Video Editor GUI workflow steps and Story-to-Video operations passed with real fixture media and bundled FFmpeg export.
 - GitHub Release `v4.0.2` has been built by CI and verified with 100% cryptographic integrity across all 5 assets.
+
