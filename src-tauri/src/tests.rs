@@ -1054,8 +1054,14 @@ fn test_docked_chrome_coordinate_transformation_scaling() {
         hc, 710,
         "Height must clamp to fit within parent client area"
     );
-    assert!(xc + wc <= 1000, "Child window must never exceed parent client width");
-    assert!(yc + hc <= 800, "Child window must never exceed parent client height");
+    assert!(
+        xc + wc <= 1000,
+        "Child window must never exceed parent client width"
+    );
+    assert!(
+        yc + hc <= 800,
+        "Child window must never exceed parent client height"
+    );
 }
 
 #[test]
@@ -1071,9 +1077,15 @@ fn test_docked_chrome_strict_boundary_clamping_and_sub_100px_dimensions() {
             .expect("Transform with sub-100px remaining width must succeed");
     assert_eq!(x, 450);
     assert_eq!(y, 10);
-    assert_eq!(w, 50, "Target width must be strictly 50 px and not exceed client area");
+    assert_eq!(
+        w, 50,
+        "Target width must be strictly 50 px and not exceed client area"
+    );
     assert_eq!(h, 300);
-    assert!(x + w <= 500, "Strict boundary invariant violated: x + w > client_width");
+    assert!(
+        x + w <= 500,
+        "Strict boundary invariant violated: x + w > client_width"
+    );
 
     // Remaining height below 100 px:
     // Client height is 500, y is 460, requested height is 300.
@@ -1084,8 +1096,14 @@ fn test_docked_chrome_strict_boundary_clamping_and_sub_100px_dimensions() {
     assert_eq!(x, 10);
     assert_eq!(y, 460);
     assert_eq!(w, 300);
-    assert_eq!(h, 40, "Target height must be strictly 40 px and not exceed client area");
-    assert!(y + h <= 500, "Strict boundary invariant violated: y + h > client_height");
+    assert_eq!(
+        h, 40,
+        "Target height must be strictly 40 px and not exceed client area"
+    );
+    assert!(
+        y + h <= 500,
+        "Strict boundary invariant violated: y + h > client_height"
+    );
 
     // Negative coordinates safely clamped to client area origin (0, 0)
     let (x, y, w, h) =
@@ -1104,7 +1122,10 @@ fn test_docked_chrome_boundary_rejection_and_error_handling() {
     // Reject coordinates beyond right client boundary
     let res_x_edge =
         DockedChromeManager::transform_css_to_parent_client(1920, 100, 400, 300, 96, 1920, 1080);
-    assert!(res_x_edge.is_err(), "Must reject x exactly equal to client width");
+    assert!(
+        res_x_edge.is_err(),
+        "Must reject x exactly equal to client width"
+    );
 
     let res_x_beyond =
         DockedChromeManager::transform_css_to_parent_client(2500, 100, 400, 300, 96, 1920, 1080);
@@ -1113,7 +1134,10 @@ fn test_docked_chrome_boundary_rejection_and_error_handling() {
     // Reject coordinates beyond bottom client boundary
     let res_y_edge =
         DockedChromeManager::transform_css_to_parent_client(100, 1080, 400, 300, 96, 1920, 1080);
-    assert!(res_y_edge.is_err(), "Must reject y exactly equal to client height");
+    assert!(
+        res_y_edge.is_err(),
+        "Must reject y exactly equal to client height"
+    );
 
     let res_y_beyond =
         DockedChromeManager::transform_css_to_parent_client(100, 1500, 400, 300, 96, 1920, 1080);
@@ -1122,7 +1146,10 @@ fn test_docked_chrome_boundary_rejection_and_error_handling() {
     // Reject zero-sized or negative client areas
     let res_zero_client =
         DockedChromeManager::transform_css_to_parent_client(100, 100, 400, 300, 96, 0, 0);
-    assert!(res_zero_client.is_err(), "Must reject zero-sized client area");
+    assert!(
+        res_zero_client.is_err(),
+        "Must reject zero-sized client area"
+    );
 
     let res_neg_client =
         DockedChromeManager::transform_css_to_parent_client(100, 100, 400, 300, 96, -100, 800);
@@ -1135,12 +1162,25 @@ fn test_docked_chrome_boundary_rejection_and_error_handling() {
 
     let res_neg_dim =
         DockedChromeManager::transform_css_to_parent_client(100, 100, 400, -50, 96, 1920, 1080);
-    assert!(res_neg_dim.is_err(), "Must reject negative requested height");
+    assert!(
+        res_neg_dim.is_err(),
+        "Must reject negative requested height"
+    );
 
     // Guard against astronomical coordinate inputs / integer overflow
-    let res_overflow =
-        DockedChromeManager::transform_css_to_parent_client(i32::MAX, 100, 400, 300, 192, 1920, 1080);
-    assert!(res_overflow.is_err(), "Must safely reject extreme coordinate values without panicking");
+    let res_overflow = DockedChromeManager::transform_css_to_parent_client(
+        i32::MAX,
+        100,
+        400,
+        300,
+        192,
+        1920,
+        1080,
+    );
+    assert!(
+        res_overflow.is_err(),
+        "Must safely reject extreme coordinate values without panicking"
+    );
 }
 
 #[test]

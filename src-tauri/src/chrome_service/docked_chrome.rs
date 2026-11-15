@@ -230,7 +230,9 @@ impl DockedChromeManager {
             || phys_h_f > (i32::MAX - 10000) as f64
             || phys_h_f <= 0.0
         {
-            return Err("Requested coordinates or dimensions exceed valid integer limits".to_string());
+            return Err(
+                "Requested coordinates or dimensions exceed valid integer limits".to_string(),
+            );
         }
 
         let phys_x = phys_x_f as i32;
@@ -385,14 +387,13 @@ impl DockedChromeManager {
 
         // Apply High-DPI coordinate scaling & parent client clamping
         let (target_x, target_y, target_w, target_h) =
-            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height)
-                .map_err(|e| {
-                    Self::terminate_pid(pid);
-                    format!(
-                        "Coordinate scaling/clamping failed during docking: {}. Cleaned up instance.",
-                        e
-                    )
-                })?;
+            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height).map_err(|e| {
+                Self::terminate_pid(pid);
+                format!(
+                    "Coordinate scaling/clamping failed during docking: {}. Cleaned up instance.",
+                    e
+                )
+            })?;
 
         unsafe {
             // 1. Reparent Chrome into Studio
