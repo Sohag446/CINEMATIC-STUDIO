@@ -240,6 +240,13 @@ interface StudioState {
   markSceneStatus: (clipId: string, status: any) => Promise<void>;
   attachDownloadedVideoToScene: (clipId: string, filePath: string, proxyUrl?: string) => Promise<void>;
   detachAudioFromClip: (timelineClipId: string) => Promise<void>;
+  isChromeDocked: boolean;
+  dockedChromeHwnd: number | null;
+  dockChrome: (url: string, userDataDir: string, profileDirKey: string, x: number, y: number, width: number, height: number) => Promise<number>;
+  syncDockedBounds: (x: number, y: number, width: number, height: number) => Promise<void>;
+  setDockedVisible: (visible: boolean) => Promise<void>;
+  closeDocked: () => Promise<void>;
+  toggleChromeDockMode: () => void;
 }
 
 const getDefaultCharacters = (projectId: string): CharacterProfile[] => [
@@ -435,6 +442,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   registeredProfiles: [],
   isDiscoveringProfiles: false,
   activePairingChallenge: null,
+  isChromeDocked: true,
+  dockedChromeHwnd: null,
 
   // Phase 3 Task Queue & Execution Engine
   tasks: [],
@@ -675,6 +684,36 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   installNativeHost: async () => {
     return apiService.installNativeHost();
+  },
+
+  dockChrome: async (url, userDataDir, profileDirKey, x, y, width, height) => {
+    try {
+      const hwnd = await apiService.dockChromeToWindow(url, userDataDir, profileDirKey, x, y, width, height);
+      set({ dockedChromeHwnd: hwnd, isChromeDocked: true });
+      return hwnd;
+    } catch (err) {
+      console.warn('[Docked Chrome] Falling back to companion mode:', err);
+      await apiService.launchChromeProfile(userDataDir, profileDirKey);
+      set({ isChromeDocked: false, dockedChromeHwnd: null });
+      return 0;
+    }
+  },
+
+  syncDockedBounds: async (x, y, width, height) => {
+    await apiService.syncDockedChromeBounds(x, y, width, height);
+  },
+
+  setDockedVisible: async (visible) => {
+    await apiService.setDockedChromeVisible(visible);
+  },
+
+  closeDocked: async () => {
+    await apiService.closeDockedChrome();
+    set({ dockedChromeHwnd: null });
+  },
+
+  toggleChromeDockMode: () => {
+    set(state => ({ isChromeDocked: !state.isChromeDocked }));
   },
 
   // Phase 3 Actions

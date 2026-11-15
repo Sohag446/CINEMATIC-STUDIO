@@ -451,6 +451,36 @@ export const apiService = {
     console.log(`[Browser Simulation] Launching Chrome profile ${profileDirKey} from ${userDataDir}`);
   },
 
+  async dockChromeToWindow(url: string, userDataDir: string, profileDirKey: string, x: number, y: number, width: number, height: number): Promise<number> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<number>('dock_chrome_to_window', { url, userDataDir, profileDirKey, x, y, width, height });
+    }
+    console.log(`[Browser Simulation] Docking Chrome to window at (${x}, ${y}, ${width}x${height})`);
+    return 1001;
+  },
+
+  async syncDockedChromeBounds(x: number, y: number, width: number, height: number): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('sync_docked_chrome_bounds', { x, y, width, height });
+    }
+  },
+
+  async setDockedChromeVisible(visible: boolean): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('set_docked_chrome_visible', { visible });
+    }
+  },
+
+  async closeDockedChrome(): Promise<void> {
+    if (isTauriEnvironment()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return invoke<void>('close_docked_chrome');
+    }
+  },
+
   async initiateProfilePairing(profileId: string): Promise<PairingChallenge> {
     if (isTauriEnvironment()) {
       const { invoke } = await import('@tauri-apps/api/core');

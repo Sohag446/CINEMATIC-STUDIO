@@ -1,7 +1,7 @@
 use crate::chrome_service::{
-    ChromeDiscoveryService, DiscoveredChromeProfile, NativeMessagingIpc, PairingChallengeDto,
-    PairingService, PairingVerificationResult, ProfileManager, RegisterProfileDto,
-    RegisteredProfile, UpdateProfileDto, VerifyPairingDto,
+    ChromeDiscoveryService, DiscoveredChromeProfile, DockedChromeManager, NativeMessagingIpc,
+    PairingChallengeDto, PairingService, PairingVerificationResult, ProfileManager,
+    RegisterProfileDto, RegisteredProfile, UpdateProfileDto, VerifyPairingDto,
 };
 use crate::database::{run_integrity_check, AppSettings, DbPool, RecoveryReport};
 use crate::media_service::{
@@ -440,6 +440,68 @@ pub async fn launch_chrome_profile(
     profile_dir_key: String,
 ) -> Result<(), String> {
     ProfileManager::launch_profile(&user_data_dir, &profile_dir_key)
+}
+
+#[tauri::command]
+pub async fn dock_chrome_to_window(
+    window: tauri::WebviewWindow,
+    url: String,
+    user_data_dir: String,
+    profile_dir_key: String,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> Result<isize, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let hwnd = window.hwnd().map(|h| h.0 as isize).unwrap_or(0);
+        DockedChromeManager::dock_chrome(
+            hwnd,
+            &url,
+            &user_data_dir,
+            &profile_dir_key,
+            x,
+            y,
+            width,
+            height,
+        )
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (
+            window,
+            url,
+            user_data_dir,
+            profile_dir_key,
+            x,
+            y,
+            width,
+            height,
+        );
+        Err("Option B Docked Chrome is only supported on Windows".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn sync_docked_chrome_bounds(
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> Result<(), String> {
+    DockedChromeManager::sync_bounds(x, y, width, height)
+}
+
+#[tauri::command]
+pub async fn set_docked_chrome_visible(visible: bool) -> Result<(), String> {
+    DockedChromeManager::set_visible(visible)
+}
+
+#[tauri::command]
+pub async fn close_docked_chrome() -> Result<(), String> {
+    DockedChromeManager::close_docked_chrome();
+    Ok(())
 }
 
 #[tauri::command]

@@ -147,6 +147,16 @@ jobs:
             exit 1
           }
 
+          # Normalize filenames: replace spaces with dots to match GitHub Release asset URLs
+          $files = Get-ChildItem -Path $releaseDir -File
+          foreach ($file in $files) {
+            if ($file.Name.Contains(" ")) {
+              $newName = $file.Name -replace ' ', '.'
+              $newPath = Join-Path $releaseDir $newName
+              Move-Item -Path $file.FullName -Destination $newPath -Force
+            }
+          }
+
           $hashLines = @()
           $files = Get-ChildItem -Path $releaseDir -File
           foreach ($file in $files) {
@@ -164,7 +174,7 @@ jobs:
       - name: Upload Installer Packages Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cinematic-studio-windows-installer-v4.0.1
+          name: cinematic-studio-windows-installer-${{ github.ref_name }}
           path: |
             release_artifacts/*
           retention-days: 30
@@ -182,33 +192,36 @@ jobs:
             **Developer & Architect:** Md. Sohag Hossen
             **Repository:** https://github.com/Sohag446/CINEMATIC-STUDIO
             **Operating System:** Windows 11 / Windows 10 x64
-            **Release Target:** ${{ github.ref_name }} (Corrected Patch Release)
+            **Release Target:** ${{ github.ref_name }} (Production Release)
 
             ---
 
             ## 🚀 What's New in ${{ github.ref_name }}
 
-            1. **Decoupled Real-Time Playback Clock:**
+            1. **Option B In-Workspace Native Chrome Integration:**
+               - Genuine `chrome.exe` docked directly inside the AI Workspace panel via Win32 container reparenting.
+               - Dynamic viewport synchronization on window resize, maximize, minimize, and restore.
+               - Full keyboard, mouse, and scrolling support for Google Flow/Veo, ChatGPT, Gemini, and Claude.
+               - Multi-profile isolation and session persistence across application restarts.
+               - Companion Window mode retained as a selectable fallback.
+
+            2. **Decoupled Real-Time Playback Clock:**
                - Replaced element-dependent playback ticks with an independent `requestAnimationFrame` master timeline clock.
                - Video plays smoothly across cuts, gaps, and transitions without freezing.
                - CSP hardened to explicitly allow `blob:`, `asset:`, `http://asset.localhost`, and `https://asset.localhost`.
 
-            2. **Real Chrome Integration & Win32 Architecture:**
-               - Companion Chrome process management with dedicated user data directories.
-               - Multi-account Google profile switching (Google 1, Google 2, etc.) for generation services.
-               - Secure Manifest V3 Extension & Native Messaging Host (`cinematic-studio-host.exe`) integration.
+            3. **Interactive Mouse Trimming & Move:**
+               - Multitrack timeline clips feature left-edge trim, right-edge trim, and drag-to-move handlers.
+               - Split at playhead position, duplicate, delete, and multi-track reordering.
 
-            3. **23-Point AI Film Production Engine:**
+            4. **23-Point AI Film Production Engine:**
                - Natural language duration parsing supporting $30\text{s}$ (3 scenes), $1\text{m}$ (6 scenes), $10\text{m}$ (60 scenes), up to $2\text{h}$ (720 scenes).
-               - Generates complete cinematography, camera framing, lighting setups, dialogue, foley, and first-to-previous-last frame continuity locks.
+               - Generates complete cinematography, camera framing, lighting setups, dialogue, foley, and continuity locks.
 
-            4. **CapCut-Grade Professional Multi-Track Video Editor:**
+            5. **CapCut-Grade Professional Multi-Track Video Editor:**
                - Multi-track timeline (Tracks V1-V3, A1-A3, and Text Overlay) with drag-and-drop from the Media Library.
-               - Clip Split at Playhead (`Ctrl+B`), Trim Start / End, Duplicate, Delete, and Full Undo / Redo (`Ctrl+Z`, `Ctrl+Y`).
-               - Comprehensive Desktop Inspector with Transform (scale, rotation, position X/Y, opacity), Speed (0.25x-4.0x), Audio Detach to A1, and Color Grading (brightness, contrast, saturation, hue).
-
-            5. **One-Click Scene Assembly Bridge:**
-               - "Assemble Takes" automatically places all completed scene takes sequentially onto Track V1 and opens the Video Editor.
+               - Full Undo / Redo (`Ctrl+Z`, `Ctrl+Y`).
+               - Comprehensive Desktop Inspector with Transform, Speed, Audio Detach to A1, and Color Grading.
 
             6. **Production FFmpeg Master MP4 Rendering:**
                - Multi-track composite rendering with picture-in-picture, audio mixing, and stream normalization via bundled Gyan FFmpeg 9.0.2.
@@ -219,8 +232,8 @@ jobs:
 
             | Deliverable | Package File | Scope & Recommended Use |
             | :--- | :--- | :--- |
-            | **Windows NSIS Setup (Recommended)** | `Cinematic Studio_4.0.1_x64-setup.exe` | Per-user desktop installation (%LOCALAPPDATA%\Programs), no UAC admin required |
-            | **Windows MSI Installer** | `Cinematic Studio_4.0.1_x64_en-US.msi` | Windows Installer package with stable WiX UpgradeCode |
+            | **Windows NSIS Setup (Recommended)** | `Cinematic.Studio_*_x64-setup.exe` | Per-user desktop installation (%LOCALAPPDATA%\Programs), no UAC admin required |
+            | **Windows MSI Installer** | `Cinematic.Studio_*_x64_en-US.msi` | Windows Installer package with stable WiX UpgradeCode |
             | **Chrome Extension (MV3)** | `cinematic-studio-chrome-extension.zip` | Manifest V3 Chrome Extension package for side-loading (`chrome://extensions`) |
             | **Native Messaging Host** | `cinematic-studio-host.exe` | Standalone Chrome native messaging host binary |
             | **Integrity Checksums** | `SHA256SUMS.txt` | SHA-256 cryptographic hashes for all release artifacts |

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Bot,
   Video,
@@ -51,8 +51,18 @@ export const AIVideoWorkspace: React.FC = () => {
     assembleCompletedScenes,
     markSceneStatus,
     attachDownloadedVideoToScene,
-    addClipDirectlyToTimeline
+    addClipDirectlyToTimeline,
+    isChromeDocked,
+    dockedChromeHwnd,
+    dockChrome,
+    syncDockedBounds,
+    setDockedVisible,
+    closeDocked,
+    toggleChromeDockMode
   } = useStudioStore();
+
+  const browserViewportRef = useRef<HTMLDivElement>(null);
+  const [browserCurrentUrl, setBrowserCurrentUrl] = useState<string>('https://deepmind.google/technologies/veo/');
 
   // Exactly TWO primary tabs: Tab 1 = AI Story Assistant, Tab 2 = AI Video Assistant
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'STORY' | 'VIDEO'>('STORY');
@@ -98,16 +108,57 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
     claude: 'https://claude.ai'
   };
 
-  const handleLaunchChrome = async (targetUrl: string = 'https://deepmind.google/technologies/veo/') => {
+  const handleLaunchOrDockChrome = async (targetUrl: string = 'https://deepmind.google/technologies/veo/') => {
+    setBrowserCurrentUrl(targetUrl);
     const profile = registeredProfiles.find(p => p.id === activeVideoProfileId) || registeredProfiles[0];
     const userDir = profile?.user_data_dir || '';
     const key = profile?.profile_dir_key || 'Default';
-    try {
+
+    if (isChromeDocked && browserViewportRef.current) {
+      const rect = browserViewportRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.round(rect.left));
+      const y = Math.max(0, Math.round(rect.top));
+      const w = Math.max(300, Math.round(rect.width));
+      const h = Math.max(200, Math.round(rect.height));
+      try {
+        await dockChrome(targetUrl, userDir, key, x, y, w, h);
+      } catch (err) {
+        console.warn('Docking error, falling back to companion:', err);
+        await launchProfile(userDir, key);
+      }
+    } else {
       await launchProfile(userDir, key);
-    } catch {
-      window.open(targetUrl, '_blank');
     }
   };
+
+  const handleLaunchChrome = (targetUrl: string = 'https://deepmind.google/technologies/veo/') => {
+    handleLaunchOrDockChrome(targetUrl);
+  };
+
+  // Synchronize docked Chrome bounds on viewport resize
+  useEffect(() => {
+    if (!browserViewportRef.current || !dockedChromeHwnd) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const rect = entry.target.getBoundingClientRect();
+        syncDockedBounds(
+          Math.max(0, Math.round(rect.left)),
+          Math.max(0, Math.round(rect.top)),
+          Math.max(300, Math.round(rect.width)),
+          Math.max(200, Math.round(rect.height))
+        );
+      }
+    });
+    observer.observe(browserViewportRef.current);
+    return () => observer.disconnect();
+  }, [dockedChromeHwnd, syncDockedBounds]);
+
+  // Synchronize docked visibility with active tab
+  useEffect(() => {
+    if (dockedChromeHwnd) {
+      setDockedVisible(activeWorkspaceTab === 'VIDEO');
+    }
+  }, [activeWorkspaceTab, dockedChromeHwnd, setDockedVisible]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -613,6 +664,100 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
                   <Film className="w-3.5 h-3.5" />
                   <span>Assemble Takes</span>
                 </button>
+              </div>
+            </div>
+
+            {/* IN-WORKSPACE BROWSER PANEL (OPTION B DOCKED WIN32 CONTAINER) */}
+            <div className="bg-studio-900 border border-studio-800 rounded-xl p-3.5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center space-x-2">
+                  <Monitor className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-bold text-white font-mono uppercase tracking-wider">
+                    AI Workspace Browser {isChromeDocked ? '(Option B Docked)' : '(Option A Companion)'}
+                  </span>
+                  {dockedChromeHwnd ? (
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800/60">
+                      Active (HWND: {dockedChromeHwnd})
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* AI Site Switcher Quick Links & Mode Toggle */}
+                <div className="flex items-center space-x-1.5 text-xs">
+                  {[
+                    { label: 'Google Veo', url: 'https://deepmind.google/technologies/veo/' },
+                    { label: 'ChatGPT', url: 'https://chatgpt.com' },
+                    { label: 'Gemini', url: 'https://gemini.google.com' },
+                    { label: 'Claude', url: 'https://claude.ai' }
+                  ].map(site => (
+                    <button
+                      key={site.label}
+                      onClick={() => handleLaunchOrDockChrome(site.url)}
+                      className="px-2.5 py-1 rounded bg-studio-950 hover:bg-studio-800 border border-studio-800 text-slate-300 hover:text-white font-mono text-[11px] transition-colors"
+                    >
+                      {site.label}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={toggleChromeDockMode}
+                    className="px-2.5 py-1 rounded bg-studio-850 hover:bg-studio-800 border border-cyan-700/60 text-cyan-300 font-mono text-[11px] transition-colors"
+                    title="Toggle between Option B (Docked in Workspace) and Option A (External Companion Window)"
+                  >
+                    {isChromeDocked ? 'Mode: Docked' : 'Mode: Companion'}
+                  </button>
+                </div>
+              </div>
+
+              {/* URL Address Bar & Controls */}
+              <div className="flex items-center space-x-2 pt-1 border-t border-studio-800">
+                <input
+                  type="text"
+                  value={browserCurrentUrl}
+                  onChange={e => setBrowserCurrentUrl(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleLaunchOrDockChrome(browserCurrentUrl);
+                  }}
+                  placeholder="Enter URL to navigate in Chrome..."
+                  className="flex-1 bg-studio-950 border border-studio-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-600 font-mono"
+                />
+                <button
+                  onClick={() => handleLaunchOrDockChrome(browserCurrentUrl)}
+                  className="px-3 py-1.5 bg-studio-cyan hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded transition-colors font-mono"
+                >
+                  Navigate
+                </button>
+                {dockedChromeHwnd ? (
+                  <button
+                    onClick={closeDocked}
+                    className="px-2.5 py-1.5 bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs rounded font-mono transition-colors"
+                  >
+                    Close
+                  </button>
+                ) : null}
+              </div>
+
+              {/* Viewport Mount Area */}
+              <div
+                ref={browserViewportRef}
+                className="w-full h-[380px] bg-black rounded-lg border border-studio-800 relative flex items-center justify-center overflow-hidden"
+              >
+                {!dockedChromeHwnd && (
+                  <div className="text-center p-6 space-y-2 text-slate-500">
+                    <Monitor className="w-8 h-8 text-slate-600 mx-auto" />
+                    <p className="text-xs font-mono">
+                      {isChromeDocked
+                        ? 'Google Chrome will dock inside this workspace viewport.'
+                        : 'Google Chrome will launch in a separate companion window.'}
+                    </p>
+                    <button
+                      onClick={() => handleLaunchOrDockChrome(browserCurrentUrl)}
+                      className="px-3.5 py-1.5 rounded-lg bg-studio-850 hover:bg-studio-800 border border-cyan-600/60 text-cyan-300 text-xs font-semibold inline-flex items-center space-x-1.5"
+                    >
+                      <span>Launch In-Workspace Chrome (Option B)</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
