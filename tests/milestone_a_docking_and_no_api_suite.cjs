@@ -67,59 +67,291 @@ const loader = new Function('require', 'module', 'exports', transpiledStory);
 loader(require, storyModule, storyModule.exports);
 const { storyAgent, parseRequestedDuration } = storyModule.exports;
 
+// ============================================================================
+// NO-AI-API PRODUCTION AUDIT ENGINE & REPOSITORY SCANNER
+// ============================================================================
+
+const PROHIBITED_NPM_SDKS = [
+  'openai',
+  '@google/generative-ai',
+  '@google/genai',
+  'google-generativeai',
+  'google-genai',
+  '@anthropic-ai/sdk',
+  'anthropic',
+  'anthropic-sdk',
+  'groq-sdk',
+  'groq',
+  'ollama',
+  'ollama-node',
+  'langchain',
+  '@langchain/core',
+  '@langchain/community',
+  '@langchain/openai',
+  '@langchain/anthropic',
+  'together-ai',
+  'cohere-ai',
+  '@mistralai/mistralai'
+];
+
+const PROHIBITED_NPM_PREFIXES = [
+  '@openai/',
+  '@langchain/'
+];
+
+const PROHIBITED_CARGO_CRATES = [
+  'async-openai',
+  'openai',
+  'ollama-rs',
+  'ollama',
+  'anthropic',
+  'anthropic-sdk',
+  'groq',
+  'groq-sdk',
+  'google-generativeai',
+  'google-genai',
+  'langchain-rust',
+  'langchain'
+];
+
+const FORBIDDEN_CONTENT_PATTERNS = [
+  { name: 'OpenAI Direct Inference Endpoint', regex: /api\.openai\.com/i },
+  { name: 'Gemini GenerativeLanguage Inference Endpoint', regex: /generativelanguage\.googleapis\.com/i },
+  { name: 'Anthropic Direct Inference Endpoint', regex: /api\.anthropic\.com/i },
+  { name: 'Groq Direct Inference Endpoint', regex: /api\.groq\.com/i },
+  { name: 'Ollama Daemon Local Inference Endpoint', regex: /(localhost|127\.0\.0\.1):11434/i },
+  { name: 'Together AI Inference Endpoint', regex: /api\.together\.xyz/i },
+  { name: 'Mistral AI Inference Endpoint', regex: /api\.mistral\.ai/i },
+  { name: 'Cohere Inference Endpoint', regex: /api\.cohere\.ai/i },
+  { name: 'OpenAI SDK Direct Import', regex: /(from\s+['"]openai['"]|require\(['"]openai['"]\))/i },
+  { name: 'Gemini SDK Direct Import', regex: /(from\s+['"]@google\/generative-ai['"]|require\(['"]@google\/generative-ai['"]\))/i },
+  { name: 'Anthropic SDK Direct Import', regex: /(from\s+['"]@anthropic-ai\/sdk['"]|require\(['"]@anthropic-ai\/sdk['"]\))/i },
+  { name: 'Groq SDK Direct Import', regex: /(from\s+['"]groq-sdk['"]|require\(['"]groq-sdk['"]\))/i },
+  { name: 'Ollama Client Direct Import', regex: /(from\s+['"]ollama['"]|require\(['"]ollama['"]\))/i },
+  { name: 'LangChain Direct Import', regex: /(from\s+['"]langchain['"]|require\(['"]langchain['"]\))/i },
+  { name: 'Rust async-openai Import', regex: /use\s+async_openai\b/i },
+  { name: 'Rust ollama-rs Import', regex: /use\s+ollama_rs\b/i },
+  { name: 'API Key Configuration Field', regex: /apiKey\s*[:\?]/i },
+  { name: 'OpenAI API Key Env Var', regex: /OPENAI_API_KEY/i },
+  { name: 'Gemini API Key Env Var', regex: /GEMINI_API_KEY/i },
+  { name: 'Anthropic API Key Env Var', regex: /ANTHROPIC_API_KEY/i },
+  { name: 'Groq API Key Env Var', regex: /GROQ_API_KEY/i },
+  { name: 'Ollama Host Override Env Var', regex: /OLLAMA_HOST/i },
+  { name: 'Ollama API Base Env Var', regex: /OLLAMA_API_BASE/i },
+];
+
+function isProhibitedNpmPackage(name) {
+  if (PROHIBITED_NPM_SDKS.includes(name)) return true;
+  for (const prefix of PROHIBITED_NPM_PREFIXES) {
+    if (name.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
+function isProhibitedCargoCrate(name) {
+  return PROHIBITED_CARGO_CRATES.includes(name);
+}
+
+function auditPackageJson(content, manifestPath = 'package.json') {
+  const pkg = typeof content === 'string' ? JSON.parse(content) : content;
+  const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
+  const detected = [];
+  let totalCount = 0;
+  for (const sec of sections) {
+    if (pkg[sec] && typeof pkg[sec] === 'object') {
+      for (const dep of Object.keys(pkg[sec])) {
+        totalCount++;
+        if (isProhibitedNpmPackage(dep)) {
+          detected.push({ package: dep, section: sec, manifest: manifestPath });
+        }
+      }
+    }
+  }
+  if (detected.length > 0) {
+    throw new Error(`Prohibited AI SDK dependency detected in ${manifestPath}: ${detected.map(d => `${d.package} (${d.section})`).join(', ')}`);
+  }
+  return { ok: true, count: totalCount };
+}
+
+function auditPackageLock(content, manifestPath = 'package-lock.json') {
+  const lock = typeof content === 'string' ? JSON.parse(content) : content;
+  const detected = [];
+  const allResolvedPackages = new Set();
+
+  // 1. v2/v3 lockfile packages object (includes all resolved direct and transitive packages)
+  if (lock.packages && typeof lock.packages === 'object') {
+    for (const key of Object.keys(lock.packages)) {
+      if (!key) continue; // project root ""
+      const parts = key.split('node_modules/');
+      const pkgName = parts[parts.length - 1];
+      if (pkgName) {
+        allResolvedPackages.add(pkgName);
+        if (isProhibitedNpmPackage(pkgName)) {
+          detected.push({ package: pkgName, path: key, manifest: manifestPath });
+        }
+      }
+    }
+  }
+
+  // 2. v1/v2 legacy dependencies tree (recursive)
+  function scanLegacy(depsObj, prefix = '') {
+    if (!depsObj || typeof depsObj !== 'object') return;
+    for (const [name, info] of Object.entries(depsObj)) {
+      allResolvedPackages.add(name);
+      if (isProhibitedNpmPackage(name)) {
+        detected.push({ package: name, path: `${prefix}${name}`, manifest: manifestPath });
+      }
+      if (info && info.dependencies) {
+        scanLegacy(info.dependencies, `${prefix}${name} > `);
+      }
+    }
+  }
+  if (lock.dependencies) {
+    scanLegacy(lock.dependencies);
+  }
+
+  if (detected.length > 0) {
+    throw new Error(`Prohibited AI SDK package detected in lockfile ${manifestPath}: ${detected.map(d => `${d.package} at ${d.path}`).join(', ')}`);
+  }
+  return { ok: true, count: allResolvedPackages.size };
+}
+
+function auditCargoToml(content, manifestPath = 'src-tauri/Cargo.toml') {
+  const lines = content.split('\n');
+  let inDepSection = false;
+  let currentSection = '';
+  const detected = [];
+  let totalCount = 0;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.startsWith('[') && line.endsWith(']')) {
+      const header = line.slice(1, -1).trim();
+      currentSection = header;
+      inDepSection = header.includes('dependencies');
+      continue;
+    }
+    if (inDepSection && line && !line.startsWith('#')) {
+      const eqIdx = line.indexOf('=');
+      if (eqIdx !== -1) {
+        const crateName = line.slice(0, eqIdx).trim().split('.')[0].trim();
+        if (crateName) {
+          totalCount++;
+          if (isProhibitedCargoCrate(crateName)) {
+            detected.push({ crate: crateName, section: currentSection, manifest: manifestPath });
+          }
+        }
+      }
+    }
+  }
+
+  if (detected.length > 0) {
+    throw new Error(`Prohibited Rust AI crate detected in ${manifestPath}: ${detected.map(d => `${d.crate} in [${d.section}]`).join(', ')}`);
+  }
+  return { ok: true, count: totalCount };
+}
+
+function auditCargoLock(content, manifestPath = 'src-tauri/Cargo.lock') {
+  const lines = content.split('\n');
+  let inPackage = false;
+  const detected = [];
+  const allResolvedCrates = new Set();
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line === '[[package]]') {
+      inPackage = true;
+    } else if (inPackage && line.startsWith('name = ')) {
+      const match = line.match(/^name\s*=\s*"([^"]+)"/);
+      if (match) {
+        const crateName = match[1];
+        allResolvedCrates.add(crateName);
+        if (isProhibitedCargoCrate(crateName)) {
+          detected.push({ crate: crateName, manifest: manifestPath });
+        }
+      }
+      inPackage = false;
+    }
+  }
+
+  if (detected.length > 0) {
+    throw new Error(`Prohibited Rust AI crate detected in lockfile ${manifestPath}: ${detected.map(d => d.crate).join(', ')}`);
+  }
+  return { ok: true, count: allResolvedCrates.size };
+}
+
+function auditFileContent(content, filePath) {
+  for (const { name, regex } of FORBIDDEN_CONTENT_PATTERNS) {
+    if (regex.test(content)) {
+      throw new Error(`Prohibited pattern '${name}' detected in file: ${filePath}`);
+    }
+  }
+  return true;
+}
+
 async function executeAllTests() {
   // ----------------------------------------------------------------------------
   // 1. ABSOLUTE NO-AI-API ARCHITECTURE CONTRACTS (EXPANDED REPOSITORY-WIDE AUDIT)
   // ----------------------------------------------------------------------------
 
-  runTest('SOURCE-CONTRACT', 'Zero prohibited AI SDK dependencies in package.json & Cargo.toml', () => {
-    // 1. Check package.json dependencies
-    const pkgPath = path.join(rootDir, 'package.json');
-    assert(fs.existsSync(pkgPath), 'package.json must exist');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-
-    const prohibitedNpmSdks = [
-      'openai',
-      '@google/generative-ai',
-      '@anthropic-ai/sdk',
-      'groq-sdk',
-      'ollama',
-      'ollama-node',
-      'langchain',
-      '@langchain/core'
+  runTest('SOURCE-CONTRACT', 'Required dependency manifests and application roots exist', () => {
+    const requiredManifests = [
+      path.join(rootDir, 'package.json'),
+      path.join(rootDir, 'package-lock.json'),
+      path.join(rootDir, 'src-tauri', 'Cargo.toml'),
+      path.join(rootDir, 'src-tauri', 'Cargo.lock'),
+      path.join(rootDir, 'src-tauri', 'tauri.conf.json'),
+      path.join(rootDir, 'src-tauri', 'build.rs'),
+      path.join(rootDir, 'vite.config.ts'),
+      path.join(rootDir, 'tsconfig.json'),
+      path.join(rootDir, 'tsconfig.node.json'),
+      path.join(rootDir, 'tailwind.config.js'),
+      path.join(rootDir, 'postcss.config.js'),
+      path.join(rootDir, 'index.html'),
+      path.join(rootDir, 'chrome-extension', 'manifest.json'),
     ];
 
-    const allNpmDeps = {
-      ...(pkg.dependencies || {}),
-      ...(pkg.devDependencies || {}),
-      ...(pkg.peerDependencies || {}),
-      ...(pkg.optionalDependencies || {})
-    };
+    const requiredDirectories = [
+      path.join(rootDir, 'src'),
+      path.join(rootDir, 'src-tauri', 'src'),
+      path.join(rootDir, 'chrome-extension'),
+      path.join(rootDir, 'scripts'),
+      path.join(rootDir, '.github', 'workflows'),
+    ];
 
-    for (const sdk of prohibitedNpmSdks) {
-      assert(!allNpmDeps[sdk], `Prohibited AI SDK '${sdk}' detected in package.json dependencies!`);
+    for (const m of requiredManifests) {
+      assert(fs.existsSync(m), `Required manifest missing: ${path.relative(rootDir, m)}`);
     }
-
-    // 2. Check src-tauri/Cargo.toml dependencies
-    const cargoPath = path.join(rootDir, 'src-tauri', 'Cargo.toml');
-    assert(fs.existsSync(cargoPath), 'src-tauri/Cargo.toml must exist');
-    const cargoContent = fs.readFileSync(cargoPath, 'utf8');
-
-    const prohibitedCrates = [
-      'async-openai',
-      'ollama-rs',
-      'anthropic',
-      'groq',
-      'google-generativeai'
-    ];
-
-    for (const crate of prohibitedCrates) {
-      const crateRegex = new RegExp(`^\\s*${crate}\\s*=`, 'm');
-      assert(!crateRegex.test(cargoContent), `Prohibited Rust AI crate '${crate}' detected in Cargo.toml!`);
+    for (const d of requiredDirectories) {
+      assert(fs.existsSync(d), `Required directory missing: ${path.relative(rootDir, d)}`);
     }
   });
 
-  runTest('SOURCE-CONTRACT', 'Zero direct AI API endpoints across all source, build, workflow, extension & config files', () => {
+  runTest('SOURCE-CONTRACT', 'Zero prohibited AI SDKs in package.json & package-lock.json (direct & transitive)', () => {
+    const pkgPath = path.join(rootDir, 'package.json');
+    const lockPath = path.join(rootDir, 'package-lock.json');
+
+    const pkgRes = auditPackageJson(fs.readFileSync(pkgPath, 'utf8'), 'package.json');
+    const lockRes = auditPackageLock(fs.readFileSync(lockPath, 'utf8'), 'package-lock.json');
+
+    assert(pkgRes.count >= 15, `Expected >= 15 package.json dependencies, checked ${pkgRes.count}`);
+    assert(lockRes.count >= 100, `Expected >= 100 resolved package-lock entries, checked ${lockRes.count}`);
+    console.log(`       ↳ Verified ${pkgRes.count} package.json deps & ${lockRes.count} resolved transitive packages (0 prohibited SDKs).`);
+  });
+
+  runTest('SOURCE-CONTRACT', 'Zero prohibited Rust AI crates in Cargo.toml & Cargo.lock (direct & resolved)', () => {
+    const cargoPath = path.join(rootDir, 'src-tauri', 'Cargo.toml');
+    const lockPath = path.join(rootDir, 'src-tauri', 'Cargo.lock');
+
+    const cargoRes = auditCargoToml(fs.readFileSync(cargoPath, 'utf8'), 'src-tauri/Cargo.toml');
+    const lockRes = auditCargoLock(fs.readFileSync(lockPath, 'utf8'), 'src-tauri/Cargo.lock');
+
+    assert(cargoRes.count >= 10, `Expected >= 10 Cargo.toml dependencies, checked ${cargoRes.count}`);
+    assert(lockRes.count >= 200, `Expected >= 200 resolved Cargo.lock packages, checked ${lockRes.count}`);
+    console.log(`       ↳ Verified ${cargoRes.count} Cargo.toml deps & ${lockRes.count} resolved crate packages (0 prohibited crates).`);
+  });
+
+  runTest('SOURCE-CONTRACT', 'Zero direct AI API endpoints across all application-owned source, build, extension & workflow files', () => {
     const scanRoots = [
       path.join(rootDir, 'src'),
       path.join(rootDir, 'src-tauri', 'src'),
@@ -143,25 +375,11 @@ async function executeAllTests() {
       path.join(rootDir, 'src-tauri', 'build.rs'),
     ];
 
-    // Check environment template files if present
     const envCandidates = ['.env', '.env.example', '.env.template', '.env.local'];
     for (const envFile of envCandidates) {
       const p = path.join(rootDir, envFile);
       if (fs.existsSync(p)) specificFiles.push(p);
     }
-
-    const forbiddenPatterns = [
-      { name: 'OpenAI API Endpoint', regex: /api\.openai\.com/i },
-      { name: 'Gemini GenerativeLanguage Endpoint', regex: /generativelanguage\.googleapis\.com/i },
-      { name: 'Anthropic API Endpoint', regex: /api\.anthropic\.com/i },
-      { name: 'Groq API Endpoint', regex: /api\.groq\.com/i },
-      { name: 'Ollama Local Daemon Inference Endpoint', regex: /(localhost|127\.0\.0\.1):11434/i },
-      { name: 'API Key Configuration Field', regex: /apiKey\s*\?:/i },
-      { name: 'OpenAI API Key Env Var', regex: /OPENAI_API_KEY/i },
-      { name: 'Gemini API Key Env Var', regex: /GEMINI_API_KEY/i },
-      { name: 'Anthropic API Key Env Var', regex: /ANTHROPIC_API_KEY/i },
-      { name: 'Groq API Key Env Var', regex: /GROQ_API_KEY/i },
-    ];
 
     let filesAudited = 0;
     const auditedList = [];
@@ -172,10 +390,7 @@ async function executeAllTests() {
       filesAudited++;
       auditedList.push(path.relative(rootDir, filePath));
       const content = fs.readFileSync(filePath, 'utf8');
-
-      for (const { name, regex } of forbiddenPatterns) {
-        assert(!regex.test(content), `Prohibited pattern '${name}' detected in file: ${filePath}`);
-      }
+      auditFileContent(content, filePath);
     }
 
     function walkDirectory(dir) {
@@ -218,7 +433,114 @@ async function executeAllTests() {
     assert(manifestContent.includes('claude.ai'), 'Normal browser URL claude.ai must be permitted in manifest');
 
     assert(filesAudited >= 70, `Expected at least 70 configuration and source files audited, got ${filesAudited}`);
-    console.log(`       ↳ Expanded Audit Complete: ${filesAudited} files audited across 5 roots + 12 specific configs (0 prohibited SDKs/endpoints).`);
+    console.log(`       ↳ Verified ${filesAudited} application-owned source/config files across 5 roots + 12 specific manifests (0 prohibited endpoints/keys).`);
+  });
+
+  // ----------------------------------------------------------------------------
+  // 2. AUDIT ENGINE REGRESSION & PROHIBITED DETECTION FIXTURE SUITE
+  // ----------------------------------------------------------------------------
+
+  runTest('AUDIT-REGRESSION-FIXTURE', 'Audit engine catches prohibited npm packages in package-lock.json fixtures', () => {
+    const maliciousLockfile = {
+      name: 'cinematic-studio',
+      version: '4.0.2',
+      lockfileVersion: 3,
+      packages: {
+        '': { name: 'cinematic-studio' },
+        'node_modules/clsx': { version: '2.1.0' },
+        'node_modules/openai': { version: '4.28.0' }
+      }
+    };
+    assert.throws(
+      () => auditPackageLock(maliciousLockfile, 'mock-package-lock.json'),
+      /Prohibited AI SDK package detected in lockfile.*openai/
+    );
+
+    const transitiveMaliciousLockfile = {
+      name: 'cinematic-studio',
+      version: '4.0.2',
+      lockfileVersion: 3,
+      packages: {
+        '': { name: 'cinematic-studio' },
+        'node_modules/some-lib/node_modules/@google/generative-ai': { version: '0.1.0' }
+      }
+    };
+    assert.throws(
+      () => auditPackageLock(transitiveMaliciousLockfile, 'mock-transitive-lock.json'),
+      /Prohibited AI SDK package detected in lockfile.*@google\/generative-ai/
+    );
+  });
+
+  runTest('AUDIT-REGRESSION-FIXTURE', 'Audit engine catches prohibited Rust crates in Cargo.lock fixtures', () => {
+    const maliciousCargoLock = `
+[[package]]
+name = "serde"
+version = "1.0.200"
+
+[[package]]
+name = "async-openai"
+version = "0.20.0"
+`;
+    assert.throws(
+      () => auditCargoLock(maliciousCargoLock, 'mock-Cargo.lock'),
+      /Prohibited Rust AI crate detected in lockfile.*async-openai/
+    );
+  });
+
+  runTest('AUDIT-REGRESSION-FIXTURE', 'Audit engine catches prohibited SDK imports in application source fixtures', () => {
+    const maliciousSourceTs = `
+import { useState } from 'react';
+import OpenAI from 'openai';
+export function BadComponent() { return null; }
+`;
+    assert.throws(
+      () => auditFileContent(maliciousSourceTs, 'src/features/bad.ts'),
+      /Prohibited pattern 'OpenAI SDK Direct Import'/
+    );
+
+    const maliciousPythonOrJs = `const { Anthropic } = require('@anthropic-ai/sdk');`;
+    assert.throws(
+      () => auditFileContent(maliciousPythonOrJs, 'src/services/bad.js'),
+      /Prohibited pattern 'Anthropic SDK Direct Import'/
+    );
+  });
+
+  runTest('AUDIT-REGRESSION-FIXTURE', 'Audit engine catches prohibited inference endpoints in build/config fixtures', () => {
+    const maliciousConfig = `export const BASE_API = "https://api.openai.com/v1/chat/completions";`;
+    assert.throws(
+      () => auditFileContent(maliciousConfig, 'vite.config.ts'),
+      /Prohibited pattern 'OpenAI Direct Inference Endpoint'/
+    );
+
+    const maliciousOllamaConfig = `const OLLAMA_URL = "http://localhost:11434/api/generate";`;
+    assert.throws(
+      () => auditFileContent(maliciousOllamaConfig, 'src/services/bad.ts'),
+      /Prohibited pattern 'Ollama Daemon Local Inference Endpoint'/
+    );
+  });
+
+  runTest('AUDIT-REGRESSION-FIXTURE', 'Audit engine catches prohibited API-key env vars in template fixtures', () => {
+    const maliciousEnv = `
+PORT=1420
+OPENAI_API_KEY=sk-proj-maliciousFakeKey12345
+`;
+    assert.throws(
+      () => auditFileContent(maliciousEnv, '.env.example'),
+      /Prohibited pattern 'OpenAI API Key Env Var'/
+    );
+  });
+
+  runTest('AUDIT-REGRESSION-FIXTURE', 'Audit engine permits legitimate browser navigation URLs without false positives', () => {
+    const legitimateBrowserNav = `
+const ASSISTANT_URLS = {
+  chatgpt: 'https://chatgpt.com',
+  gemini: 'https://gemini.google.com',
+  claude: 'https://claude.ai',
+  veo: 'https://deepmind.google/technologies/veo/',
+  flow: 'https://flow.google.com'
+};
+`;
+    assert.doesNotThrow(() => auditFileContent(legitimateBrowserNav, 'src/features/aivideo/AIVideoWorkspace.tsx'));
   });
 
   runTest('SOURCE-CONTRACT', 'BrowserAgentDispatcher interface declared with supported AI websites', () => {

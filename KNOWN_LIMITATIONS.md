@@ -73,7 +73,7 @@ In Milestone A, the native Rust docking implementation in `src-tauri/src/chrome_
   - Live interactive inspection on physical Windows 11 hardware with an active display manager is required to verify sub-pixel alignment and borderless client presentation.
 
 ### 3.3 Chrome Runtime Acceptance Checklist Status (Items A through K):
-- **Item A (Expanded Repository-Wide No-AI-API Audit):** PASS (Audited across 126 files in 5 root directories + 12 root/config files; zero prohibited SDKs in `package.json` or `Cargo.toml`; zero direct API endpoints).
+- **Item A (Expanded Repository-Wide No-AI-API Audit & Lockfile Verification):** PASS (Audited across 126 application-owned source/config files, 21 package.json dependencies, 205 package-lock resolved transitive packages, 16 Cargo.toml dependencies, and 431 Cargo.lock resolved crates. 6 regression fixture tests verify detection of prohibited SDKs, lockfile entries, imports, endpoints, and env keys).
 - **Item B (Story Agent Browser Dispatch Contract):** PASS (Verified with 6 genuine unit tests in `tests/milestone_a_docking_and_no_api_suite.cjs`).
 - **Item C (Win32 API Return Code Enforcement):** PASS (Verified via native code contracts and compile assertions).
 - **Item D (Strict Boundary Clamping & High-DPI Math):** PASS (Verified via native Rust unit tests and JS mathematical suite across 100%–200% DPI and sub-100px edge bounds).
