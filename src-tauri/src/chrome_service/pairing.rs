@@ -56,7 +56,8 @@ impl PairingService {
 
         // 2. Generate cryptographically strong material
         let session_id = uuid::Uuid::new_v4().to_string();
-        let pairing_secret = generate_pairing_secret();
+        let pairing_secret = generate_pairing_secret()
+            .map_err(|e| format!("Security Error: OS CSPRNG failure: {}", e))?;
         let server_nonce = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now().timestamp_millis();
         let expires_at = now + (5 * 60 * 1000); // 5-minute validity window

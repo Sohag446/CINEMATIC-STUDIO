@@ -161,3 +161,18 @@ pub struct FFmpegStatusDto {
     pub security_policy_error: Option<String>,
     pub status_message: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaProbeDto {
+    pub success: bool,
+    pub file_path: String,
+    pub file_size_bytes: u64,
+    pub duration_seconds: Option<f64>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub fps: Option<f64>,
+    pub video_codec: Option<String>,
+    pub audio_codec: Option<String>,
+    pub checksum_sha256: Option<String>,
+    pub error: Option<String>,
+}

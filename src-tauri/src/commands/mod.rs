@@ -787,3 +787,114 @@ pub async fn detect_ffmpeg_status(
         custom_ffprobe.as_deref(),
     ))
 }
+
+#[tauri::command]
+pub async fn probe_media_file(
+    app: tauri::AppHandle,
+    file_path: String,
+) -> Result<MediaProbeDto, String> {
+    let path = std::path::Path::new(&file_path);
+    if !path.exists() {
+        return Ok(MediaProbeDto {
+            success: false,
+            file_path,
+            file_size_bytes: 0,
+            duration_seconds: None,
+            width: None,
+            height: None,
+            fps: None,
+            video_codec: None,
+            audio_codec: None,
+            checksum_sha256: None,
+            error: Some("File does not exist on disk".to_string()),
+        });
+    }
+
+    let meta = std::fs::metadata(path).map_err(|e| e.to_string())?;
+    if meta.len() == 0 {
+        return Ok(MediaProbeDto {
+            success: false,
+            file_path,
+            file_size_bytes: 0,
+            duration_seconds: None,
+            width: None,
+            height: None,
+            fps: None,
+            video_codec: None,
+            audio_codec: None,
+            checksum_sha256: None,
+            error: Some("Media file has 0 bytes (empty/corrupted)".to_string()),
+        });
+    }
+
+    let sha256 = FFmpegManager::calculate_sha256(path).ok();
+    let status = FFmpegManager::detect_tools_with_app(Some(&app), None, None);
+    let mut duration = None;
+    let mut width = None;
+    let mut height = None;
+    let mut fps = None;
+    let mut vcodec = None;
+    let mut acodec = None;
+
+    if let Some(ffprobe_path) = status.resolved_ffprobe_path {
+        let output = std::process::Command::new(ffprobe_path)
+            .args(&[
+                "-v", "quiet",
+                "-print_format", "json",
+                "-show_format",
+                "-show_streams",
+                &file_path,
+            ])
+            .output();
+
+        if let Ok(out) = output {
+            if out.status.success() {
+                if let Ok(json_str) = String::from_utf8(out.stdout) {
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                        if let Some(fmt) = val.get("format") {
+                            if let Some(dur_str) = fmt.get("duration").and_then(|d| d.as_str()) {
+                                duration = dur_str.parse::<f64>().ok();
+                            }
+                        }
+                        if let Some(streams) = val.get("streams").and_then(|s| s.as_array()) {
+                            for s in streams {
+                                let codec_type = s.get("codec_type").and_then(|t| t.as_str()).unwrap_or("");
+                                if codec_type == "video" && width.is_none() {
+                                    width = s.get("width").and_then(|w| w.as_i64()).map(|w| w as i32);
+                                    height = s.get("height").and_then(|h| h.as_i64()).map(|h| h as i32);
+                                    vcodec = s.get("codec_name").and_then(|c| c.as_str()).map(String::from);
+                                    if let Some(r_frame_rate) = s.get("r_frame_rate").and_then(|r| r.as_str()) {
+                                        let parts: Vec<&str> = r_frame_rate.split('/').collect();
+                                        if parts.len() == 2 {
+                                            if let (Ok(num), Ok(den)) = (parts[0].parse::<f64>(), parts[1].parse::<f64>()) {
+                                                if den > 0.0 {
+                                                    fps = Some(num / den);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if codec_type == "audio" && acodec.is_none() {
+                                    acodec = s.get("codec_name").and_then(|c| c.as_str()).map(String::from);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(MediaProbeDto {
+        success: true,
+        file_path,
+        file_size_bytes: meta.len(),
+        duration_seconds: duration,
+        width,
+        height,
+        fps,
+        video_codec: vcodec,
+        audio_codec: acodec,
+        checksum_sha256: sha256,
+        error: None,
+    })
+}

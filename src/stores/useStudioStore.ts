@@ -4,6 +4,7 @@ import {
   CreateProjectInput,
   Scene,
   Clip,
+  ClipStatus,
   ProductionTask,
   SystemTelemetry,
   AppSettings,
@@ -238,10 +239,12 @@ interface StudioState {
   addClipDirectlyToTimeline: (clipId: string) => Promise<void>;
   assembleCompletedScenes: () => Promise<void>;
   markSceneStatus: (clipId: string, status: any) => Promise<void>;
+  verifyAndCompleteClip: (clipId: string, filePath: string) => Promise<boolean>;
   attachDownloadedVideoToScene: (clipId: string, filePath: string, proxyUrl?: string) => Promise<void>;
   detachAudioFromClip: (timelineClipId: string) => Promise<void>;
   isChromeDocked: boolean;
   dockedChromeHwnd: number | null;
+  dockChromeError: string | null;
   dockChrome: (url: string, userDataDir: string, profileDirKey: string, x: number, y: number, width: number, height: number) => Promise<number>;
   syncDockedBounds: (x: number, y: number, width: number, height: number) => Promise<void>;
   setDockedVisible: (visible: boolean) => Promise<void>;
@@ -444,6 +447,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   activePairingChallenge: null,
   isChromeDocked: true,
   dockedChromeHwnd: null,
+  dockChromeError: null,
 
   // Phase 3 Task Queue & Execution Engine
   tasks: [],
@@ -689,13 +693,13 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   dockChrome: async (url, userDataDir, profileDirKey, x, y, width, height) => {
     try {
       const hwnd = await apiService.dockChromeToWindow(url, userDataDir, profileDirKey, x, y, width, height);
-      set({ dockedChromeHwnd: hwnd, isChromeDocked: true });
+      set({ dockedChromeHwnd: hwnd, isChromeDocked: true, dockChromeError: null });
       return hwnd;
-    } catch (err) {
-      console.warn('[Docked Chrome] Falling back to companion mode:', err);
-      await apiService.launchChromeProfile(userDataDir, profileDirKey);
-      set({ isChromeDocked: false, dockedChromeHwnd: null });
-      return 0;
+    } catch (err: any) {
+      const errorMsg = err?.message || String(err);
+      console.error('[Docked Chrome] Native Win32 child-window docking failed:', errorMsg);
+      set({ isChromeDocked: false, dockedChromeHwnd: null, dockChromeError: errorMsg });
+      throw new Error(`Win32 Chrome docking failed: ${errorMsg}`);
     }
   },
 
@@ -1080,37 +1084,28 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   },
 
   generateShotVideo: async (clipId: string) => {
-    const { clips, activeProject } = get();
+    const { clips, activeProject, registeredProfiles, activeVideoProfileId } = get();
     const clip = clips.find(c => c.id === clipId);
     if (!clip || !activeProject) return;
 
-    const generatingClip: Clip = {
+    // Check if an active registered profile exists and is paired
+    const activeProfile = registeredProfiles.find(p => p.id === activeVideoProfileId) || registeredProfiles[0];
+    const isPaired = activeProfile && activeProfile.pairing_state === 'PAIRED';
+
+    // Truthful lifecycle: transition to WAITING_FOR_PROVIDER or HUMAN_ACTION_REQUIRED
+    const nextStatus: ClipStatus = isPaired ? 'HUMAN_ACTION_REQUIRED' : 'WAITING_FOR_PROVIDER';
+
+    const updatedClip: Clip = {
       ...clip,
-      status: 'GENERATING',
-      assigned_provider: 'Google Veo',
+      status: nextStatus,
+      assigned_provider: activeProfile?.assigned_provider || 'Google Veo',
       updated_at: Date.now()
     };
-    await apiService.updateClip(generatingClip);
+    await apiService.updateClip(updatedClip);
     set(state => ({
-      clips: state.clips.map(c => c.id === clipId ? generatingClip : c),
+      clips: state.clips.map(c => c.id === clipId ? updatedClip : c),
       selectedClipId: clipId,
       selectedShotId: clipId
-    }));
-
-    await new Promise(r => setTimeout(r, 2200));
-
-    const completedClip: Clip = {
-      ...generatingClip,
-      status: 'COMPLETED',
-      proxy_path: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      output_video_path: `${activeProject.project_dir_path || 'C:\\CinematicStudio\\Projects'}\\takes\\take_${clip.clip_number}_1080p.mp4`,
-      thumbnail_path: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=640&q=80',
-      updated_at: Date.now()
-    };
-    await apiService.updateClip(completedClip);
-
-    set(state => ({
-      clips: state.clips.map(c => c.id === clipId ? completedClip : c)
     }));
   },
 
@@ -1119,13 +1114,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     if (shotQueueState === 'RUNNING') return;
     set({ shotQueueState: 'RUNNING' });
 
-    const pendingClips = clips.filter(c => c.status !== 'COMPLETED');
+    const pendingClips = clips.filter(c => ['NOT_STARTED', 'PLANNED', 'PROMPT_READY', 'IDLE'].includes(c.status));
     for (const clip of pendingClips) {
       if (get().shotQueueState !== 'RUNNING') {
         break;
       }
       await generateShotVideo(clip.id);
-      await new Promise(r => setTimeout(r, 500));
     }
 
     set({ shotQueueState: 'IDLE' });
@@ -1139,6 +1133,59 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   retryFailedShot: async (clipId: string) => {
     await get().generateShotVideo(clipId);
+  },
+
+  verifyAndCompleteClip: async (clipId: string, filePath: string): Promise<boolean> => {
+    const { clips } = get();
+    const clip = clips.find(c => c.id === clipId);
+    if (!clip) return false;
+
+    // Transition to VERIFYING status first
+    const verifyingClip: Clip = {
+      ...clip,
+      status: 'VERIFYING',
+      updated_at: Date.now()
+    };
+    await apiService.updateClip(verifyingClip);
+    set(state => ({
+      clips: state.clips.map(c => c.id === clipId ? verifyingClip : c)
+    }));
+
+    const probe = await apiService.probeMedia(filePath);
+    if (probe.success && probe.file_size_bytes > 0) {
+      const completedClip: Clip = {
+        ...clip,
+        status: 'COMPLETED',
+        output_video_path: filePath,
+        proxy_path: filePath,
+        verified_duration_seconds: probe.duration_seconds || clip.target_duration_seconds,
+        verified_width: probe.width || 1920,
+        verified_height: probe.height || 1080,
+        verified_fps: probe.fps || 24,
+        verified_codec: probe.video_codec || 'h264',
+        verified_file_size_bytes: probe.file_size_bytes,
+        verified_sha256: probe.checksum_sha256,
+        verification_error: undefined,
+        updated_at: Date.now()
+      };
+      await apiService.updateClip(completedClip);
+      set(state => ({
+        clips: state.clips.map(c => c.id === clipId ? completedClip : c)
+      }));
+      return true;
+    } else {
+      const failedClip: Clip = {
+        ...clip,
+        status: 'FAILED',
+        verification_error: probe.error || 'Media file could not be verified by FFprobe or is 0 bytes',
+        updated_at: Date.now()
+      };
+      await apiService.updateClip(failedClip);
+      set(state => ({
+        clips: state.clips.map(c => c.id === clipId ? failedClip : c)
+      }));
+      return false;
+    }
   },
 
   addClipDirectlyToTimeline: async (clipId: string) => {
@@ -1158,9 +1205,9 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       media_asset_id: clip.id,
       clip_id: clip.id,
       timeline_start_seconds: lastClipEnd,
-      timeline_duration_seconds: clip.target_duration_seconds || 10,
+      timeline_duration_seconds: clip.verified_duration_seconds || clip.target_duration_seconds || 10,
       source_in_seconds: 0,
-      source_out_seconds: clip.target_duration_seconds || 10
+      source_out_seconds: clip.verified_duration_seconds || clip.target_duration_seconds || 10
     });
   },
 
@@ -1174,25 +1221,35 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     }
     if (!v1Track) return;
 
-    const readyClips = clips.filter(c => ['COMPLETED', 'IMPORTED', 'DOWNLOADED', 'GENERATED'].includes(c.status));
-    const clipsToAssemble = readyClips.length > 0 ? readyClips : clips;
-    const sortedClips = [...clipsToAssemble].sort((a, b) => a.clip_number - b.clip_number);
+    // Only assemble genuinely verified, completed, imported, or downloaded clips that have valid media files
+    const readyClips = clips.filter(c =>
+      ['COMPLETED', 'IMPORTED', 'DOWNLOADED'].includes(c.status) &&
+      Boolean(c.output_video_path || c.proxy_path)
+    );
+
+    if (readyClips.length === 0) {
+      console.warn('[Timeline Assembly] No verified video clips available for assembly. Complete or import real media files first.');
+      set({ mainView: 'VIDEO_EDITOR' });
+      return;
+    }
+
+    const sortedClips = [...readyClips].sort((a, b) => a.clip_number - b.clip_number);
 
     let currentTimelineSeconds = 0;
     for (const clip of sortedClips) {
-      const duration = clip.target_duration_seconds || 10;
-      const mediaPath = clip.output_video_path || clip.proxy_path || `C:\\CinematicStudio\\Projects\\${activeProject.slug}\\takes\\scene_${String(clip.clip_number).padStart(3, '0')}.mp4`;
-      const proxyPath = clip.proxy_path || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+      const duration = clip.verified_duration_seconds || clip.target_duration_seconds || 10;
+      const mediaPath = clip.output_video_path || clip.proxy_path || '';
+      const fileSize = clip.verified_file_size_bytes || 1024;
 
       const asset = await createMediaAsset({
         project_id: activeProject.id,
         file_name: `Scene_${String(clip.clip_number).padStart(3, '0')}.mp4`,
         file_path: mediaPath,
         media_type: 'VIDEO',
-        file_size_bytes: 25000000,
+        file_size_bytes: fileSize,
         duration_seconds: duration,
-        fps: activeProject.target_fps || 24,
-        proxy_path: proxyPath
+        fps: clip.verified_fps || activeProject.target_fps || 24,
+        proxy_path: clip.proxy_path || mediaPath
       });
 
       await addClipToTimeline({
@@ -1231,15 +1288,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   },
 
   attachDownloadedVideoToScene: async (clipId: string, filePath: string, proxyUrl?: string) => {
-    const { clips, activeProject } = get();
+    const { clips, activeProject, verifyAndCompleteClip } = get();
     const clip = clips.find(c => c.id === clipId);
     if (!clip || !activeProject) return;
+
+    if (filePath) {
+      const verified = await verifyAndCompleteClip(clipId, filePath);
+      if (verified) return;
+    }
+
     const updated: Clip = {
       ...clip,
       status: 'IMPORTED',
-      output_video_path: filePath,
-      proxy_path: proxyUrl || clip.proxy_path || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      thumbnail_path: clip.thumbnail_path || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=640&q=80',
+      output_video_path: filePath || undefined,
+      proxy_path: proxyUrl || filePath || undefined,
+      thumbnail_path: undefined,
       updated_at: Date.now()
     };
     await apiService.updateClip(updated);

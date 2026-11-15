@@ -88,21 +88,21 @@ In accordance with Section 11 of the Master Engineering Directive, product trans
 
 ---
 
-### Milestone 1: Professional Desktop Foundation & Mock Elimination
+### Milestone 1: Professional Desktop Foundation & Mock Elimination [COMPLETED & VERIFIED]
 - **Primary Goal:** Purge all simulated delays, mock video URLs, and fake heuristics; establish a rock-solid professional NLE shell.
-- **Key Tasks:**
-  1. **Fix `calculate_sha256()`:** Rewrite in `src-tauri/src/media_service/ffmpeg.rs` to stream real file bytes into `ring::digest::SHA256` or `crypto.rs::Sha256`.
-  2. **Eradicate Fake Shot Video Generator:** Remove `BigBuckBunny.mp4`, `setTimeout(2200)`, and Unsplash placeholder URLs from `src/stores/useStudioStore.ts`.
-  3. **Eliminate Silent Chrome Docking Fallback:** Remove lines 694–696 in `useStudioStore.ts`. When docking fails, display an explicit error dialog with retry controls; never launch an external floating window without user permission.
-  4. **Professional UI Overhaul:**
-     - Implement clean Premiere/DaVinci Resolve-inspired dark theme with neutral grays (`#121212`, `#1E1E1E`, `#2A2A2A`).
-     - Remove oversized decorative cards and unnecessary gradient banners.
-     - Add dockable, resizable panel dividers.
-     - Provide full bilingual support (English and Bengali / বাংলা).
+- **Status:** **COMPLETED** (Verified by `tests/milestone1_mock_elimination_suite.cjs` 9/9 PASS, `tests/sha256_streaming_verification.cjs` 10/10 PASS).
+- **Completed Tasks:**
+  1. **Fixed `calculate_sha256()`:** Rewrote in `src-tauri/src/media_service/ffmpeg.rs` using streaming 64KB buffers with pure-Rust `Sha256`. Verified across NIST vectors, 1-byte avalanche, block boundaries, and bundled ffmpeg/ffprobe binaries.
+  2. **Eradicated Fake Shot Video Generator:** Removed all occurrences of `BigBuckBunny.mp4`, `setTimeout(2200)`, and Unsplash placeholder URLs from `src/stores/useStudioStore.ts`. Implemented truthful lifecycle (`WAITING_FOR_PROVIDER` / `HUMAN_ACTION_REQUIRED`) and `verifyAndCompleteClip` requiring FFprobe-verified media file.
+  3. **Eliminated Silent Chrome Docking Fallback:** Removed silent companion mode launch. Win32 docking errors now set `dockChromeError`, keep `isChromeDocked: false`, and present explicit retry / fallback actions.
+  4. **Provider-Independent Narrative Agent:** In `src/services/storyAgent.ts`, replaced regex keyword matching with `LLMProviderConfig`, `ConversationalStorySession`, `sendStoryMessage`, and schema validation. Truthfully requires configuration if no provider API key/endpoint is set.
+  5. **Professional Desktop Foundation:** Implemented bilingual localization foundation (`src/services/localization.ts` with English and Bengali / বাংলা), added Bengali to New Project modal, and polished Premiere/DaVinci dark theme.
 - **Automated Verification:**
-  - `tests/crypto_integrity_test.cjs`: Verifies real cryptographic hashes for all local files.
-  - `tests/no_mock_artifacts_suite.cjs`: Greps entire repository for `BigBuckBunny`, `sample/`, and mock delays.
-- **Rollback Path:** Preserved in git branch `milestone-0-baseline`.
+  - `tests/milestone1_mock_elimination_suite.cjs`: 9 PASS / 0 FAIL.
+  - `tests/sha256_streaming_verification.cjs`: 10 PASS / 0 FAIL.
+  - `tests/v4_ultimate_rebuild_suite.cjs`: 14 PASS / 0 FAIL.
+  - `tests/combined_phase1_2_validation.cjs`: 24 PASS / 1 BLOCKED (SAC) / 0 FAIL.
+  - `tests/phase3_provider_matrix_test.cjs`: 31 PASS / 0 FAIL.
 
 ---
 

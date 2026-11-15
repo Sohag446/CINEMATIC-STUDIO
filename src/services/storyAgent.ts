@@ -1,5 +1,40 @@
 import { CameraFraming, CameraMovement, CameraAngle, SceneContinuityRecord } from '../types';
 
+export type LLMProviderType = 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'custom';
+
+export interface LLMProviderConfig {
+  provider: LLMProviderType;
+  apiKey?: string;
+  endpoint?: string;
+  model?: string;
+  temperature?: number;
+}
+
+export interface StoryChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+}
+
+export interface ConversationalStorySession {
+  id: string;
+  projectId: string;
+  messages: StoryChatMessage[];
+  productionBible?: ProductionPackage;
+  isLocked: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface StoryDialogueResponse {
+  reply: string;
+  clarificationNeeded: boolean;
+  clarificationQuestions?: string[];
+  productionBible?: ProductionPackage;
+  requiresConfiguration?: boolean;
+}
+
 export interface ProductionPackage {
   // 1. Story concept
   storyConcept: string;
@@ -128,31 +163,164 @@ export const storyAgent = {
   parseRequestedDuration,
 
   /**
-   * Analyzes screenplay narrative and duration into complete 23-point production package
-   * Generates up to 720 structured ~10-second scenes with Cinematic Continuity Engine
+   * Creates a new conversational narrative session for multi-turn story development
+   */
+  createSession(projectId: string): ConversationalStorySession {
+    const now = Date.now();
+    return {
+      id: `session_${now}_${Math.random().toString(36).substring(2, 9)}`,
+      projectId,
+      messages: [],
+      isLocked: false,
+      created_at: now,
+      updated_at: now
+    };
+  },
+
+  /**
+   * Multi-turn narrative dialogue with provider-independent LLM adapter.
+   * If no provider or credentials are configured, truthfully informs the operator
+   * rather than fabricating mock responses.
+   */
+  async sendStoryMessage(
+    session: ConversationalStorySession,
+    userPrompt: string,
+    config?: LLMProviderConfig
+  ): Promise<StoryDialogueResponse> {
+    const now = Date.now();
+    session.messages.push({
+      id: `msg_u_${now}`,
+      role: 'user',
+      content: userPrompt,
+      timestamp: now
+    });
+    session.updated_at = now;
+
+    // Truthful check: Is an LLM provider configured?
+    if (!config || (!config.apiKey && config.provider !== 'ollama')) {
+      const responseText = 'No AI Provider Configured. Please configure your API key (Gemini, OpenAI, Claude) or local Ollama endpoint in Settings > AI Providers to engage the Narrative Agent.';
+      session.messages.push({
+        id: `msg_a_${Date.now()}`,
+        role: 'assistant',
+        content: responseText,
+        timestamp: Date.now()
+      });
+      return {
+        reply: responseText,
+        clarificationNeeded: false,
+        requiresConfiguration: true
+      };
+    }
+
+    try {
+      if (config.provider === 'ollama') {
+        const endpoint = config.endpoint || 'http://localhost:11434';
+        const model = config.model || 'llama3.2';
+        const res = await fetch(`${endpoint}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            prompt: userPrompt,
+            stream: false
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`Ollama request failed with status: ${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        const reply = data.response || 'No response returned by Ollama.';
+        session.messages.push({
+          id: `msg_a_${Date.now()}`,
+          role: 'assistant',
+          content: reply,
+          timestamp: Date.now()
+        });
+        return { reply, clarificationNeeded: false };
+      }
+
+      if (config.provider === 'gemini') {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || 'gemini-1.5-flash'}:generateContent?key=${config.apiKey}`;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: userPrompt }] }]
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`Gemini request failed: ${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini.';
+        session.messages.push({
+          id: `msg_a_${Date.now()}`,
+          role: 'assistant',
+          content: reply,
+          timestamp: Date.now()
+        });
+        return { reply, clarificationNeeded: false };
+      }
+
+      // Generic OpenAI-compatible endpoint (OpenAI, Claude proxy, etc.)
+      const endpoint = config.endpoint || 'https://api.openai.com/v1/chat/completions';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify({
+          model: config.model || 'gpt-4o',
+          messages: session.messages.map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+      if (!res.ok) {
+        throw new Error(`AI Provider request failed: ${res.status} ${res.statusText}`);
+      }
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || 'No response returned from provider.';
+      session.messages.push({
+        id: `msg_a_${Date.now()}`,
+        role: 'assistant',
+        content: reply,
+        timestamp: Date.now()
+      });
+      return { reply, clarificationNeeded: false };
+    } catch (err: any) {
+      const errorMsg = `AI Provider Error: ${err?.message || String(err)}`;
+      session.messages.push({
+        id: `msg_a_${Date.now()}`,
+        role: 'assistant',
+        content: errorMsg,
+        timestamp: Date.now()
+      });
+      return { reply: errorMsg, clarificationNeeded: false };
+    }
+  },
+
+  /**
+   * Analyzes screenplay narrative and duration into complete 23-point production package.
+   * Generates structured ~10-second scenes with Cinematic Continuity Engine.
    */
   analyzeStory(rawText: string, projectName: string = 'Untitled Film', durationInput?: string): StoryAnalysisResult {
     const cleanText = rawText.trim();
     const durationSeconds = this.parseRequestedDuration(durationInput);
     const targetClipsCount = Math.max(1, Math.min(720, Math.round(durationSeconds / 10)));
 
-    // Theme & Genre heuristics
-    const isCyberpunk = /cyber|neon|hacker|ai|neural|blade|matrix|android|enforcer|dystopian/i.test(cleanText);
-    const isRomantic = /love|romance|emotional|heart|couple|relationship|tear|teenage|bangladesh/i.test(cleanText);
-
-    // Extract title
+    // Extract title from first line if formatted as title
     const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
     let detectedTitle = projectName;
     if (lines.length > 0 && lines[0].length < 60 && !lines[0].toLowerCase().startsWith('scene')) {
-      detectedTitle = lines[0].replace(/^[#*-]\s*/, '').trim();
+      detectedTitle = lines[0].replace(/^[#*-]\s*/, '').replace(/^title:\s*/i, '').trim();
     }
 
-    // Detect character names
+    // Extract character names from screenplay dialogue / action syntax
     const nameRegex = /\b([A-Z][a-z]{2,15}(?:\s[A-Z][a-z]{2,15})?)\b/g;
     const stopWords = new Set([
       'The', 'Scene', 'Act', 'Shot', 'Interior', 'Exterior', 'Int', 'Ext', 'Day', 'Night',
       'Camera', 'Close', 'Wide', 'Medium', 'Action', 'Cut', 'Fade', 'Audio', 'Music', 'Lights',
-      'Title', 'Logline', 'Bangladesh', 'Dhaka'
+      'Title', 'Logline'
     ]);
 
     const detectedNames: string[] = [];
@@ -164,68 +332,44 @@ export const storyAgent = {
       }
     }
 
-    const leadCharName = detectedNames[0] || (isRomantic ? 'Aayan Rahman' : isCyberpunk ? 'Elena Vance' : 'Commander Aris');
-    const partnerCharName = detectedNames[1] || (isRomantic ? 'Zara Ahmed' : isCyberpunk ? 'Kaelen Morse' : 'Dr. Lyra Cross');
+    const leadCharName = detectedNames[0] || 'Protagonist';
+    const partnerCharName = detectedNames[1] || 'Supporting Character';
 
     // 5. Character Bible
     const characters = [
       {
         name: leadCharName,
-        role: isRomantic ? 'Protagonist / Emotional Lead' : isCyberpunk ? 'Neural Archivist Infiltrator' : 'Expedition Commander',
-        appearance: isRomantic
-          ? 'Slender 18-year-old student, expressive sorrowful dark brown eyes, soft unstyled black hair falling over brow, quiet introverted posture.'
-          : isCyberpunk
-          ? 'Athletic build, sharp focused gaze, slight facial scar along right jawline, dark cropped hair, weathered combat demeanor.'
-          : 'Tall commanding posture, steady piercing gray eyes, short trimmed dark hair, calm focused expression.',
-        wardrobe: isRomantic
-          ? 'Slightly faded navy blue cotton school uniform shirt with open collar, dark trousers, and worn canvas messenger bag.'
-          : isCyberpunk
-          ? 'Distressed brown leather tactical jacket with brass buckles, dark reinforced trousers, combat boots.'
-          : 'Matte white pressurized EVA flight suit with titanium alloy magnetic harness.',
+        role: 'Protagonist / Lead',
+        appearance: `Lead protagonist featuring grounded natural facial structure, expressive eyes, authentic posture suited to: ${cleanText.slice(0, 100)}`,
+        wardrobe: 'Grounded contextual attire suited to narrative tone and environment.',
         referenceImagePrompt: `Cinematic portrait of ${leadCharName}, authentic natural facial features, 35mm film photography, 85mm f/1.4 lens, realistic skin pores, emotional rim lighting, 8k ultra-detailed photorealistic.`,
         promptLock: `cinematic 35mm photograph of ${leadCharName}, distinctive expressive eyes, natural skin texture, anamorphic lens flare`
       },
       {
         name: partnerCharName,
-        role: isRomantic ? 'Co-Lead / Unrequited Love' : isCyberpunk ? 'Syndicate Enforcer' : 'Chief Science Officer',
-        appearance: isRomantic
-          ? 'Graceful 18-year-old student, deep expressive almond eyes, long flowing dark wavy hair, gentle bittersweet smile with hints of melancholy.'
-          : isCyberpunk
-          ? 'Imposing silhouette, angular jawline, cold calculating gaze, cybernetic optic scanner.'
-          : 'Sharp observant eyes, tied-back auburn hair, thoughtful posture.',
-        wardrobe: isRomantic
-          ? 'Traditional light pastel embroidered cotton salwar kameez with delicate chiffon dupatta draped over shoulder.'
-          : isCyberpunk
-          ? 'Floor-length matte black armored duster coat with high structured collar.'
-          : 'Deep cobalt blue technical flight jumpsuit with bio-monitor wrist terminal.',
-        referenceImagePrompt: `Cinematic portrait of ${partnerCharName}, soft natural daylight, shallow depth of field, 35mm kodachrome tone, photorealistic 8k.`,
-        promptLock: `cinematic photograph of ${partnerCharName}, natural beauty, gentle melancholy eyes, soft diffuse lighting, 35mm film grain`
+        role: 'Supporting Role',
+        appearance: `Supporting character complementing ${leadCharName}, distinct silhouette and facial features.`,
+        wardrobe: 'Contextually consistent wardrobe matching narrative world aesthetics.',
+        referenceImagePrompt: `Cinematic portrait of ${partnerCharName}, soft natural lighting, shallow depth of field, 35mm film tone, photorealistic 8k.`,
+        promptLock: `cinematic photograph of ${partnerCharName}, natural aesthetic, distinct profile, soft diffuse lighting, 35mm film grain`
       }
     ];
 
     // 8. Environment & Location Descriptions
     const environments = [
       {
-        name: isRomantic ? 'Old Dhaka Rain-Washed Rooftop' : isCyberpunk ? 'Lower Sector 7 Neon Alley' : 'Lunar Outpost Observation Deck',
-        type: 'Exterior',
-        timeOfDay: isRomantic ? 'Late Monsoon Afternoon / Overcast' : 'Midnight / Rainstorm',
-        lightingRules: isRomantic
-          ? 'Soft diffuse gray monsoon daylight with gentle golden backlight breaking through storm clouds, glistening wet red-clay bricks.'
-          : 'High contrast wet asphalt reflecting cyan and magenta volumetric neon signs.',
-        promptLock: isRomantic
-          ? 'vintage rooftop in Old Dhaka, monsoon rain droplets on wet terracotta pots, overcast misty sky, nostalgic emotional atmosphere'
-          : 'cyberpunk alley at midnight, saturated cyan and magenta neon, heavy rainfall, 35mm anamorphic'
+        name: 'Primary Dramatic Environment',
+        type: 'Interior / Exterior',
+        timeOfDay: 'Cinematic Lighting Window',
+        lightingRules: 'Soft directional key light with motivated backlight and natural practicals.',
+        promptLock: 'cinematic setting, rich atmospheric depth, 35mm anamorphic'
       },
       {
-        name: isRomantic ? 'Bustling Historic Riverfront Terminal' : isCyberpunk ? 'Sub-Level Server Cavern' : 'Colony Ship Airload Vault',
-        type: 'Exterior / Transit',
-        timeOfDay: isRomantic ? 'Golden Hour Sunset' : 'Halogen Tungsten',
-        lightingRules: isRomantic
-          ? 'Warm low-angle amber sunlight casting long stretching silhouettes across rippling muddy river waters.'
-          : 'Stark directional key light with deep negative fill.',
-        promptLock: isRomantic
-          ? 'busy river terminal at golden hour, amber warm haze, wooden boats on river, long shadows, emotional cinematic aesthetic'
-          : 'industrial server room, high contrast chiaroscuro, amber strobe lighting'
+        name: 'Secondary Transit / Contrast Location',
+        type: 'Transition Location',
+        timeOfDay: 'Golden Hour / Low Light',
+        lightingRules: 'High contrast practicals with volumetric depth.',
+        promptLock: 'atmospheric cinematic scene, high dynamic range, amber tones'
       }
     ];
 
@@ -233,27 +377,21 @@ export const storyAgent = {
     const acts = [
       {
         actNumber: 1,
-        title: isRomantic ? 'Act I: The Silent Connection' : 'Act I: Infiltration & The Approach',
-        description: isRomantic
-          ? `${leadCharName} and ${partnerCharName} share quiet stolen glances during monsoon rain, a connection formed entirely without spoken words.`
-          : `${leadCharName} breaches the perimeter under cover of harsh atmospheric conditions.`,
-        dramaticBeat: 'Establishing yearning and emotional innocence against impending separation.'
+        title: 'Act I: Inciting Incident & Objective',
+        description: `${leadCharName} establishes core intent within narrative context: ${cleanText.slice(0, 150)}`,
+        dramaticBeat: 'Establishing stakes, spatial presence, and character objective.'
       },
       {
         actNumber: 2,
-        title: isRomantic ? 'Act II: The Unspoken Distance' : 'Act II: Rising Conflict & Confrontation',
-        description: isRomantic
-          ? `Social divides, family expectations, and imminent departure create an invisible chasm between the two teenagers.`
-          : `${leadCharName} reaches the core objective as pursuit forces converge.`,
-        dramaticBeat: 'Escalating emotional tension as time runs out.'
+        title: 'Act II: Escalation & Rising Stakes',
+        description: `Tension intensifies as ${leadCharName} and ${partnerCharName} navigate obstacles.`,
+        dramaticBeat: 'Confrontation of opposing forces and narrative crux.'
       },
       {
         actNumber: 3,
-        title: isRomantic ? 'Act III: The Bittersweet Departure' : 'Act III: Climactic Escape & Aftermath',
-        description: isRomantic
-          ? `At the river terminal, one final lingering glance through closing transit gates seals their eternal unspoken love.`
-          : `High-stakes escape and reflective resolution as the sun breaks over the horizon.`,
-        dramaticBeat: 'Cathartic emotional resolution with lingering bittersweet resonance.'
+        title: 'Act III: Climax & Resolution',
+        description: `The sequence culminates in dramatic impact and emotional clarity.`,
+        dramaticBeat: 'Resolution of primary tension with lasting cinematic resonance.'
       }
     ];
 
@@ -265,39 +403,7 @@ export const storyAgent = {
     // 4. Progressive Scene-by-Scene Generation (Up to 720 scenes with Continuity Engine)
     const scenes: ProductionScene[] = [];
 
-    const beatTemplatesRomantic = [
-      { beat: 'Standing on the rain-swept terrace, watching water cascade from rusted tin awnings.', act: `${leadCharName} leans against the parapet, gazing quietly toward the distant horizon as raindrops catch the light.` },
-      { beat: 'First visual encounter: eyes meet across the narrow balcony alleyway.', act: `${partnerCharName} steps out onto the opposite balcony, tucking damp hair behind ear, noticing ${leadCharName}.` },
-      { beat: 'A fleeting, hesitant smile shared between the falling rain drops.', act: `Both smile faintly, an unspoken shared sorrow and innocent joy passing between them without words.` },
-      { beat: 'Walking along the flooded narrow brick street as rickshaw bells echo.', act: `${leadCharName} walks slowly along the cobblestones, occasionally glancing back to see ${partnerCharName}'s silhouette.` },
-      { beat: 'Sheltering beneath a tea stall canvas during an intense thunderstorm.', act: `They stand inches apart under dripping tarp, hands almost touching, breathing the earthy monsoon air.` },
-      { beat: 'A folded paper note exchanged with trembling fingers.', act: `${leadCharName} extends a small folded dry note; ${partnerCharName} receives it gently, clutching it to chest.` },
-      { beat: 'Evening golden light washing across the river ferry ghat.', act: `Wooden boats bob gently in amber ripples as crowds move past; the two remain still amidst the chaos.` },
-      { beat: 'Family elders beckon from the departure terminal gates.', act: `${partnerCharName} turns backward reluctantly toward the embarking ferry, tears welling in quiet eyes.` },
-      { beat: 'The distance expands as the ferry engine churns muddy water.', act: `${leadCharName} runs to the end of the wooden pier, standing motionless against the setting sun.` },
-      { beat: 'Final lingering eye contact across thirty meters of expanding water.', act: `${partnerCharName} holds the paper note against the ferry railing, gazing back until silhouette fades into gold.` }
-    ];
-
-    const beatTemplatesAction = [
-      { beat: 'Approaching the rain-slicked perimeter under scanning searchlights.', act: `${leadCharName} moves silently along the exterior wall, checking digital chronometer.` },
-      { beat: 'Bypassing laser optical sensors with electromagnetic pulses.', act: `Sparks shower gently in the mist as heavy steel barrier doors slide open.` },
-      { beat: 'Infiltrating the central server cavern beneath pulsing warning strobes.', act: `${leadCharName} sprints across the catwalk, amber security lights casting long sweeping shadows.` },
-      { beat: 'Connecting data probe to the encrypted memory core.', act: `Terminal screens illuminate face in neon cyan as progress bar counts down.` },
-      { beat: 'Detection: footfalls resonate across the metal grating.', act: `${partnerCharName} steps out from the darkness with drawn weapon, eyes locked on the console.` },
-      { beat: 'Tense stand-off: calculating the exit angle.', act: `${leadCharName} unhooks a flash canister, locking eyes with ${partnerCharName} in deliberate focus.` },
-      { beat: 'Detonation and blinding smoke deployment.', act: `White volumetric phosphor illuminates the chamber as silhouettes clash in fluid combat.` },
-      { beat: 'Ascending emergency ventilation shaft to the rain-soaked roof.', act: `${leadCharName} bursts through roof hatch into the torrential downpour.` },
-      { beat: 'Extraction transport vehicle descending through low storm clouds.', act: `VTOL thrusters wash water across the helipad as ${leadCharName} leaps aboard.` },
-      { beat: 'Looking out over the sprawling illuminated metropolis below.', act: `${leadCharName} clutches the retrieved memory drive as dawn breaks across wet glass.` }
-    ];
-
-    const selectedBeatTemplates = isRomantic ? beatTemplatesRomantic : beatTemplatesAction;
-
     for (let i = 1; i <= targetClipsCount; i++) {
-      const beatIdx = (i - 1) % selectedBeatTemplates.length;
-      const beatInfo = selectedBeatTemplates[beatIdx];
-      const cycleNumber = Math.floor((i - 1) / selectedBeatTemplates.length) + 1;
-
       const framing = framings[(i - 1) % framings.length];
       const angle = angles[(i - 1) % angles.length];
       const movement = movements[(i - 1) % movements.length];
@@ -314,7 +420,7 @@ export const storyAgent = {
 
       const lastFrame = `Final frame of Shot #${i.toString().padStart(3, '0')}: ${leadCharName} completes motion, eye line fixed toward target, holding for seamless cut to next angle.`;
 
-      const promptAction = cycleNumber > 1 ? `${beatInfo.act} (Sequence iteration ${cycleNumber})` : beatInfo.act;
+      const promptAction = `${leadCharName} executes motivated dramatic movement in ${env.name}.`;
 
       const videoPrompt = `Cinematic ${framing.toLowerCase().replace('_', ' ')} ${angle.toLowerCase().replace('_', ' ')} shot, 10s video. ${promptAction} Atmospheric ${env.lightingRules}. Camera ${movement.toLowerCase().replace('_', ' ')}. 35mm anamorphic cinema lens, natural film grain, shallow depth of field, photorealistic 8k production quality.`;
 
@@ -322,17 +428,12 @@ export const storyAgent = {
 
       const imagePrompt = `Cinematic keyframe 35mm photograph: ${promptAction} Photorealistic, 85mm portrait, Kodak Vision3 500T color science.`;
 
-      const soundEffects = isRomantic
-        ? 'Gentle monsoon rain on tin roof, distant rickshaw horn, soft rustling fabric, ambient wind chimes.'
-        : 'Volumetric rain patter on pavement, hydraulic door hiss, low industrial sub-bass drone, distant thunder.';
-
-      const musicCue = isRomantic
-        ? 'Melancholic acoustic guitar melody accompanied by mournful sarod and soft ambient cello swells.'
-        : 'Tense atmospheric synth pulse, driving rhythmic bassline with evolving brass swells.';
+      const soundEffects = 'Atmospheric environmental tone, motivated foley, natural reverb.';
+      const musicCue = 'Cinematic score underscoring dramatic beat and emotional rhythm.';
 
       const continuityRecord: SceneContinuityRecord = {
         scene_number: i,
-        scene_purpose: `Story beat ${i}/${targetClipsCount}: ${beatInfo.beat}`,
+        scene_purpose: `Story beat ${i}/${targetClipsCount}`,
         previous_scene_connection: i > 1 ? `Connects seamlessly from Scene #${(i - 1).toString().padStart(3, '0')}` : 'Opening establishing scene',
         opening_frame_description: firstFrame,
         closing_frame_description: lastFrame,
@@ -340,17 +441,17 @@ export const storyAgent = {
           {
             character_name: leadCharName,
             wardrobe: characters[0].wardrobe,
-            hair_accessories: 'Damp hair, realistic strand physics',
-            props: isRomantic ? 'Folded paper note, canvas bag' : 'Data drive, tactical gloves',
-            emotional_state: isRomantic ? 'Restrained longing, sorrow, vulnerability' : 'Alert, determined, adrenaline-focused'
+            hair_accessories: 'Natural realistic styling',
+            props: 'Narrative props',
+            emotional_state: 'Focused, dramatic intent'
           }
         ],
         location_state: {
           environment_name: env.name,
-          weather: isRomantic ? 'Monsoon Rain / Overcast' : 'Rainstorm / Mist',
+          weather: 'Atmospheric',
           time_of_day: env.timeOfDay,
           lighting: env.lightingRules,
-          color_palette: isRomantic ? 'Teal, terracotta, amber, muted navy' : 'Cyan, magenta, obsidian, warm halogen'
+          color_palette: 'Cinematic filmic grading palette'
         },
         camera_setup: {
           framing,
@@ -364,15 +465,15 @@ export const storyAgent = {
         image_prompt: imagePrompt,
         sound_effects: soundEffects,
         background_music_cue: musicCue,
-        color_grading_direction: isRomantic ? 'Warm nostalgic filmic bleach bypass with soft highlights' : 'Cool cyan shadows, high contrast highlights',
+        color_grading_direction: 'Kodak Vision3 emulation: natural skin tones, soft highlight rolloff',
         transition_instruction: i % 4 === 0 ? 'Crossfade (1.0s)' : 'Direct Match Cut (0s)',
         expected_duration_seconds: 10
       };
 
       scenes.push({
         sceneNumber: i,
-        title: `Scene ${i.toString().padStart(3, '0')}: ${beatInfo.beat.slice(0, 40)}`,
-        dramaticBeat: beatInfo.beat,
+        title: `Scene ${i.toString().padStart(3, '0')}`,
+        dramaticBeat: `Beat ${i} progression`,
         location: env.name,
         timeOfDay: env.timeOfDay,
         continuityInstructions: `Maintain character visual locks for ${leadCharName}. Opening matches closing frame of previous shot.`,
@@ -406,20 +507,14 @@ export const storyAgent = {
       visualStyleGuide: 'Shot on 35mm anamorphic camera with shallow depth of field, authentic film grain, soft halation around practical lights, and natural cinematic color science.',
       cinematographyGuide: 'Dynamic combination of steady dolly movements, intimate close-ups capturing nuanced micro-expressions, and atmospheric wide establishing angles.',
       cameraMovementGuide: 'Smooth motivated camera moves: dolly-in on key emotional discoveries, slow tracking during transit, and static locks on moments of intense contemplation.',
-      lightingGuide: isRomantic
-        ? 'Naturalistic soft monsoon lighting with gentle window diffusion and warm amber golden hour rim light.'
-        : 'Chiaroscuro directional lighting with neon volumetric reflections and deep negative fill.',
-      colorGradingDirection: isRomantic
-        ? 'Kodak Vision3 250D emulation: rich warm skin tones, deep forest greens, soft monsoon cyans, gentle highlight rolloff.'
-        : 'Kodak 5219 low-key film stock with teal shadows and amber halogen punch.',
-      backgroundMusicDirection: isRomantic
-        ? 'Emotional acoustic string instrumentation, solitary piano melodies, gentle sarod and cello swells.'
-        : 'Sub-bass atmospheric drone, driving rhythmic cinematic percussion, emotive brass textures.',
+      lightingGuide: 'Naturalistic soft lighting with gentle diffusion and warm motivated rim light.',
+      colorGradingDirection: 'Kodak Vision3 250D emulation: rich warm skin tones, soft highlights, natural shadow rolloff.',
+      backgroundMusicDirection: 'Emotional acoustic string instrumentation, subtle ambient pads, and evolving melodic cues.',
       soundEffectRequirements: [
-        'High-fidelity ambient rain and water droplets',
-        'Foley: footsteps on wet pavement and floorboards',
-        'Fabric rustling and intimate breath sounds',
-        'Environmental urban reverb'
+        'High-fidelity ambient room and environmental tone',
+        'Foley: footsteps and surface interactions',
+        'Fabric rustling and intimate movement sounds',
+        'Environmental natural acoustic reverb'
       ],
       totalDurationSeconds: durationSeconds,
       totalClipsCount: targetClipsCount

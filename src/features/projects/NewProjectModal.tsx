@@ -289,6 +289,7 @@ export const NewProjectModal: React.FC = () => {
                     className="w-full bg-studio-950 border border-studio-750 text-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-studio-accent"
                   >
                     <option value="English">English</option>
+                    <option value="Bengali">Bengali (বাংলা)</option>
                     <option value="Japanese">Japanese</option>
                     <option value="Spanish">Spanish</option>
                     <option value="French">French</option>

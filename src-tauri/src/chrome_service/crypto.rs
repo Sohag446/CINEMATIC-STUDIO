@@ -192,16 +192,51 @@ pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     result == 0
 }
 
-/// Generates a cryptographically strong 256-bit pairing secret
-pub fn generate_pairing_secret() -> String {
-    let u1 = uuid::Uuid::new_v4();
-    let u2 = uuid::Uuid::new_v4();
-    let combined = format!(
-        "{}:{}:{}",
-        u1,
-        u2,
-        chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
-    );
-    let digest = sha256_digest(combined.as_bytes());
-    to_hex(&digest)
+#[cfg(target_os = "windows")]
+mod os_rng {
+    const BCRYPT_USE_SYSTEM_PREFERRED_RNG: u32 = 0x00000002;
+
+    #[link(name = "bcrypt")]
+    extern "system" {
+        fn BCryptGenRandom(
+            hAlgorithm: *mut std::ffi::c_void,
+            pbBuffer: *mut u8,
+            cbBuffer: u32,
+            dwFlags: u32,
+        ) -> i32;
+    }
+
+    pub fn fill_random_bytes(buf: &mut [u8]) -> Result<(), String> {
+        let status = unsafe {
+            BCryptGenRandom(
+                std::ptr::null_mut(),
+                buf.as_mut_ptr(),
+                buf.len() as u32,
+                BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+            )
+        };
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(format!("BCryptGenRandom failed with NTSTATUS: 0x{:08X}", status))
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+mod os_rng {
+    use std::fs::File;
+    use std::io::Read;
+
+    pub fn fill_random_bytes(buf: &mut [u8]) -> Result<(), String> {
+        let mut f = File::open("/dev/urandom").map_err(|e| e.to_string())?;
+        f.read_exact(buf).map_err(|e| e.to_string())
+    }
+}
+
+/// Generates a cryptographically secure 256-bit (32-byte) pairing secret using OS CSPRNG.
+pub fn generate_pairing_secret() -> Result<String, String> {
+    let mut bytes = [0u8; 32];
+    os_rng::fill_random_bytes(&mut bytes)?;
+    Ok(to_hex(&bytes))
 }

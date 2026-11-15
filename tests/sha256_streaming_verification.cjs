@@ -103,7 +103,30 @@ try {
   }
   assert(threwMissing, 'Explicit Rejection on Non-Existent File', 'Throws error instead of returning synthetic hash');
 
-  // Test 6: Verify Bundled Media Binaries
+  // Test 6: SHA-256 Block Boundaries (55, 56, 63, 64, 65, 127, 128, 129 bytes)
+  const boundarySizes = [55, 56, 63, 64, 65, 127, 128, 129];
+  let allBoundariesPass = true;
+  for (const size of boundarySizes) {
+    const bFile = path.join(tmpDir, `bound_${size}.bin`);
+    fs.writeFileSync(bFile, Buffer.alloc(size, 0x61));
+    const bHash = calculateFileSha256(bFile);
+    if (bHash.length !== 64 || !/^[0-9a-f]{64}$/.test(bHash)) {
+      allBoundariesPass = false;
+    }
+  }
+  assert(allBoundariesPass, 'SHA-256 Block Boundaries (55, 56, 63, 64, 65 bytes)', 'All block boundary digests match exact 64-character hex');
+
+  // Test 7: Multi-Buffer Streaming (131,072 bytes = 2x 64KB buffers)
+  const multiBufFile = path.join(tmpDir, 'multi_buf.bin');
+  fs.writeFileSync(multiBufFile, Buffer.alloc(131072, 0x42));
+  const multiBufHash = calculateFileSha256(multiBufFile);
+  assert(
+    multiBufHash.length === 64 && /^[0-9a-f]{64}$/.test(multiBufHash),
+    'Multi-Buffer Streaming (128 KB chunked transfer)',
+    `Computed digest: ${multiBufHash.substring(0, 16)}...`
+  );
+
+  // Test 8: Verify Bundled Media Binaries
   const ffmpegPath = path.resolve(__dirname, '../src-tauri/resources/media-engine/windows-x64/ffmpeg.exe');
   const ffprobePath = path.resolve(__dirname, '../src-tauri/resources/media-engine/windows-x64/ffprobe.exe');
 

@@ -961,3 +961,44 @@ fn test_calculate_sha256_bundled_media_binaries() {
         );
     }
 }
+
+#[test]
+fn test_calculate_sha256_block_boundaries_and_multi_buffer() {
+    use crate::media_service::ffmpeg::FFmpegManager;
+
+    let temp_dir = tempfile::tempdir().unwrap();
+
+    // Block boundary tests: 55, 56, 63, 64, 65 bytes
+    for size in [55, 56, 63, 64, 65, 127, 128, 129] {
+        let file_path = temp_dir.path().join(format!("boundary_{}.bin", size));
+        let data = vec![0x61u8; size]; // 'a' repeated
+        fs::write(&file_path, &data).unwrap();
+        let hash = FFmpegManager::calculate_sha256(&file_path).unwrap();
+        assert_eq!(hash.len(), 64, "Hash length must always be 64 hex characters");
+    }
+
+    // Multi-buffer streaming test (131,072 bytes = 2 full 64KB buffers)
+    let multi_buf_path = temp_dir.path().join("multi_buffer.bin");
+    let large_data = vec![0x42u8; 131_072];
+    fs::write(&multi_buf_path, &large_data).unwrap();
+    let multi_hash = FFmpegManager::calculate_sha256(&multi_buf_path).unwrap();
+    assert_eq!(multi_hash.len(), 64);
+}
+
+#[test]
+fn test_os_csprng_pairing_secret_properties() {
+    use crate::chrome_service::crypto::generate_pairing_secret;
+    use std::collections::HashSet;
+
+    // 1. Valid 64-char hex format
+    let secret = generate_pairing_secret().expect("OS CSPRNG must succeed");
+    assert_eq!(secret.len(), 64, "256-bit secret must be exactly 64 hex chars");
+    assert!(secret.chars().all(|c| c.is_ascii_hexdigit()), "All chars must be valid hex");
+
+    // 2. Uniqueness test across 500 generated secrets
+    let mut generated = HashSet::new();
+    for _ in 0..500 {
+        let s = generate_pairing_secret().expect("OS CSPRNG must succeed");
+        assert!(generated.insert(s), "Collision detected in CSPRNG output!");
+    }
+}

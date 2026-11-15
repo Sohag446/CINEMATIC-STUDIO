@@ -54,6 +54,7 @@ export const AIVideoWorkspace: React.FC = () => {
     addClipDirectlyToTimeline,
     isChromeDocked,
     dockedChromeHwnd,
+    dockChromeError,
     dockChrome,
     syncDockedBounds,
     setDockedVisible,
@@ -122,9 +123,9 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
       const h = Math.max(200, Math.round(rect.height));
       try {
         await dockChrome(targetUrl, userDir, key, x, y, w, h);
-      } catch (err) {
-        console.warn('Docking error, falling back to companion:', err);
-        await launchProfile(userDir, key);
+      } catch (err: any) {
+        console.error('Docking error (Option B):', err);
+        // Do not silently launch companion mode; error state is set on the store and displayed in viewport
       }
     } else {
       await launchProfile(userDir, key);
@@ -197,16 +198,24 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
     switch (status) {
       case 'COMPLETED':
       case 'IMPORTED':
-        return <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-semibold font-mono">Imported</span>;
+        return <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-semibold font-mono">Verified / Imported</span>;
+      case 'VERIFYING':
+        return <span className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-700/60 font-semibold font-mono animate-pulse">FFprobe Verifying</span>;
       case 'DOWNLOADED':
       case 'GENERATED':
         return <span className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-semibold font-mono">Generated</span>;
       case 'GENERATING':
       case 'QUEUED':
+      case 'SUBMITTED':
         return <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950 text-amber-300 border border-amber-700/60 font-semibold font-mono animate-pulse">Generating</span>;
+      case 'HUMAN_ACTION_REQUIRED':
+        return <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-950 text-orange-300 border border-orange-700/60 font-semibold font-mono animate-pulse">Action Required</span>;
+      case 'WAITING_FOR_PROVIDER':
+        return <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950 text-blue-300 border border-blue-700/60 font-semibold font-mono">Waiting for Provider</span>;
       case 'PROMPT_READY':
         return <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950 text-purple-300 border border-purple-700/60 font-semibold font-mono">Prompt Ready</span>;
       case 'NEEDS_ATTENTION':
+      case 'NEEDS_REVIEW':
       case 'FAILED':
         return <span className="px-1.5 py-0.5 rounded text-[10px] bg-rose-950 text-rose-300 border border-rose-700/60 font-semibold font-mono">Attention</span>;
       default:
@@ -743,19 +752,52 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
                 className="w-full h-[380px] bg-black rounded-lg border border-studio-800 relative flex items-center justify-center overflow-hidden"
               >
                 {!dockedChromeHwnd && (
-                  <div className="text-center p-6 space-y-2 text-slate-500">
-                    <Monitor className="w-8 h-8 text-slate-600 mx-auto" />
-                    <p className="text-xs font-mono">
-                      {isChromeDocked
-                        ? 'Google Chrome will dock inside this workspace viewport.'
-                        : 'Google Chrome will launch in a separate companion window.'}
-                    </p>
-                    <button
-                      onClick={() => handleLaunchOrDockChrome(browserCurrentUrl)}
-                      className="px-3.5 py-1.5 rounded-lg bg-studio-850 hover:bg-studio-800 border border-cyan-600/60 text-cyan-300 text-xs font-semibold inline-flex items-center space-x-1.5"
-                    >
-                      <span>Launch In-Workspace Chrome (Option B)</span>
-                    </button>
+                  <div className="text-center p-6 space-y-3 max-w-md">
+                    {dockChromeError ? (
+                      <div className="bg-rose-950/70 border border-rose-700/80 rounded-lg p-3 text-left space-y-2">
+                        <div className="flex items-center space-x-2 text-rose-300 font-bold text-xs font-mono">
+                          <span>Win32 Native Docking Error</span>
+                        </div>
+                        <p className="text-[11px] text-rose-200/90 font-mono break-words leading-relaxed">
+                          {dockChromeError}
+                        </p>
+                        <p className="text-[10px] text-rose-300/70 font-mono">
+                          Silent companion fallback is disabled. Choose an action below:
+                        </p>
+                        <div className="flex items-center space-x-2 pt-1">
+                          <button
+                            onClick={() => handleLaunchOrDockChrome(browserCurrentUrl)}
+                            className="px-2.5 py-1 rounded bg-rose-900 hover:bg-rose-800 text-white text-[11px] font-mono font-bold"
+                          >
+                            Retry Docking
+                          </button>
+                          <button
+                            onClick={() => {
+                              const profile = registeredProfiles.find(p => p.id === activeVideoProfileId) || registeredProfiles[0];
+                              if (profile) launchProfile(profile.user_data_dir, profile.profile_dir_key);
+                            }}
+                            className="px-2.5 py-1 rounded bg-studio-800 hover:bg-studio-700 text-slate-300 text-[11px] font-mono"
+                          >
+                            Launch Companion Window
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <Monitor className="w-8 h-8 text-slate-600 mx-auto" />
+                        <p className="text-xs font-mono text-slate-400">
+                          {isChromeDocked
+                            ? 'Google Chrome will dock inside this workspace viewport (Win32 child container).'
+                            : 'Google Chrome will launch in a separate companion window.'}
+                        </p>
+                        <button
+                          onClick={() => handleLaunchOrDockChrome(browserCurrentUrl)}
+                          className="px-3.5 py-1.5 rounded-lg bg-studio-850 hover:bg-studio-800 border border-cyan-600/60 text-cyan-300 text-xs font-semibold inline-flex items-center space-x-1.5"
+                        >
+                          <span>Launch In-Workspace Chrome (Option B)</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -785,10 +827,15 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
                     >
                       <option value="NOT_STARTED">Not Started</option>
                       <option value="PROMPT_READY">Prompt Ready</option>
+                      <option value="WAITING_FOR_PROVIDER">Waiting for Provider</option>
+                      <option value="HUMAN_ACTION_REQUIRED">Human Action Required</option>
                       <option value="GENERATING">Generating</option>
                       <option value="GENERATED">Generated</option>
-                      <option value="DOWNLOADED">Downloaded</option>
+                      <option value="DOWNLOADING">Downloading</option>
+                      <option value="VERIFYING">Verifying</option>
+                      <option value="COMPLETED">Completed / Verified</option>
                       <option value="IMPORTED">Imported</option>
+                      <option value="FAILED">Failed</option>
                       <option value="NEEDS_ATTENTION">Needs Attention</option>
                     </select>
                   </div>

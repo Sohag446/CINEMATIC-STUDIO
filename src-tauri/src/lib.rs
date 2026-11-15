@@ -83,6 +83,7 @@ pub fn run() {
             commands::list_render_jobs,
             commands::create_render_job,
             commands::detect_ffmpeg_status,
+            commands::probe_media_file,
         ])
         .run(tauri::generate_context!())
         .expect("Error while running CINEMATIC STUDIO application");

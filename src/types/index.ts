@@ -41,16 +41,27 @@ export type CameraFraming = 'WIDE' | 'MEDIUM' | 'CLOSE_UP' | 'EXTREME_CLOSE_UP' 
 export type CameraAngle = 'EYE_LEVEL' | 'LOW_ANGLE' | 'HIGH_ANGLE' | 'DUTCH' | 'BIRDS_EYE';
 export type CameraMovement = 'STATIC' | 'PAN_LEFT' | 'PAN_RIGHT' | 'DOLLY_IN' | 'DOLLY_OUT' | 'ORBIT' | 'TRACKING';
 export type ClipStatus =
+  // Truthful Generation Lifecycle (Milestone 1)
+  | 'IDLE'
+  | 'WAITING_FOR_PROVIDER'
+  | 'HUMAN_ACTION_REQUIRED'
+  | 'SUBMITTED'
+  | 'GENERATING'
+  | 'DOWNLOADING'
+  | 'VERIFYING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'PAUSED'
+  | 'NEEDS_REVIEW'
+  // Pipeline & legacy compatibility
   | 'NOT_STARTED'
   | 'PROMPT_READY'
   | 'QUEUED'
-  | 'GENERATING'
   | 'GENERATED'
   | 'DOWNLOADED'
   | 'IMPORTED'
   | 'NEEDS_ATTENTION'
-  | 'COMPLETED'
-  | 'FAILED'
   | 'REJECTED'
   | 'PLANNED';
 
@@ -117,8 +128,31 @@ export interface Clip {
   sound_effects?: string;
   music_cue?: string;
   transition_instruction?: string;
+  // Truthful media verification attributes (Milestone 1)
+  verified_duration_seconds?: number;
+  verified_width?: number;
+  verified_height?: number;
+  verified_fps?: number;
+  verified_codec?: string;
+  verified_file_size_bytes?: number;
+  verified_sha256?: string;
+  verification_error?: string;
   created_at: number;
   updated_at: number;
+}
+
+export interface MediaProbeResult {
+  success: boolean;
+  file_path: string;
+  file_size_bytes: number;
+  duration_seconds?: number;
+  width?: number;
+  height?: number;
+  fps?: number;
+  video_codec?: string;
+  audio_codec?: string;
+  checksum_sha256?: string;
+  error?: string;
 }
 
 export type TaskState = 
@@ -168,6 +202,7 @@ export interface AppSettings {
   log_level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
   theme: 'dark' | 'cinematic';
   hardware_thread_cap: number;
+  ui_language?: 'en' | 'bn';
 }
 
 // ==========================================
