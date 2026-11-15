@@ -1,15 +1,15 @@
 # CINEMATIC STUDIO — FEATURE IMPLEMENTATION MATRIX
-**Document Version:** 1.0.0 — Milestone 0 Feature Inventory  
-**Target Platform:** Windows 11 x64  
-**Product Owner & Lead Developer:** Md. Sohag Hossen  
-**Baseline Commit:** `455f333f702d69848fb8ebd40f99d497c17a527a`  
+**Document Version:** 1.1.0 — Milestone 0 Corrected Feature Inventory
+**Target Platform:** Windows 11 x64
+**Product Owner & Lead Developer:** Md. Sohag Hossen
+**Baseline Commit:** `0b257da`
 
 ---
 
 ## Status Classification Legend
-- **IMPLEMENTED:** Feature is fully written, functional in production code, and covered by passing automated tests.
+- **IMPLEMENTED:** Feature is fully written, functional in production code, and verified by passing automated tests.
 - **PARTIALLY IMPLEMENTED:** Scaffolding, UI, or backend exists, but critical sub-components or full pipelines are unfinished.
-- **EXPERIMENTAL:** Functional proof-of-concept exists (e.g. standalone script or prototype), but not fully hardened for production.
+- **EXPERIMENTAL:** Functional proof-of-concept exists (e.g. standalone script or prototype), but not fully hardened or verified in the installed production app.
 - **BLOCKED:** Implementation is blocked by external requirements (e.g., hardware availability, CA credentials, platform security).
 - **PLANNED:** Feature is specified in the architecture but implementation has not yet commenced.
 
@@ -42,7 +42,7 @@
 | Feature Name | Status | Relevant Source Files | Actual Implementation Evidence | Missing Functionality | Required Tests | Acceptance Criteria |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Modular Provider Adapters** | IMPLEMENTED | `chrome-extension/adapters/`<br>`chatgpt.js`, `claude.js`, `gemini.js`, `googleFlowVeo.js` | Content script DOM adapters with versioned fallback selectors for text/video models. | Live API-based headless fallback adapters (OpenAI/Anthropic/Gemini SDKs). | `tests/phase3_provider_matrix_test.cjs` | Correct adapter initializes on matching provider URLs without DOM errors. |
-| **Anti-Bot & CAPTCHA Detection** | IMPLEMENTED | `chrome-extension/adapters/common.js` | Cloudflare Turnstile and Google reCAPTCHA detection with strict non-circumvention. | Automated audio-based accessibility fallback (prohibited by policy; human action required). | `tests/phase3_provider_matrix_test.cjs` | Anti-bot detection pauses task immediately and sets state to `NEEDS_HUMAN_ACTION`. |
+| **Anti-Bot & CAPTCHA Detection** | IMPLEMENTED | `chrome-extension/adapters/common.js` | Cloudflare Turnstile and Google reCAPTCHA detection with strict non-circumvention. | Audio-based accessibility fallback (prohibited by policy; human action required). | `tests/phase3_provider_matrix_test.cjs` | Anti-bot detection pauses task immediately and sets state to `NEEDS_HUMAN_ACTION`. |
 | **Real Clip Generation** | PLANNED (Currently FAKE) | `src/stores/useStudioStore.ts` (Lines 1082-1115) | Simulated 2.2s `setTimeout`, mock Big Buck Bunny URL, and Unsplash placeholder images. | Real browser task dispatch via Native Messaging Host, download capture, and local storage. | Real clip generation integration test. | Generation triggers real browser operation; clip completes only when verified MP4 exists on disk. |
 | **Shot Queue Automation** | PARTIALLY IMPLEMENTED | `src/stores/useStudioStore.ts` (Lines 1117-1132) | Sequential loop runner in Zustand state. | Real task progress tracking, error retry policies, and disk space pre-flight checks. | Shot queue lifecycle test. | Queue processes clips sequentially without artificial timeouts or fake completions. |
 
@@ -52,9 +52,9 @@
 
 | Feature Name | Status | Relevant Source Files | Actual Implementation Evidence | Missing Functionality | Required Tests | Acceptance Criteria |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Win32 Native HWND Docking** | IMPLEMENTED | `src-tauri/src/chrome_service/docked_chrome.rs` | Uses Win32 `SetParent`, `SetWindowLongW` (`WS_CHILD`), and `SetWindowPos` to host Chrome. | Elimination of silent floating window fallback on failure in Zustand store. | `tests/option_a_chrome_embedding_suite.cjs` | Genuine `chrome.exe` window renders docked inside the designated AI workspace panel. |
-| **Dynamic Window Bounds Sync** | IMPLEMENTED | `src/features/aivideo/AIVideoWorkspace.tsx`<br>`src-tauri/src/chrome_service/docked_chrome.rs` | `ResizeObserver` on container DOM element syncing coordinates over Tauri IPC. | High-DPI multi-monitor DPI scaling normalization. | Dynamic resize test. | Chrome window tracks panel resizing smoothly without clipping or black artifacts. |
-| **Tab Switching & Visibility Lifecycle** | IMPLEMENTED | `src-tauri/src/chrome_service/docked_chrome.rs` | `ShowWindow(SW_HIDE)` and `ShowWindow(SW_SHOW)` toggling when switching tabs. | State preservation when navigating between different project views. | Workspace tab navigation test. | Navigating away from AI Video tab hides Chrome; returning restores it instantly. |
+| **Win32 Native HWND Docking** | **EXPERIMENTAL (UNVERIFIED IN PRODUCTION)** | `src-tauri/src/chrome_service/docked_chrome.rs`<br>`scripts/docked_chrome_architecture_poc.ps1` | Standalone POC script demonstrated Win32 `SetParent`. Rust implementation exists but ignores Win32 return values (`SetParent`, `SetWindowLongW`, `SetWindowPos`). | **Installed-app production verification**, error handling on Win32 failures, DPI scaling, elimination of silent floating window fallback. | Initial docking, focus, resize, maximize/restore, tab switch, DPI, profile isolation, and shutdown tests. | Genuine `chrome.exe` window renders docked inside the designated AI workspace panel without silent fallback. |
+| **Dynamic Window Bounds Sync** | PARTIALLY IMPLEMENTED | `src/features/aivideo/AIVideoWorkspace.tsx`<br>`src-tauri/src/chrome_service/docked_chrome.rs` | `ResizeObserver` on container DOM element syncing coordinates over Tauri IPC. | Check for valid HWND in `sync_bounds` before returning; High-DPI scaling normalization. | Dynamic resize test. | Chrome window tracks panel resizing smoothly without clipping or black artifacts. |
+| **Tab Switching & Visibility Lifecycle** | PARTIALLY IMPLEMENTED | `src-tauri/src/chrome_service/docked_chrome.rs` | `ShowWindow(SW_HIDE)` and `ShowWindow(SW_SHOW)` toggling when switching tabs. | Validation of Chrome window state after returning from multi-tab navigation. | Workspace tab navigation test. | Navigating away from AI Video tab hides Chrome; returning restores it instantly. |
 | **HMAC-SHA256 Native Host Pairing** | IMPLEMENTED | `src-tauri/src/bin/host.rs`<br>`src-tauri/src/chrome_service/pairing.rs` | Challenge-response authentication with anti-replay nonces over stdio 32-bit framing. | Automatic pairing renewal after browser profile reset. | `tests/combined_phase1_2_validation.cjs` (Category F & G) | Only paired, authenticated Chrome extension sessions can exchange IPC commands. |
 
 ---
@@ -64,7 +64,7 @@
 | Feature Name | Status | Relevant Source Files | Actual Implementation Evidence | Missing Functionality | Required Tests | Acceptance Criteria |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **FFmpeg 9.0.2 Binary Management** | IMPLEMENTED | `src-tauri/src/media_service/ffmpeg.rs`<br>`scripts/acquire_ffmpeg.cjs` | Automatic acquisition, extraction, and validation of official Gyan static release. | Dynamic runtime repair if binaries are corrupted or deleted. | `tests/media_engine_resolver_test.cjs` | Application discovers, validates, and binds local FFmpeg and FFprobe binaries. |
-| **Cryptographic SHA-256 Hashing** | PARTIALLY IMPLEMENTED (Bug Identified) | `src-tauri/src/media_service/ffmpeg.rs` (Lines 496-506) | Inferred hash from file length or returned hardcoded constants. | **True streaming cryptographic SHA-256 calculation** for all files. | `scripts/verify_authenticode_audit.ps1` | Function computes actual SHA-256 digest by reading file bytes into a cryptographic hasher. |
+| **Cryptographic SHA-256 Hashing** | **IMPLEMENTED (FIXED)** | `src-tauri/src/media_service/ffmpeg.rs` (Lines 495-514) | True streaming chunked SHA-256 calculation reading 64KB buffers into pure-Rust `Sha256`. | None. Buggy synthetic file-size hash completely removed. | `tests/sha256_streaming_verification.cjs` (8 PASS / 0 FAIL) | Computes actual cryptographic SHA-256 digest; verified on NIST vectors, 1-byte avalanche, and bundled media binaries. |
 | **Media Ingestion & Metadata Probing** | IMPLEMENTED | `src-tauri/src/media_service/mod.rs` | Invokes `ffprobe -show_streams -show_format -print_format json` to extract codecs, duration, dimensions. | Waveform data extraction (`.dat` or `.json` peak files) for audio tracks. | Real media probing test with fixture files. | Imported video/audio files have exact duration, resolution, codec, and fps in database. |
 | **Proxy File Generation** | PARTIALLY IMPLEMENTED | `src-tauri/src/media_service/mod.rs` | Command exists in Rust backend to transcode 720p 1Mbps fast-decode proxies. | Automatic background generation queue triggered upon 4K media import. | Proxy transcoding test. | Large 4K files automatically generate lightweight proxies for smooth timeline playback. |
 
@@ -87,7 +87,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Timeline Export via FFmpeg** | IMPLEMENTED | `src-tauri/src/media_service/ffmpeg.rs` | Builds FFmpeg command lines for concat and transcode with 720p, 1080p, 1440p, 4K presets. | Complex filtergraph generation (`overlay`, `amix`, `xfade`) for multi-track composition. | `tests/real_media_rendering_test.cjs` | Export produces a real, playable MP4 file verified with FFprobe and full decode check. |
 | **Render Job Queue Daemon** | PARTIALLY IMPLEMENTED (Incomplete) | `src-tauri/src/media_service/mod.rs` (Lines 412-446) | SQLite table and `create_render_job` command implemented. | **Background worker loop** to process queued jobs asynchronously. | Render worker lifecycle test. | Enqueued jobs are processed sequentially in the background with live percentage updates. |
-| **Hardware Acceleration** | EXPERIMENTAL | `src-tauri/src/media_service/ffmpeg.rs` | Auto-detects CPU `libx264`, NVENC, QSV, and AMF encoder profiles. | AMD AMF (`h264_amf`) verification and Direct3D 11 video acceleration integration. | Hardware encoder benchmark test. | Automatically leverages AMD GPU hardware encoding when available, falling back cleanly to CPU. |
+| **Hardware Acceleration** | EXPERIMENTAL | `src-tauri/src/media_service/ffmpeg.rs` | Detects CPU `libx264`, NVENC, QSV, and AMF encoder profiles. | AMD AMF (`h264_amf`) verification on target AMD Radeon GPU. | Hardware encoder benchmark test. | Automatically leverages AMD GPU hardware encoding when available, falling back cleanly to CPU. |
 
 ---
 

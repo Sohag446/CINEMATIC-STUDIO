@@ -1,8 +1,8 @@
 # CINEMATIC STUDIO — KNOWN LIMITATIONS & TECHNICAL CONSTRAINTS
-**Document Version:** 1.0.0 — Milestone 0 Constraints Catalog  
-**Target Environment:** Windows 11 x64 (AMD Ryzen 7 5000 Series, AMD Radeon Graphics, 20 GB RAM)  
-**Product Owner & Lead Developer:** Md. Sohag Hossen  
-**Baseline Commit:** `455f333f702d69848fb8ebd40f99d497c17a527a`  
+**Document Version:** 1.1.0 — Milestone 0 Corrected Constraints Catalog
+**Target Environment:** Windows 11 x64 (AMD Ryzen 7 5000 Series, AMD Radeon Graphics, 20 GB RAM)
+**Product Owner & Lead Developer:** Md. Sohag Hossen
+**Baseline Commit:** `0b257da`
 
 ---
 
@@ -12,7 +12,7 @@
 - **Constraint:** The development and target workstation is powered by an **AMD Ryzen 7 5000 Series CPU and AMD Radeon Graphics (RDNA architecture)**. NVIDIA CUDA is **not available**.
 - **Impact:** Any AI model or media processing algorithm relying on CUDA-specific libraries (e.g. `torch-cuda`, TensorRT, or NVENC-only FFmpeg filters) will fail immediately.
 - **Architectural Solution:**
-  - Hardware video encoding must target **AMD AMF (`h264_amf`, `hevc_amf`)** or **Direct3D 11 Video Acceleration (D3D11VA)** via FFmpeg.
+  - Hardware video encoding must target **AMD AMF (`h264_amf`, `hevc_amf`)** or **Direct3D 11 Video Acceleration (D3D11VA)** via FFmpeg. Both require valid AMD Adrenalin drivers installed on the host.
   - Software encoding fallback must use multithreaded `libx264` and `libx265`, bounded to 8–12 CPU threads to avoid starving the UI thread.
   - Local AI inference must utilize **DirectML** or CPU-optimized ONNX Runtime / Ollama backends.
 
@@ -30,25 +30,42 @@
 
 ### 2.1 Enforcement Policy on Unsigned Binaries
 - **Constraint:** Windows 11 Smart App Control (SAC) operates at the kernel level via App Control for Business (WDAC).
-- **Impact:** Unsigned executable files downloaded from the web or built in `%USERPROFILE%` trigger an immediate hard block:
-  - Error: `os error 4551: An Application Control policy has blocked this file`
-  - Code Integrity Event Log: **Event ID 3077 (Enforcement Block)**
-- **Technical Reality:**
+- **Impact on Local Development:**
+  - Running `cargo test` on this host machine fails with:
+    `An Application Control policy has blocked this file. (os error 4551)`
+  - When cargo attempts to compile and execute procedural macro build scripts in `%USERPROFILE%` (e.g. `zmij`, `serde`, `darling_macro`), Windows blocks process execution under **Event ID 3077 (Enforcement Block)**.
+- **Impact on Distributed Installers:**
+  - Unsigned installers downloaded from GitHub Releases are blocked with:
+    `"We blocked this app because we could not verify its publisher."`
   - Neither unchecking "Unblock" in File Properties nor running `Unblock-File` bypasses Smart App Control.
-  - Microsoft Trusted Signing Public Trust is **ineligible** for individual developers residing in Bangladesh (US & Canada only).
   - Public releases must remain gated until genuine **SSL.com eSigner** or **Certum Standard Cloud** code-signing credentials are configured in GitHub Secrets.
 
 ---
 
 ## 3. Real In-Workspace Chrome Win32 Docking Bounds
 
-### 3.1 Win32 Child HWND Parenting Constraints
-- **Constraint:** Genuine `chrome.exe` is hosted inside a designated application panel using Win32 `SetParent(chromeHwnd, appHwnd)` and `SetWindowLongW(chromeHwnd, GWL_STYLE, WS_CHILD | WS_VISIBLE)`.
-- **Known Technical Edges:**
-  1. **High-DPI Multi-Monitor Transitions:** Moving the application between monitors with different display scaling factors (e.g. 100% and 150%) can cause a momentary coordinate offset until `sync_docked_chrome_bounds` recalculates client rects.
-  2. **Mouse Wheel Focus Routing:** Windows sends `WM_MOUSEWHEEL` messages to the window with keyboard focus rather than the window under the cursor unless `SPI_SETWHEELSCROLLING` is active. Clicking inside the Chrome panel is required to transfer keyboard focus.
-  3. **Elevation Mismatch:** If CINEMATIC STUDIO is launched as Administrator while Chrome is launched as standard user (or vice-versa), Win32 `SetParent` will fail with `ERROR_ACCESS_DENIED` due to UIPI (User Interface Privilege Isolation). Both processes must run at the same elevation level.
-  4. **Silent Fallback Bug (To Be Removed):** `useStudioStore.ts:694-696` currently catches docking errors and silently opens an external floating window. This must be replaced with an explicit error dialog.
+### 3.1 Production Status: Experimental & Unverified in Installed App
+While the standalone PowerShell script (`scripts/docked_chrome_architecture_poc.ps1`) demonstrated Win32 `SetParent` feasibility, **the actual production Rust implementation remains unverified inside the installed desktop application**.
+
+### 3.2 Known Production Defects in `docked_chrome.rs`:
+1. **Ignored Win32 Return Values:**
+   - `win32::SetParent(chrome_hwnd, parent_hwnd)`: Return value (`NULL` on error) is not checked.
+   - `win32::SetWindowLongW(chrome_hwnd, ...)`: Return value is not checked.
+   - `win32::SetWindowPos(chrome_hwnd, ...)`: Return value is not checked.
+2. **Missing HWND Validation in `sync_bounds`:**
+   - In `docked_chrome.rs:255-278`, if `hwnd == 0` or `IsWindow(hwnd) == 0`, `sync_bounds` silently returns `Ok(())` instead of reporting that the window was destroyed or disconnected.
+3. **Silent Floating Window Fallback:**
+   - In `useStudioStore.ts:694-696`, catching docking errors logs a warning and silently calls `launchChromeProfile(...)`, spawning an external floating window.
+4. **Missing Production Test Evidence:**
+   The following 8 critical tests have NOT yet been performed in the installed production application:
+   - Initial docking handshake and HWND capture.
+   - Keyboard focus and mouse wheel routing.
+   - Smooth container resizing without visual tearing.
+   - Window maximize and restore transitions.
+   - Tab switching visibility toggle (`SW_HIDE` / `SW_SHOW`).
+   - High-DPI multi-monitor display scaling adjustments.
+   - Chrome profile data directory isolation.
+   - Clean shutdown without orphan `chrome.exe` processes.
 
 ---
 
@@ -79,8 +96,7 @@
 
 ### 6.1 FFmpeg Codecs & Patents
 - **Constraint:** CINEMATIC STUDIO bundles official static builds of FFmpeg (Gyan.dev 9.0.2 Essentials).
-- **Licensing:** The bundled FFmpeg distribution is licensed under **GNU General Public License (GPL) v3** or **Lesser General Public License (LGPL) v2.1/v3**.
-- **Commercial Requirements:**
+- **Licensing:** The bundled FFmpeg distribution is licensed under **GNU General Public License (GPL) v3** due to bundled x264/x265 codecs.
+- **Commercial Separation:**
   - CINEMATIC STUDIO communicates with FFmpeg strictly via standard OS process execution (`std::process::Command` / CLI arguments) and named pipes.
-  - Dynamic or static C-linkage into proprietary application binaries is avoided, preserving clear open-source separation and full compliance with Section 6 of the LGPL / Section 7 of the GPL.
-  - Exact copies of FFmpeg licenses and build configurations are preserved in `src-tauri/resources/media-engine/windows-x64/LICENSES/`.
+  - In-process static or dynamic C linkage is strictly avoided, preserving arm's-length separation under FSF guidelines.

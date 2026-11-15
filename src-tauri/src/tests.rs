@@ -878,3 +878,86 @@ fn test_chrome_discovery_local_state_parsing() {
         Some("veo-producer@cinematic.studio")
     );
 }
+
+#[test]
+fn test_calculate_sha256_known_vectors_and_avalanche_effect() {
+    use crate::media_service::ffmpeg::FFmpegManager;
+
+    let temp_dir = tempfile::tempdir().unwrap();
+
+    // 1. Empty file vector: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    let empty_file = temp_dir.path().join("empty.bin");
+    fs::write(&empty_file, b"").unwrap();
+    let empty_hash = FFmpegManager::calculate_sha256(&empty_file).unwrap();
+    assert_eq!(
+        empty_hash,
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "Empty file SHA-256 must match FIPS vector"
+    );
+
+    // 2. "abc" vector: ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+    let abc_file = temp_dir.path().join("abc.bin");
+    fs::write(&abc_file, b"abc").unwrap();
+    let abc_hash = FFmpegManager::calculate_sha256(&abc_file).unwrap();
+    assert_eq!(
+        abc_hash,
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "'abc' SHA-256 must match standard NIST vector"
+    );
+
+    // 3. "The quick brown fox jumps over the lazy dog" vector: d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+    let fox_file = temp_dir.path().join("fox.bin");
+    fs::write(&fox_file, b"The quick brown fox jumps over the lazy dog").unwrap();
+    let fox_hash = FFmpegManager::calculate_sha256(&fox_file).unwrap();
+    assert_eq!(
+        fox_hash,
+        "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
+        "Fox vector must match NIST reference"
+    );
+
+    // 4. Avalanche effect: single-byte mutation ("The quick brown fox jumps over the lazy dog." - added period)
+    let fox_mutated = temp_dir.path().join("fox_mutated.bin");
+    fs::write(&fox_mutated, b"The quick brown fox jumps over the lazy dog.").unwrap();
+    let fox_mutated_hash = FFmpegManager::calculate_sha256(&fox_mutated).unwrap();
+    assert_eq!(
+        fox_mutated_hash,
+        "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c",
+        "Single byte change must completely alter SHA-256 digest"
+    );
+    assert_ne!(fox_hash, fox_mutated_hash);
+
+    // 5. Missing file error handling
+    let missing_file = temp_dir.path().join("non_existent_file.bin");
+    let err = FFmpegManager::calculate_sha256(&missing_file);
+    assert!(err.is_err(), "Missing file must return an explicit Err");
+}
+
+#[test]
+fn test_calculate_sha256_bundled_media_binaries() {
+    use crate::media_service::ffmpeg::{
+        FFmpegManager, EXPECTED_FFMPEG_SHA256, EXPECTED_FFPROBE_SHA256,
+    };
+    use std::path::PathBuf;
+
+    let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let ffmpeg_path = base_dir.join("resources/media-engine/windows-x64/ffmpeg.exe");
+    let ffprobe_path = base_dir.join("resources/media-engine/windows-x64/ffprobe.exe");
+
+    if ffmpeg_path.exists() {
+        let calculated = FFmpegManager::calculate_sha256(&ffmpeg_path).unwrap();
+        assert_eq!(
+            calculated.to_lowercase(),
+            EXPECTED_FFMPEG_SHA256.to_lowercase(),
+            "Bundled ffmpeg.exe real streaming hash must match expected Gyan 9.0.2 checksum"
+        );
+    }
+
+    if ffprobe_path.exists() {
+        let calculated = FFmpegManager::calculate_sha256(&ffprobe_path).unwrap();
+        assert_eq!(
+            calculated.to_lowercase(),
+            EXPECTED_FFPROBE_SHA256.to_lowercase(),
+            "Bundled ffprobe.exe real streaming hash must match expected Gyan 9.0.2 checksum"
+        );
+    }
+}

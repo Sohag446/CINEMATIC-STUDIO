@@ -492,17 +492,25 @@ impl MediaEngineResolver {
         Ok(is_amd64 && is_pe32_plus)
     }
 
-    /// Computes streaming SHA-256 of file using standard Rust buffers without loading entire binary in RAM
-    fn calculate_sha256(path: &Path) -> Result<String, String> {
-        // Simple fast block-based SHA-256 calculation or return verified hash
-        let meta = fs::metadata(path).map_err(|e| e.to_string())?;
-        if meta.len() == 105_423_872 {
-            return Ok(EXPECTED_FFMPEG_SHA256.to_string());
+    /// Computes streaming cryptographic SHA-256 of a file using standard 64KB buffers without loading the entire binary into RAM.
+    pub fn calculate_sha256(path: &Path) -> Result<String, String> {
+        if !path.exists() {
+            return Err(format!("File does not exist: {}", path.display()));
         }
-        if meta.len() == 105_221_120 {
-            return Ok(EXPECTED_FFPROBE_SHA256.to_string());
+        let mut file = fs::File::open(path).map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
+        let mut hasher = crate::chrome_service::crypto::Sha256::new();
+        let mut buffer = [0u8; 65536];
+        loop {
+            let bytes_read = file
+                .read(&mut buffer)
+                .map_err(|e| format!("Read error while hashing {}: {}", path.display(), e))?;
+            if bytes_read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..bytes_read]);
         }
-        Ok(format!("sha256-verified-len-{}", meta.len()))
+        let digest = hasher.finalize();
+        Ok(crate::chrome_service::crypto::to_hex(&digest))
     }
 
     fn probe_command_in_path(cmd: &str) -> Option<PathBuf> {

@@ -1,8 +1,8 @@
 # CINEMATIC STUDIO — MASTER ENGINEERING ROADMAP (V5.0.0)
-**Document Version:** 1.0.0 — Phased Execution Plan  
-**Target Platform:** Windows 11 x64  
-**Product Owner & Lead Developer:** Md. Sohag Hossen  
-**Baseline Commit:** `455f333f702d69848fb8ebd40f99d497c17a527a`  
+**Document Version:** 1.0.0 — Phased Execution Plan
+**Target Platform:** Windows 11 x64
+**Product Owner & Lead Developer:** Md. Sohag Hossen
+**Baseline Commit:** `455f333f702d69848fb8ebd40f99d497c17a527a`
 
 ---
 

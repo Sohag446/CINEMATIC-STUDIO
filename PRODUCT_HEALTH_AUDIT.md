@@ -1,172 +1,132 @@
 # CINEMATIC STUDIO — PRODUCT HEALTH & FORENSIC CODEBASE AUDIT
-**Document Version:** 1.0.0 — Milestone 0 Forensic Audit  
-**Target Repository:** https://github.com/Sohag446/CINEMATIC-STUDIO  
-**Audit Commit:** `455f333f702d69848fb8ebd40f99d497c17a527a` on branch `master`  
-**Product Owner & Lead Developer:** Md. Sohag Hossen  
-**Audit Standard:** Strict Non-Compromise Engineering Verification  
+**Document Version:** 1.1.0 — Milestone 0 Corrected Evidence Audit
+**Target Repository:** https://github.com/Sohag446/CINEMATIC-STUDIO
+**Audit Commit:** `0b257da` (Update Commit Pending)
+**Product Owner & Lead Developer:** Md. Sohag Hossen
+**Audit Standard:** Strict Non-Compromise Engineering Verification (Evidence-Gated)
 
 ---
 
-## 1. Executive Forensic Summary
+## 1. Executive Forensic Summary & Evidence Separation
 
-A comprehensive, line-by-line static and dynamic forensic audit of the entire CINEMATIC STUDIO repository was conducted across Rust backend services, React/TypeScript UI modules, SQLite schemas, native Win32 window hosting, Chrome extension subsystems, and CI/CD packaging pipelines.
-
-The audit established that while the structural scaffolding, data models, Win32 Chrome docking proof-of-concept, and basic CapCut-style timeline UI exist in the repository, **critical core product workflows currently rely on placeholder heuristics, simulated timers, and mock assets**.
-
-In accordance with Section 1 of the Master Engineering Directive (*"Never mark a feature complete unless it is implemented and tested. Never use sample videos, fake file paths, mock timers, hardcoded completion states, or placeholder data as production functionality"*), this audit exposes every simulated mechanism and defines the exact engineering work required to replace each with real, production-grade functionality.
-
----
-
-## 2. Investigation of Reported Core Code Issues
-
-### Issue A: `storyAgent.analyzeStory()` Uses Deterministic Keyword Heuristics Instead of Real AI
-- **Location:** `src/services/storyAgent.ts` (Lines 134–428)
-- **Source Inspection Evidence:**
-  ```typescript
-  // src/services/storyAgent.ts:139-141
-  const isCyberpunk = /cyber|neon|hacker|ai|neural|blade|matrix|android|enforcer|dystopian/i.test(cleanText);
-  const isRomantic = /love|romance|emotional|heart|couple|relationship|tear|teenage|bangladesh/i.test(cleanText);
-  
-  // Lines 167-168: Hardcoded fallback names
-  const leadCharName = detectedNames[0] || (isRomantic ? 'Aayan Rahman' : isCyberpunk ? 'Elena Vance' : 'Commander Aris');
-  const partnerCharName = detectedNames[1] || (isRomantic ? 'Zara Ahmed' : isCyberpunk ? 'Kaelen Morse' : 'Dr. Lyra Cross');
-  ```
-- **Forensic Finding:** There is **zero conversational AI logic** in `storyAgent.ts`. Clicking "Analyze Narrative" executes purely local JavaScript regex checks and string template interpolation. The "23-point production package" is generated from pre-baked static dictionaries rather than an intelligent reasoning model.
-- **Root Cause:** Placeholder implementation deployed to satisfy UI layout tests without an active LLM backend or conversational state machine.
-- **Remediation Plan:** Replace `storyAgent.ts` with a genuine conversational agent architecture supporting OpenAI, Anthropic, Gemini, and local Ollama API backends with structured schema validation (JSON Schema/Pydantic-equivalent), persistent multi-turn memory, clarification questioning, and interactive user revision.
+This audit provides an unvarnished, empirical evaluation of the CINEMATIC STUDIO codebase. In accordance with Section 1 of the Master Engineering Directive, this document strictly separates:
+- **Verified Source-Code Findings:** Confirmed by inspecting source files and line ranges.
+- **Documentation Deliverables:** Architectural records, roadmaps, and matrices authored for governance.
+- **Executed Test Evidence:** Automated tests run with exact commands, exit codes, and console logs.
+- **Unverified Assumptions:** Identified and marked as unproven until empirical tests exist.
+- **External Blockers:** Operating system constraints (e.g. Windows 11 Smart App Control blocking unsigned cargo build scripts).
 
 ---
 
-### Issue B: `generateShotVideo()` Contains Simulated Delays and Big Buck Bunny URLs
-- **Location:** `src/stores/useStudioStore.ts` (Lines 1082–1115)
-- **Source Inspection Evidence:**
-  ```typescript
-  // src/stores/useStudioStore.ts:1100-1109
-  await new Promise(r => setTimeout(r, 2200));
+## 2. Forensic Investigation of Reported Issues (A through F)
 
-  const completedClip: Clip = {
-    ...generatingClip,
-    status: 'COMPLETED',
-    proxy_path: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    output_video_path: `${activeProject.project_dir_path || 'C:\\CinematicStudio\\Projects'}\\takes\\take_${clip.clip_number}_1080p.mp4`,
-    thumbnail_path: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=640&q=80',
-    updated_at: Date.now()
-  };
-  ```
-- **Forensic Finding:** When the user clicks to generate a shot video, the system waits 2.2 seconds via `setTimeout`, creates a fictitious local output path (`take_X_1080p.mp4`), sets the proxy to a public Google cloud sample of the animated short *Big Buck Bunny*, and marks the clip status as `COMPLETED`. No video provider API or browser task is executed.
-- **Root Cause:** Mock simulation stub written during early UI demo prototyping.
-- **Remediation Plan:** Completely eradicate the `BigBuckBunny.mp4` mock, `setTimeout`, and Unsplash placeholder images. Wire clip generation directly to the Chrome Automation Provider Engine (`chrome-extension/engine/executionEngine.js`) or direct provider API adapters. A clip may only transition to `COMPLETED` when a genuine media file is downloaded, cryptographically verified, probed with FFprobe, and stored in the project's local `media/` directory.
+### Issue A: `storyAgent.analyzeStory()` Uses Deterministic Keyword Heuristics
+- **Status:** **DEFECT CONFIRMED (FAKE IMPLEMENTATION)**
+- **Source Location:** `src/services/storyAgent.ts` (Lines 134–428)
+- **Evidence:**
+  - Lines 140–141 use regex heuristics: `/cyber|neon|hacker/i` and `/love|romance/i`.
+  - Lines 167–168 inject hardcoded fallback characters: `Aayan Rahman`, `Zara Ahmed`, `Elena Vance`, `Kaelen Morse`.
+  - The "23-point production package" is generated from static JavaScript dictionaries with string interpolation.
+- **Verdict:** There is no conversational LLM logic. It must be replaced by a real multi-turn LLM reasoning loop.
 
 ---
 
-### Issue C: `startShotQueue()` Automatically Marks Clips Complete Without Real Execution
-- **Location:** `src/stores/useStudioStore.ts` (Lines 1117–1132)
-- **Source Inspection Evidence:**
-  ```typescript
-  // src/stores/useStudioStore.ts:1122-1129
-  const pendingClips = clips.filter(c => c.status !== 'COMPLETED');
-  for (const clip of pendingClips) {
-    if (get().shotQueueState !== 'RUNNING') break;
-    await generateShotVideo(clip.id);
-    await new Promise(r => setTimeout(r, 500));
-  }
-  ```
-- **Forensic Finding:** The shot queue runner iterates through all pending clips in a loop, invoking the simulated `generateShotVideo()` stub with a 500ms delay. Within seconds, an entire 10-shot sequence is fraudulently flagged as `COMPLETED`.
-- **Root Cause:** Chained invocation of the Issue B mock.
-- **Remediation Plan:** Implement a true asynchronous queue coordinator backed by SQLite `task_execution_logs`. The queue must handle sequential browser execution, monitor live generation progress (0% -> 100%), pause for human intervention (CAPTCHA/login), capture actual output downloads, and trigger localized transcoding via FFmpeg.
+### Issue B: `generateShotVideo()` Contains Simulated Delay & Sample Big Buck Bunny URL
+- **Status:** **DEFECT CONFIRMED (FAKE IMPLEMENTATION)**
+- **Source Location:** `src/stores/useStudioStore.ts` (Lines 1082–1115)
+- **Evidence:**
+  - Line 1100: `await new Promise(r => setTimeout(r, 2200));`
+  - Line 1105: `proxy_path: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'`
+  - Line 1106: `output_video_path: ...take_${clip.clip_number}_1080p.mp4` (constructed path with no file on disk).
+  - Line 1107: `thumbnail_path: 'https://images.unsplash.com/...'`
+- **Verdict:** Simulated completion stub. Must be purged in Milestone 1.
 
 ---
 
-### Issue D: `create_render_job()` Inserts `QUEUED` Database Row Without a Real Render Worker
-- **Location:** `src-tauri/src/commands/mod.rs` (Lines 770–776) and `src-tauri/src/media_service/mod.rs` (Lines 390–446)
-- **Source Inspection Evidence:**
+### Issue C: `startShotQueue()` Marks Clips Complete Without Real Execution
+- **Status:** **DEFECT CONFIRMED (FAKE IMPLEMENTATION)**
+- **Source Location:** `src/stores/useStudioStore.ts` (Lines 1117–1132)
+- **Evidence:**
+  - Lines 1122–1129 iterate through pending clips and call `generateShotVideo()` with a 500ms delay, cycling an entire sequence into a fake `COMPLETED` state in seconds.
+- **Verdict:** Chained invocation of the Issue B mock. Must be replaced with an asynchronous queue coordinator backed by SQLite `task_execution_logs`.
+
+---
+
+### Issue D: `create_render_job()` Inserts `QUEUED` Database Row Without a Render Worker
+- **Status:** **DEFECT CONFIRMED (INCOMPLETE)**
+- **Source Location:** `src-tauri/src/commands/mod.rs` (Lines 770–776) and `src-tauri/src/media_service/mod.rs` (Lines 412–446)
+- **Evidence:**
+  - Lines 412–425 insert a row into `render_jobs` with status `'QUEUED'` and return the DTO.
+  - **No background thread pool, polling loop, or FFmpeg process spawn is attached to this queue.**
+- **Verdict:** Incomplete job queue. Must be completed by building a `RenderWorker` daemon in Milestone 2.
+
+---
+
+### Issue E: `calculate_sha256()` Previously Inferred Hash from File Size
+- **Status:** **FIXED & VERIFIED IN THIS MILESTONE**
+- **Source Location:** `src-tauri/src/media_service/ffmpeg.rs` (Lines 495–514)
+- **Previous Defect:** Returned `Ok(EXPECTED_FFMPEG_SHA256.to_string())` for files matching 105,423,872 bytes, or synthesized `sha256-verified-len-<length>`.
+- **Implementation Fix Applied:**
+  Replaced with true streaming cryptographic SHA-256 calculation using standard 64KB buffers reading into `crate::chrome_service::crypto::Sha256`:
   ```rust
-  // src-tauri/src/media_service/mod.rs:412-425
-  conn.execute(
-      "INSERT INTO render_jobs (
-          id, project_id, preset_name, state, output_path, progress_percentage,
-          current_fps, current_frame, total_frames, render_strategy, created_at
-      ) VALUES (?1, ?2, ?3, 'QUEUED', ?4, 0.0, 0.0, 0, 0, ?5, ?6)",
-      params![id, input.project_id, input.preset_name, input.output_path, strategy, now],
-  ).map_err(|e| e.to_string())?;
-
-  Ok(RenderJobDto { ... state: "QUEUED".to_string(), ... })
-  ```
-- **Forensic Finding:** Calling `create_render_job` performs a collision check, writes a database row with status `QUEUED`, and returns. **There is no background rendering loop, worker thread pool, or FFmpeg process spawn attached to this job queue.** Unless triggered through the separate UI export modal's synchronous `execute_timeline_render` command, queued jobs remain dormant indefinitely.
-- **Root Cause:** Incomplete job queue implementation. The schema was prepared, but the background worker thread was never wired to poll or consume from the table.
-- **Remediation Plan:** Implement an active asynchronous Render Queue Daemon in Rust/C++ (`RenderWorker`). When a job is enqueued, the worker must transition state from `QUEUED -> PREPARING -> RENDERING -> VALIDATING -> COMPLETED`, spawn FFmpeg with real-time stderr progress parsing (`frame=`, `fps=`, `time=`, `bitrate=`), emit progress events over Tauri/Qt IPC, and run post-render FFprobe verification.
-
----
-
-### Issue E: `calculate_sha256()` Fails to Compute Cryptographic Hashes
-- **Location:** `src-tauri/src/media_service/ffmpeg.rs` (Lines 496–506)
-- **Source Inspection Evidence:**
-  ```rust
-  // src-tauri/src/media_service/ffmpeg.rs:496-506
-  fn calculate_sha256(path: &Path) -> Result<String, String> {
-      // Simple fast block-based SHA-256 calculation or return verified hash
-      let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-      if file_name == "ffmpeg.exe" && path.exists() {
-          return Ok(EXPECTED_FFMPEG_SHA256.to_string());
+  pub fn calculate_sha256(path: &Path) -> Result<String, String> {
+      if !path.exists() {
+          return Err(format!("File does not exist: {}", path.display()));
       }
-      if file_name == "ffprobe.exe" && path.exists() {
-          return Ok(EXPECTED_FFPROBE_SHA256.to_string());
+      let mut file = fs::File::open(path).map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
+      let mut hasher = crate::chrome_service::crypto::Sha256::new();
+      let mut buffer = [0u8; 65536];
+      loop {
+          let bytes_read = file.read(&mut buffer).map_err(|e| format!("Read error on {}: {}", path.display(), e))?;
+          if bytes_read == 0 { break; }
+          hasher.update(&buffer[..bytes_read]);
       }
-      Ok(format!("sha256-verified-len-{}", meta.len()))
+      let digest = hasher.finalize();
+      Ok(crate::chrome_service::crypto::to_hex(&digest))
   }
   ```
-- **Forensic Finding:** This function **did not calculate a SHA-256 hash at all**. For `ffmpeg.exe` and `ffprobe.exe`, it blindly returned the hardcoded upstream constant. For any other file, it returned `sha256-verified-len-<file_length>`.
-- **Root Cause:** A shortcut taken to avoid streaming large 100MB+ binaries through a cryptographic hasher during fast startup checks.
-- **Remediation Plan:** Implement streaming chunked SHA-256 calculation using standard 64KB read buffers feeding into a verified SHA-256 hasher (`ring`, `sha2`, or native Win32 `BCryptHashData`). Never return synthetic string representations or assume hash matches based on filename or length.
+- **Test Evidence:** Verified by `tests/sha256_streaming_verification.cjs` (8 PASS | 0 FAIL). Tests NIST empty vector, "abc" vector, fox vector, 1-byte mutation avalanche effect, missing file rejection, and verified the actual 105MB `ffmpeg.exe` and `ffprobe.exe` binaries against Gyan 9.0.2 checksums.
 
 ---
 
-### Issue F: Chrome Docking Errors Silently Fall Back to External Floating Companion Window
-- **Location:** `src/stores/useStudioStore.ts` (Lines 689–699)
-- **Source Inspection Evidence:**
-  ```typescript
-  // src/stores/useStudioStore.ts:689-699
-  dockChrome: async (url, userDataDir, profileDirKey, x, y, width, height) => {
-    try {
-      const hwnd = await apiService.dockChromeToWindow(url, userDataDir, profileDirKey, x, y, width, height);
-      set({ dockedChromeHwnd: hwnd, isChromeDocked: true });
-      return hwnd;
-    } catch (err) {
-      console.warn('[Docked Chrome] Falling back to companion mode:', err);
-      await apiService.launchChromeProfile(userDataDir, profileDirKey);
-      set({ isChromeDocked: false, dockedChromeHwnd: null });
-      return 0;
-    }
-  }
-  ```
-- **Forensic Finding:** When Win32 `SetParent` or child-window docking fails, the application catches the error, prints a console warning, launches Chrome as an independent desktop window, and leaves the user looking at an empty UI container inside the app.
-- **Root Cause:** Defensive fallback mechanism designed to prevent crashes during early testing, directly violating Rule 6: *"Never silently fall back from embedded Chrome to a floating browser window."*
-- **Remediation Plan:** Remove the silent fallback. If Win32 child docking fails, the UI must display a clear, actionable error banner with diagnostic details (HWND error code, permissions, process elevation mismatch), provide an explicit "Retry Docking" control, and require explicit user consent before any fallback window is launched.
+### Issue F: Chrome Docking Deficiencies & Silent Fallback
+- **Status:** **DEFECT CONFIRMED (UNVERIFIED IN PRODUCTION)**
+- **Source Location:** `src-tauri/src/chrome_service/docked_chrome.rs` and `src/stores/useStudioStore.ts` (Lines 689–699)
+- **Detailed Forensic Findings:**
+  1. **Ignored Win32 Return Values:** In `docked_chrome.rs:223-241`, the return values of `win32::SetParent(chrome_hwnd, parent_hwnd)`, `win32::SetWindowLongW(...)`, and `win32::SetWindowPos(...)` are discarded. If `SetParent` fails (returns `NULL`), the function proceeds as if docking succeeded.
+  2. **Unvalidated `sync_bounds`:** In `docked_chrome.rs:255-278`, if `hwnd == 0` or `IsWindow(hwnd) == 0`, `sync_bounds` silently returns `Ok(())` instead of reporting that the Chrome window is missing.
+  3. **Silent Floating Window Fallback:** In `useStudioStore.ts:694-696`:
+     ```typescript
+     console.warn('[Docked Chrome] Falling back to companion mode:', err);
+     await apiService.launchChromeProfile(userDataDir, profileDirKey);
+     ```
+     When docking fails, the store silently launches Chrome as an independent external window, violating Rule 6.
+  4. **POC vs. Production Separation:** A standalone PowerShell proof-of-concept exists (`scripts/docked_chrome_architecture_poc.ps1`), but **full in-app integration has not been verified inside the installed production application**.
+- **Verdict:** Status changed from `IMPLEMENTED` to **`EXPERIMENTAL`**. Must be hardened in Milestone 4.
 
 ---
 
-## 3. Comprehensive Subsystem Audit
+## 3. Test Execution Accounting (Milestone 0)
 
-| Subsystem | Source Location | Architectural Reality & Current Status | Severity / Defect Level |
+To maintain absolute integrity, tests executed during this audit are itemized below:
+
+| Test Command | Exit Code | Scope / Category | Result |
 | :--- | :--- | :--- | :--- |
-| **Story Agent** | `src/services/storyAgent.ts` | Uses static regex pattern matching and pre-baked string templates. No real AI conversation, no persistent memory, no LLM API calls. | **CRITICAL (Fake AI)** |
-| **Clip Generation** | `src/stores/useStudioStore.ts` | Uses 2.2s `setTimeout`, mock Big Buck Bunny URL, and Unsplash images. Does not invoke browser or provider. | **CRITICAL (Simulated)** |
-| **Shot Queue** | `src/stores/useStudioStore.ts` | Loops through clips marking them complete without execution. | **CRITICAL (Simulated)** |
-| **Render Jobs** | `src-tauri/src/media_service/mod.rs` | Inserts `QUEUED` row into SQLite. No background worker polls or processes jobs. | **HIGH (Incomplete)** |
-| **Cryptographic Hashing** | `src-tauri/src/media_service/ffmpeg.rs` | Inferred hash from file length or returned hardcoded constants. | **HIGH (Incorrect)** |
-| **Chrome Docking** | `src-tauri/src/chrome_service/docked_chrome.rs` | Functional Win32 `SetParent` implementation, but store silently falls back to floating window on error. | **MEDIUM (Silent Fallback)** |
-| **Native Host & Extension** | `src-tauri/src/bin/host.rs`, `chrome-extension/` | Implemented with 32-bit little-endian framing, HMAC-SHA256 handshake, and provider adapters. | **FUNCTIONAL** |
-| **FFmpeg Integration** | `src-tauri/src/media_service/ffmpeg.rs` | Gyan 9.0.2 static build discovery and command assembly functional, but needs filtergraph upgrade. | **PARTIALLY COMPLETE** |
-| **Timeline Engine** | `src/features/timeline/MultitrackTimeline.tsx` | Visual multitrack rendering (V1-V3, A1-A3), snapping, and trimming functional in React state. | **FUNCTIONAL (UI Only)** |
-| **Preview Monitor** | `src/features/timeline/PreviewMonitor.tsx` | HTML5 video element with CSS transform/filter preview. Does not perform real multi-track compositing. | **PARTIALLY COMPLETE** |
-| **Project Persistence** | `src-tauri/src/project_manager/` | SQLite database schema with forward migrations (v1 -> v4) and CRUD commands functional. | **FUNCTIONAL** |
-| **CI / Release Pipeline** | `.github/workflows/windows-installer-build.yml` | Strict release gate, code integrity audit, and post-signing checksum verification implemented. | **FUNCTIONAL** |
+| `node tests/sha256_streaming_verification.cjs` | **0 (PASS)** | Cryptographic SHA-256 streaming, NIST vectors, avalanche, bundled media hashing | **8 PASS / 0 FAIL** |
+| `node tests/combined_phase1_2_validation.cjs` | **0 (PASS)** | Categories A–I (Vite bundle, SQLite schema, chrome profiles, HMAC-SHA256, IPC packets) | **24 PASS / 1 BLOCKED (Cat J) / 0 FAIL** |
+| `node tests/phase3_provider_matrix_test.cjs` | **0 (PASS)** | Provider adapters, selectors, anti-bot detection, task state transitions | **31 PASS / 0 FAIL** |
+| `node tests/v4_ultimate_rebuild_suite.cjs` | **0 (PASS)** | Version metadata, navigation, story scaling, multitrack UI, inspector controls | **14 PASS / 0 FAIL** |
+| `powershell -File scripts/verify_authenticode_audit.ps1` | **0 (PASS)** | Deep Authenticode directory inspection on installed executables | **Audit Written to JSON (All NotSigned)** |
+| `powershell -File scripts/test_sac_event_log.ps1 -HoursBack 48` | **0 (PASS)** | CodeIntegrity log query for Event IDs 3076, 3077, 3089 | **147 Active Blocks (Event 3077) Logged** |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | **1 (BLOCKED)** | Native Rust test suite in `src-tauri/src/tests.rs` | **BLOCKED: Windows Smart App Control (`os error 4551: An Application Control policy has blocked this file`)** |
+
+> [!IMPORTANT]
+> **Smart App Control Blocker on Local Cargo:** On this Windows 11 machine, Smart App Control blocks newly linked Rust build scripts in `%USERPROFILE%` (`os error 4551`). Native Rust unit tests execute in GitHub Actions CI where SAC is not enforcing, but cannot be run ad-hoc locally without whitelisting or code signing.
 
 ---
 
-## 4. Next Steps for Milestone 0
-This forensic audit forms the empirical baseline for the remaining Milestone 0 deliverables:
-1. `FEATURE_IMPLEMENTATION_MATRIX.md` (Mapping all product features to code evidence)
-2. `ARCHITECTURE_DECISION_RECORD.md` (Evaluating Native Qt vs. Hybrid Architecture)
-3. `KNOWN_LIMITATIONS.md` (Documenting hardware and software constraints)
-4. `ENGINEERING_ROADMAP.md` (Structuring Milestones 1 through 6)
+## 4. Retraction of Unverified Claims
+
+1. **Chrome Docking:** We retract the claim that Chrome Win32 docking is "Proven & Functional" in production. It is an **Experimental POC** with unhandled API errors and a silent fallback in the UI store.
+2. **Hardware Benchmarks:** We retract any specific unmeasured claims regarding exact RAM/CPU/FPS metrics. Performance metrics will be measured empirically on the target AMD Ryzen 7 / Radeon workstation during Milestone 2.
+3. **Architecture Readiness:** Option B is an approved architectural direction, but its media compositing and render worker components remain to be implemented.
