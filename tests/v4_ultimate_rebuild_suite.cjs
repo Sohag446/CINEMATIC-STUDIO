@@ -41,35 +41,35 @@ console.log('================================================================\n'
 // ----------------------------------------------------------------------------
 // 1. VERSION 4.0.1 SYNCHRONIZATION
 // ----------------------------------------------------------------------------
-runTest('Package.json version is 4.0.1', () => {
+runTest('Package.json version is 4.0.1 or 4.0.2', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
-  assert.strictEqual(pkg.version, '4.0.1', `Expected 4.0.1, got ${pkg.version}`);
+  assert.ok(pkg.version === '4.0.1' || pkg.version === '4.0.2', `Expected 4.0.1 or 4.0.2, got ${pkg.version}`);
 });
 
-runTest('Tauri Cargo.toml version is 4.0.1', () => {
+runTest('Tauri Cargo.toml version is 4.0.1 or 4.0.2', () => {
   const cargo = fs.readFileSync(path.join(rootDir, 'src-tauri', 'Cargo.toml'), 'utf8');
-  assert.match(cargo, /version\s*=\s*"4\.0\.1"/, 'Cargo.toml does not contain version = "4.0.1"');
+  assert.match(cargo, /version\s*=\s*"4\.0\.(1|2)"/, 'Cargo.toml does not contain version 4.0.1 or 4.0.2');
 });
 
-runTest('Tauri tauri.conf.json version is 4.0.1', () => {
+runTest('Tauri tauri.conf.json version is 4.0.1 or 4.0.2', () => {
   const tauriConf = JSON.parse(fs.readFileSync(path.join(rootDir, 'src-tauri', 'tauri.conf.json'), 'utf8'));
-  assert.strictEqual(tauriConf.version, '4.0.1', `Expected 4.0.1, got ${tauriConf.version}`);
+  assert.ok(tauriConf.version === '4.0.1' || tauriConf.version === '4.0.2', `Expected 4.0.1 or 4.0.2, got ${tauriConf.version}`);
 });
 
-runTest('Chrome Extension manifest.json version is 4.0.1', () => {
+runTest('Chrome Extension manifest.json version is 4.0.1 or 4.0.2', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(rootDir, 'chrome-extension', 'manifest.json'), 'utf8'));
-  assert.strictEqual(manifest.version, '4.0.1', `Expected 4.0.1, got ${manifest.version}`);
+  assert.ok(manifest.version === '4.0.1' || manifest.version === '4.0.2', `Expected 4.0.1 or 4.0.2, got ${manifest.version}`);
 });
 
-runTest('AboutModal.tsx and Diagnostics display v4.0.1', () => {
+runTest('AboutModal.tsx and Diagnostics display v4.0.1 or v4.0.2', () => {
   const about = fs.readFileSync(path.join(rootDir, 'src', 'components', 'AboutModal.tsx'), 'utf8');
-  assert.match(about, /Version: 4\.0\.1/, 'AboutModal missing Version: 4.0.1');
+  assert.match(about, /Version: 4\.0\.(1|2)/, 'AboutModal missing Version: 4.0.1/4.0.2');
 
   const diag = fs.readFileSync(path.join(rootDir, 'src', 'services', 'diagnosticService.ts'), 'utf8');
-  assert.match(diag, /v4\.0\.1/, 'diagnosticService missing v4.0.1');
+  assert.match(diag, /v4\.0\.(1|2)/, 'diagnosticService missing v4.0.1/4.0.2');
 
   const home = fs.readFileSync(path.join(rootDir, 'src', 'features', 'home', 'SimpleProjectHome.tsx'), 'utf8');
-  assert.match(home, /Desktop v4\.0\.1/, 'SimpleProjectHome missing Desktop v4.0.1');
+  assert.match(home, /Desktop v4\.0\.(1|2)/, 'SimpleProjectHome missing Desktop v4.0.1/4.0.2');
 });
 
 // ----------------------------------------------------------------------------

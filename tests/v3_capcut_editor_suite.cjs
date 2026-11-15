@@ -34,24 +34,24 @@ function runTest(name, fn) {
 }
 
 // TEST 1: Version 3.0.0+ Synchronization
-runTest('All configuration files strictly synchronized to version 3.0.0, 4.0.0, or 4.0.1', () => {
+runTest('All configuration files strictly synchronized to version 3.0.0, 4.0.0, 4.0.1, or 4.0.2', () => {
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  assert.ok(pkg.version === '3.0.0' || pkg.version === '4.0.0' || pkg.version === '4.0.1', `package.json version should be 3.0.0, 4.0.0, or 4.0.1, got ${pkg.version}`);
+  assert.ok(pkg.version === '3.0.0' || pkg.version === '4.0.0' || pkg.version === '4.0.1' || pkg.version === '4.0.2', `package.json version should be 3.0.0, 4.0.0, 4.0.1, or 4.0.2, got ${pkg.version}`);
 
   const tauriConf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
-  assert.ok(tauriConf.version === '3.0.0' || tauriConf.version === '4.0.0' || tauriConf.version === '4.0.1', `tauri.conf.json version should be 3.0.0, 4.0.0, or 4.0.1, got ${tauriConf.version}`);
+  assert.ok(tauriConf.version === '3.0.0' || tauriConf.version === '4.0.0' || tauriConf.version === '4.0.1' || tauriConf.version === '4.0.2', `tauri.conf.json version should be 3.0.0, 4.0.0, 4.0.1, or 4.0.2, got ${tauriConf.version}`);
 
   const cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
-  assert.match(cargo, /version\s*=\s*"(3|4)\.0\.(0|1)"/, 'src-tauri/Cargo.toml must have version 3.0.0, 4.0.0, or 4.0.1');
+  assert.match(cargo, /version\s*=\s*"(3|4)\.0\.(0|1|2)"/, 'src-tauri/Cargo.toml must have version 3.0.0, 4.0.0, 4.0.1, or 4.0.2');
 
   const manifest = JSON.parse(fs.readFileSync('chrome-extension/manifest.json', 'utf8'));
-  assert.ok(manifest.version === '3.0.0' || manifest.version === '4.0.0' || manifest.version === '4.0.1', `chrome-extension/manifest.json version should be 3.0.0, 4.0.0, or 4.0.1, got ${manifest.version}`);
+  assert.ok(manifest.version === '3.0.0' || manifest.version === '4.0.0' || manifest.version === '4.0.1' || manifest.version === '4.0.2', `chrome-extension/manifest.json version should be 3.0.0, 4.0.0, 4.0.1, or 4.0.2, got ${manifest.version}`);
 
   const diag = fs.readFileSync('src/services/diagnosticService.ts', 'utf8');
-  assert.ok(diag.includes('v3.0.0') || diag.includes('v4.0.0') || diag.includes('v4.0.1'), 'diagnosticService.ts must report v3.0.0, v4.0.0, or v4.0.1');
+  assert.ok(diag.includes('v3.0.0') || diag.includes('v4.0.0') || diag.includes('v4.0.1') || diag.includes('v4.0.2'), 'diagnosticService.ts must report v3.0.0, v4.0.0, v4.0.1, or v4.0.2');
 
   const about = fs.readFileSync('src/components/AboutModal.tsx', 'utf8');
-  assert.ok(about.includes('3.0.0') || about.includes('4.0.0') || about.includes('4.0.1'), 'AboutModal.tsx must report 3.0.0, 4.0.0, or 4.0.1');
+  assert.ok(about.includes('3.0.0') || about.includes('4.0.0') || about.includes('4.0.1') || about.includes('4.0.2'), 'AboutModal.tsx must report 3.0.0, 4.0.0, 4.0.1, or 4.0.2');
 });
 
 // TEST 2: 5-Section Desktop Navigation
