@@ -532,6 +532,11 @@ impl MediaEngineResolver {
 pub struct FFmpegManager;
 
 impl FFmpegManager {
+    /// Computes streaming cryptographic SHA-256 of a file using standard 64KB buffers without loading the entire binary into RAM.
+    pub fn calculate_sha256(path: &Path) -> Result<String, String> {
+        MediaEngineResolver::calculate_sha256(path)
+    }
+
     /// Detects availability, versions, bundled status, encoders, and hardware capabilities of FFmpeg and FFprobe
     pub fn detect_tools(
         custom_ffmpeg: Option<&str>,

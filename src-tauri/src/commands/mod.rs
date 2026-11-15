@@ -6,7 +6,7 @@ use crate::chrome_service::{
 use crate::database::{run_integrity_check, AppSettings, DbPool, RecoveryReport};
 use crate::media_service::{
     CreateMediaAssetDto, CreateRenderJobDto, CreateTimelineClipDto, FFmpegManager, FFmpegStatusDto,
-    MediaAssetDto, MediaService, RenderJobDto, TimelineClipDto, TimelineTrackDto,
+    MediaAssetDto, MediaProbeDto, MediaService, RenderJobDto, TimelineClipDto, TimelineTrackDto,
     UpdateTimelineClipDto,
 };
 use crate::project_manager::ProjectMetadata;

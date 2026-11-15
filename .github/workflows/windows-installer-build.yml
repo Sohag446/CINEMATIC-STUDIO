@@ -110,11 +110,18 @@ jobs:
           $hasSSLCom = ($env:ES_USERNAME -and $env:ES_PASSWORD -and $env:CREDENTIAL_ID -and $env:ES_TOTP_SECRET)
           $hasPFX = ($env:WINDOWS_CSC_LINK)
           
-          if ($hasSSLCom -or $hasPFX) {
+          if ($hasSSLCom) {
             Write-Host "=========================================================================="
-            Write-Host "[RELEASE GATE: PASSED] Code-signing credentials detected."
+            Write-Host "[RELEASE GATE: PASSED] SSL.com eSigner credentials detected."
             Write-Host "=========================================================================="
             echo "SIGNING_CONFIGURED=true" >> $env:GITHUB_OUTPUT
+            echo "SIGNING_METHOD=sslcom" >> $env:GITHUB_OUTPUT
+          } elseif ($hasPFX) {
+            Write-Host "=========================================================================="
+            Write-Host "[RELEASE GATE: PASSED] Authenticode PFX certificate detected."
+            Write-Host "=========================================================================="
+            echo "SIGNING_CONFIGURED=true" >> $env:GITHUB_OUTPUT
+            echo "SIGNING_METHOD=pfx" >> $env:GITHUB_OUTPUT
           } else {
             Write-Host "=========================================================================="
             Write-Host "[RELEASE GATE: NOTICE] No code-signing credentials found in GitHub Secrets."
@@ -123,6 +130,7 @@ jobs:
             Write-Host "  - Permitted for internal development testing only."
             Write-Host "=========================================================================="
             echo "SIGNING_CONFIGURED=false" >> $env:GITHUB_OUTPUT
+            echo "SIGNING_METHOD=none" >> $env:GITHUB_OUTPUT
           }
 
       - name: Fail Unsigned Public Release Tags
@@ -164,7 +172,7 @@ jobs:
 
       # Option 1: SSL.com eSigner Cloud Signing (Pinned to immutable commit cf5f6c1 for v1.3.2)
       - name: Sign Executables with SSL.com eSigner CodeSignTool
-        if: steps.gate.outputs.SIGNING_CONFIGURED == 'true' && secrets.ES_USERNAME != ''
+        if: steps.gate.outputs.SIGNING_CONFIGURED == 'true' && steps.gate.outputs.SIGNING_METHOD == 'sslcom'
         uses: sslcom/esigner-codesign@cf5f6c1e95646f9037ca3dfcf776ec4ec1bc0c4d
         with:
           command: 'batch_sign'
@@ -178,7 +186,7 @@ jobs:
 
       # Option 2: Standard Authenticode PFX via signtool.exe
       - name: Sign Executables with Authenticode PFX
-        if: steps.gate.outputs.SIGNING_CONFIGURED == 'true' && secrets.WINDOWS_CSC_LINK != '' && secrets.ES_USERNAME == ''
+        if: steps.gate.outputs.SIGNING_CONFIGURED == 'true' && steps.gate.outputs.SIGNING_METHOD == 'pfx'
         shell: pwsh
         env:
           WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK || secrets.CSC_LINK }}
