@@ -173,7 +173,7 @@ jobs:
       # Option 1: SSL.com eSigner Cloud Signing (Pinned to immutable commit cf5f6c1 for v1.3.2)
       - name: Sign Executables with SSL.com eSigner CodeSignTool
         if: steps.gate.outputs.SIGNING_CONFIGURED == 'true' && steps.gate.outputs.SIGNING_METHOD == 'sslcom'
-        uses: sslcom/esigner-codesign@cf5f6c1e95646f9037ca3dfcf776ec4ec1bc0c4d
+        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b
         with:
           command: 'batch_sign'
           username: ${{ secrets.ES_USERNAME }}
