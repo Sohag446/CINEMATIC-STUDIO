@@ -90,6 +90,41 @@ jobs:
             exit 1
           }
 
+      - name: Evaluate Code-Signing Gate
+        id: gate
+        shell: pwsh
+        env:
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+          ES_PASSWORD: ${{ secrets.ES_PASSWORD }}
+          CREDENTIAL_ID: ${{ secrets.CREDENTIAL_ID }}
+          ES_TOTP_SECRET: ${{ secrets.ES_TOTP_SECRET }}
+          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK || secrets.CSC_LINK }}
+        run: |
+          $hasSSLCom = ($env:ES_USERNAME -and $env:ES_PASSWORD -and $env:CREDENTIAL_ID -and $env:ES_TOTP_SECRET)
+          $hasPFX = ($env:WINDOWS_CSC_LINK)
+          
+          if ($hasSSLCom -or $hasPFX) {
+            Write-Host "=========================================================================="
+            Write-Host "[RELEASE GATE: PASSED] Code-signing credentials detected."
+            Write-Host "=========================================================================="
+            echo "SIGNING_CONFIGURED=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "=========================================================================="
+            Write-Host "[RELEASE GATE: NOTICE] No code-signing credentials found in GitHub Secrets."
+            Write-Host "  - Executable artifacts will remain UNSIGNED."
+            Write-Host "  - Windows 11 Smart App Control will BLOCK installation on client systems."
+            Write-Host "  - Permitted for internal development testing only."
+            Write-Host "=========================================================================="
+            echo "SIGNING_CONFIGURED=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Fail Unsigned Public Release Tags
+        if: startsWith(github.ref, 'refs/tags/v') && steps.gate.outputs.SIGNING_CONFIGURED != 'true'
+        shell: pwsh
+        run: |
+          Write-Error "[FATAL] A public release tag ($env:GITHUB_REF) was pushed, but code-signing credentials are not configured in GitHub Secrets. Public releases MUST NOT be published unsigned."
+          exit 1
+
       - name: Stage Release Artifacts & Extension Package
         shell: pwsh
         run: |
@@ -120,93 +155,65 @@ jobs:
             }
           }
 
-      # Option 1: Microsoft Trusted Signing (formerly Azure Code Signing / Artifact Signing)
-      - name: Sign Executables with Microsoft Trusted Signing
-        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME != ''
-        uses: azure/trusted-signing-action@v0.5.1
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TRUSTED_SIGNING_ACCOUNT_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
+      # Option 1: SSL.com eSigner Cloud Signing (Pinned to immutable commit cf5f6c1 for v1.3.2)
+      - name: Sign Executables with SSL.com eSigner CodeSignTool
+        if: steps.gate.outputs.SIGNING_CONFIGURED == 'true' && secrets.ES_USERNAME != ''
+        uses: sslcom/esigner-codesign@cf5f6c1e95646f9037ca3dfcf776ec4ec1bc0c4d
         with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT || 'https://wus.codesigning.azure.net/' }}
-          code-signing-account-name: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
-          certificate-profile-name: ${{ secrets.AZURE_TRUSTED_SIGNING_PROFILE_NAME }}
-          files-folder: release_artifacts
-          files-folder-filter: exe,msi
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.digicert.com
-          timestamp-digest: SHA256
+          command: 'batch_sign'
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          dir_path: '${{ github.workspace }}/release_artifacts'
+          output_path: '${{ github.workspace }}/release_artifacts'
+          malware_block: false
 
-      # Option 2: Standard Authenticode PFX via signtool.exe (OV/EV Certificate)
+      # Option 2: Standard Authenticode PFX via signtool.exe
       - name: Sign Executables with Authenticode PFX
-        if: env.HAS_AZURE_SIGNING != 'true'
+        if: steps.gate.outputs.SIGNING_CONFIGURED == 'true' && secrets.WINDOWS_CSC_LINK != '' && secrets.ES_USERNAME == ''
         shell: pwsh
         env:
-          HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME != '' }}
           WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK || secrets.CSC_LINK }}
           WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD }}
         run: |
-          if ($env:WINDOWS_CSC_LINK -and $env:WINDOWS_CSC_KEY_PASSWORD) {
-            Write-Host "Authenticode PFX code-signing certificate detected. Preparing signtool..."
-            $pfxPath = "$env:RUNNER_TEMP\authenticode_cert.pfx"
-            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CSC_LINK))
+          Write-Host "Authenticode PFX code-signing certificate detected. Preparing signtool..."
+          $pfxPath = "$env:RUNNER_TEMP\authenticode_cert.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CSC_LINK))
 
-            $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter "signtool.exe" -Recurse | Select-Object -First 1).FullName
-            if (!$signtool) {
-              Write-Error "signtool.exe not found on runner!"
+          $signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter "signtool.exe" -Recurse | Select-Object -First 1).FullName
+          if (!$signtool) {
+            Write-Error "signtool.exe not found on runner!"
+            exit 1
+          }
+
+          $filesToSign = Get-ChildItem -Path "release_artifacts" -Include *.exe,*.msi -Recurse
+          foreach ($file in $filesToSign) {
+            Write-Host "Signing $($file.Name) with RFC 3161 timestamp..."
+            & $signtool sign /f $pfxPath /p $env:WINDOWS_CSC_KEY_PASSWORD /fd SHA256 /tr "http://timestamp.digicert.com" /td SHA256 /d "Cinematic Studio" $file.FullName
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Signing failed for $($file.FullName)!"
               exit 1
             }
-
-            $filesToSign = Get-ChildItem -Path "release_artifacts" -Include *.exe,*.msi -Recurse
-            foreach ($file in $filesToSign) {
-              Write-Host "Signing $($file.Name) with RFC 3161 timestamp..."
-              & $signtool sign /f $pfxPath /p $env:WINDOWS_CSC_KEY_PASSWORD /fd SHA256 /tr "http://timestamp.digicert.com" /td SHA256 /d "Cinematic Studio" $file.FullName
-              if ($LASTEXITCODE -ne 0) {
-                Write-Error "Signing failed for $($file.FullName)!"
-                exit 1
-              }
-            }
-            Remove-Item $pfxPath -Force
-            Write-Host "Authenticode PFX signing completed successfully."
-          } else {
-            Write-Host "=========================================================================="
-            Write-Host "[WARNING] No Code-Signing Credentials Configured in GitHub Secrets."
-            Write-Host "  - Neither Microsoft Trusted Signing (AZURE_*) nor Authenticode PFX (WINDOWS_CSC_*)"
-            Write-Host "    secrets were detected."
-            Write-Host "  - Generated release packages will be UNSIGNED."
-            Write-Host "  - Windows 11 Smart App Control will BLOCK installation with:"
-            Write-Host "    'We blocked this app because we could not verify its publisher.'"
-            Write-Host "=========================================================================="
           }
+          Remove-Item $pfxPath -Force
+          Write-Host "Authenticode PFX signing completed successfully."
 
-      - name: Verify Authenticode Signatures & Certificate Chain
+      - name: Verify Authenticode Signatures & RFC 3161 Timestamps
         shell: pwsh
         run: |
-          Write-Host "=========================================================================="
-          Write-Host "AUTHENTICODE SIGNATURE VERIFICATION AUDIT"
-          Write-Host "=========================================================================="
-          $files = Get-ChildItem -Path "release_artifacts" -Include *.exe,*.msi -Recurse
-          $allSigned = $true
-          foreach ($file in $files) {
-            $sig = Get-AuthenticodeSignature -FilePath $file.FullName
-            Write-Host "File: $($file.Name)"
-            Write-Host "  Status:      $($sig.Status)"
-            Write-Host "  Signer:      $($sig.SignerCertificate.Subject)"
-            Write-Host "  Issuer:      $($sig.SignerCertificate.Issuer)"
-            Write-Host "  TimeStamper: $($sig.TimeStamperCertificate.Subject)"
-            Write-Host "  Thumbprint:  $($sig.SignerCertificate.Thumbprint)"
-            Write-Host ""
-            if ($sig.Status -ne "Valid") {
-              $allSigned = $false
+          powershell -ExecutionPolicy Bypass -File scripts/verify_authenticode_audit.ps1 -FilePaths (Get-ChildItem -Path release_artifacts -Include *.exe,*.msi | Select-Object -ExpandProperty FullName) -ExpectedPublisher "Md. Sohag Hossen" -OutputJson "release_artifacts/AUTHENTICODE_AUDIT.json"
+          
+          if ("${{ steps.gate.outputs.SIGNING_CONFIGURED }}" -eq "true") {
+            $audit = Get-Content "release_artifacts/AUTHENTICODE_AUDIT.json" | ConvertFrom-Json
+            $failed = $audit | Where-Object { -not $_.IsAuthenticodeValid -or -not $_.HasTimestampCounterSig }
+            if ($failed) {
+              Write-Error "[FATAL] One or more executables failed signature or timestamp verification!"
+              exit 1
             }
-          }
-          if (!$allSigned) {
-            Write-Host "[AUDIT NOTICE] Some or all binaries are not signed with a valid trusted Authenticode signature."
+            Write-Host "[SUCCESS] All distributed executables carry verified Authenticode signatures and valid RFC 3161 timestamps."
           } else {
-            Write-Host "[SUCCESS] All distributed executables have valid Authenticode digital signatures."
+            Write-Host "[AUDIT NOTICE] Unsigned internal build audit complete. Signatures not enforced."
           }
 
       - name: Generate Release Checksums (SHA256SUMS.txt)
@@ -236,7 +243,7 @@ jobs:
           retention-days: 30
 
       - name: Publish Official GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && steps.gate.outputs.SIGNING_CONFIGURED == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: |

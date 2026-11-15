@@ -1,0 +1,1325 @@
+﻿[
+    {
+        "TimeCreated":  "2026-11-15T15:02:30.4142600+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\Cinematic.Studio_4.0.2_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T15:02:18.8768903+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\Cinematic.Studio_4.0.2_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T15:02:06.4110077+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\Cinematic.Studio_4.0.2_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T15:02:00.7984543+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\Cinematic.Studio_4.0.2_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T13:02:08.3550122+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer-v4.0.1\\Cinematic Studio_4.0.1_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T13:02:04.2889055+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer-v4.0.1\\Cinematic Studio_4.0.1_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T13:01:53.8516408+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu2.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T13:01:28.0259764+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer-v4.0.1\\Cinematic Studio_4.0.1_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-15T13:01:22.1933214+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer-v4.0.1\\Cinematic Studio_4.0.1_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T17:54:19.5940912+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\sift 3\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T17:54:15.4461608+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\sift 3\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T16:56:46.0978457+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\soft 2\\Cinematic.Studio_2.0.2_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T16:55:47.8999520+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\soft 2\\cinematic-studio-host (1).exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T16:55:43.6543269+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\soft 2\\Cinematic.Studio_2.0.2_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T16:14:33.6623790+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\svchost.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\sof\\Cinematic.Studio_2.0.1_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T16:12:25.9336560+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\sof\\Cinematic.Studio_2.0.1_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:12:13.7772963+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:12:03.5875207+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:09:11.6705801+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu2.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:08:32.9749161+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\cinematic-studio.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:08:32.6313911+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\cinematic-studio.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:08:31.8474370+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\cinematic-studio.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:08:02.5685014+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\msiexec.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\cinematic-studio.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:03:40.2567843+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:01:56.9137218+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\svchost.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:01:48.6207823+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:01:43.1684361+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:01:10.7046575+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:00:56.0653729+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu2.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:00:33.9497533+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T13:00:23.3281486+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (3)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:27:14.7698367+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu2.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:26:44.7004195+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu2.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:25:17.4265443+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu2.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:20:38.1109845+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu2.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:19:47.3498484+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu1.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:19:05.5207690+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu1.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:17:18.0427866+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu1.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:39.6730692+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Cinematic Studio\\uninstall.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\Temp\\~nsu1.tmp\\Un.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:30.1837056+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:24.3228252+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:19.0074314+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:15.5622072+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\explorer.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\Downloads\\cinematic-studio-windows-installer (2)\\bundle\\nsis\\Cinematic Studio_1.0.0_x64-setup.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:13.6875033+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:08.3435369+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:14:02.9746838+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:57.6180765+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:52.2516107+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:46.9265712+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:41.5582938+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:36.2344849+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:30.8890832+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:25.5203593+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:20.1581511+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:14.8323012+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:09.4822337+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:13:04.0938293+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:58.7373164+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:53.3491506+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:47.9977739+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:42.6596867+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:37.3100702+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:31.9810785+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:26.6105691+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:21.1983918+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:15.8392363+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:10.4906640+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:12:05.1558375+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:59.8107616+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:54.4727942+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:49.1071831+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:43.7532766+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:38.3743874+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:32.9199442+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:27.5886585+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:22.2407875+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:16.9019053+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:11.5718991+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:06.2361112+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:11:00.9119280+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:55.5702266+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:50.2206175+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:44.8963745+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:39.5457704+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:34.2232033+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:28.8907773+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:23.5320524+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:18.1788784+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:12.8510996+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:07.4702149+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:10:02.1369358+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:56.8058639+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:51.4370991+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:46.0347924+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:40.6289830+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:35.2598219+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:29.8595332+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:24.4642803+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:19.1037698+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:13.7453076+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:08.3267833+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:09:02.9669600+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:57.6295732+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:52.2820913+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:46.9263916+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:41.5746161+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:36.2253878+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:30.8419991+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:25.5002385+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:20.0564016+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:14.6880204+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:09.3243763+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:08:03.8554507+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:58.4774451+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:53.1321847+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:47.7759435+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:42.4061254+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:37.0365044+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:31.6778427+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:26.3241345+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:20.9637814+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:15.6195582+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:10.2469502+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:07:04.8754468+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:59.5022230+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:54.1695918+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:48.8175421+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:43.4540548+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:38.0968892+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:32.7574201+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:27.3962691+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:22.0470395+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:16.5816974+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:11.2382355+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:05.8496682+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:06:00.4714897+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:55.0207836+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:49.6542935+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:44.2560817+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:38.8627406+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:33.4788914+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:28.0777181+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:22.7061038+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:17.2776793+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:11.8747124+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:06.4811184+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    {
+        "TimeCreated":  "2026-11-14T04:05:00.9953390+06:00",
+        "EventId":  3077,
+        "EventType":  "ENFORCEMENT_BLOCK (File was blocked by policy)",
+        "FileName":  null,
+        "ProcessName":  null,
+        "PolicyName":  "VerifiedAndReputableDesktop",
+        "Message":  "Code Integrity determined that a process (\\Device\\HarddiskVolume3\\Windows\\System32\\cmd.exe) attempted to load \\Device\\HarddiskVolume3\\Users\\Sohag Hossen\\AppData\\Local\\CinematicStudio\\bin\\cinematic-studio-host.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    }
+]
