@@ -62,17 +62,31 @@ In Milestone A, the native Rust docking implementation in `src-tauri/src/chrome_
 5. **Silent Floating Window Fallback Eliminated:**
    - Removed silent fallback in `useStudioStore.ts` and `AIVideoWorkspace.tsx`. Docking failures now surface `dockChromeError` with explicit retry or manual fallback options.
 
-### 3.2 Chrome Runtime Acceptance Checklist Status (Items A through J):
-- **Item A (No Direct LLM API Endpoints):** PASS (Audited across `src/`, `src-tauri/`, `chrome-extension/`, `scripts/`; zero direct API endpoints).
+### 3.2 Coordinate Origin Evidence & Window Hierarchy
+- **Native Window Hierarchy:**
+  - The top-level Win32 window ($H_{parent}$) is created by Tauri 2 via `CreateWindowExW` and resolved via `window.hwnd()`.
+  - Microsoft Edge WebView2 runs as a child HWND inside $H_{parent}$, configured via `ICoreWebView2Controller::put_Bounds` to fill the parent client area $(0, 0, \text{client\_width}, \text{client\_height})$.
+  - Inside the DOM, `getBoundingClientRect()` yields CSS logical coordinates relative to the webview viewport origin.
+- **Evidence Disclosure:**
+  - The mapping of CSS logical $(0, 0)$ to native parent client $(0, 0)$ is **mathematically and architecturally modeled**.
+  - **It is NOT labeled runtime-verified without actual Windows desktop evidence.**
+  - Live interactive inspection on physical Windows 11 hardware with an active display manager is required to verify sub-pixel alignment and borderless client presentation.
+
+### 3.3 Chrome Runtime Acceptance Checklist Status (Items A through K):
+- **Item A (Expanded Repository-Wide No-AI-API Audit):** PASS (Audited across 126 files in 5 root directories + 12 root/config files; zero prohibited SDKs in `package.json` or `Cargo.toml`; zero direct API endpoints).
 - **Item B (Story Agent Browser Dispatch Contract):** PASS (Verified with 6 genuine unit tests in `tests/milestone_a_docking_and_no_api_suite.cjs`).
 - **Item C (Win32 API Return Code Enforcement):** PASS (Verified via native code contracts and compile assertions).
 - **Item D (Strict Boundary Clamping & High-DPI Math):** PASS (Verified via native Rust unit tests and JS mathematical suite across 100%–200% DPI and sub-100px edge bounds).
 - **Item E (Bounds Sync Deduplication):** PASS (Verified with `requestAnimationFrame` + `cancelAnimationFrame` in `AIVideoWorkspace.tsx`).
 - **Item F (Child Process Cleanup on Failure):** PASS (Verified `terminate_pid` invocation on all docking failure paths).
-- **Item G (Interactive Keyboard & Mouse Wheel Input):** BLOCKED-RUNTIME (Requires interactive GUI desktop session).
-- **Item H (Physical Multi-Monitor DPI Drag):** BLOCKED-RUNTIME (Requires heterogeneous physical multi-monitor hardware).
-- **Item I (Dynamic Minimize/Restore Re-sync):** PASS (Verified via `visibilitychange` handler).
-- **Item J (Automated CI Native Rust Verification):** PASS (Verified via GitHub Actions CI Run).
+- **Item G (Interactive Keyboard & Mouse Wheel Input):** BLOCKED (Requires interactive desktop session on live Windows hardware; not verified).
+- **Item H (Heterogeneous Multi-Monitor Dynamic DPI Transition):** BLOCKED (Requires physical multi-monitor hardware with heterogeneous scaling; not verified).
+- **Item I (Dynamic Minimize/Restore Re-sync):** PASS (Verified via `visibilitychange` handler in frontend).
+- **Item J (Automated CI Native Rust Verification):** PASS (Verified via GitHub Actions CI Run `43742973676`).
+- **Item K (Installed Application Verification):** NOT TESTED (Current build has not been installed and exercised on target workstation).
+
+> [!WARNING]
+> **Production Docking Reality:** Chrome in-workspace docking is **NOT claimed production-ready** based on mathematical or source-level tests alone. Full production readiness requires passing live interactive runtime checks (Items G, H, and K) on target hardware.
 
 ---
 

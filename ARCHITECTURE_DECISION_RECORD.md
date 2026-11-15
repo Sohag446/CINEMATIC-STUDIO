@@ -145,6 +145,7 @@ To embed `chrome.exe` (`Chrome_WidgetWin_1`) reliably inside the Tauri desktop w
    - On Windows, WebView2 creates a child window that fills the entire client area of $H_{parent}$ from origin $(0, 0)$ to $(client\_width, client\_height)$ with no offset menus or borders outside the webview.
    - Therefore, CSS logical coordinates from DOM `element.getBoundingClientRect()` map directly 1:1 to logical client coordinates of $H_{parent}$.
    - Both Tauri and Google Chrome operate under Windows Per-Monitor V2 DPI awareness (`DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`).
+   - *Evidence Disclosure:* This mapping is architecturally and mathematically specified based on Win32 and WebView2 controller design. It is strictly **NOT labeled runtime-verified** until verified on live physical Windows desktop hardware with active visual alignment checks.
 
 2. **DPI Scaling Factor:**
    - Monitor DPI is queried dynamically from Windows via `GetDpiForWindow(parent_hwnd)`.

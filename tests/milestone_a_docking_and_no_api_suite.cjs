@@ -69,55 +69,156 @@ const { storyAgent, parseRequestedDuration } = storyModule.exports;
 
 async function executeAllTests() {
   // ----------------------------------------------------------------------------
-  // 1. ABSOLUTE NO-AI-API ARCHITECTURE CONTRACTS (REPOSITORY-WIDE)
+  // 1. ABSOLUTE NO-AI-API ARCHITECTURE CONTRACTS (EXPANDED REPOSITORY-WIDE AUDIT)
   // ----------------------------------------------------------------------------
 
-  runTest('SOURCE-CONTRACT', 'Zero direct AI API inference endpoints across entire repository', () => {
-    const scanDirs = [
+  runTest('SOURCE-CONTRACT', 'Zero prohibited AI SDK dependencies in package.json & Cargo.toml', () => {
+    // 1. Check package.json dependencies
+    const pkgPath = path.join(rootDir, 'package.json');
+    assert(fs.existsSync(pkgPath), 'package.json must exist');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+    const prohibitedNpmSdks = [
+      'openai',
+      '@google/generative-ai',
+      '@anthropic-ai/sdk',
+      'groq-sdk',
+      'ollama',
+      'ollama-node',
+      'langchain',
+      '@langchain/core'
+    ];
+
+    const allNpmDeps = {
+      ...(pkg.dependencies || {}),
+      ...(pkg.devDependencies || {}),
+      ...(pkg.peerDependencies || {}),
+      ...(pkg.optionalDependencies || {})
+    };
+
+    for (const sdk of prohibitedNpmSdks) {
+      assert(!allNpmDeps[sdk], `Prohibited AI SDK '${sdk}' detected in package.json dependencies!`);
+    }
+
+    // 2. Check src-tauri/Cargo.toml dependencies
+    const cargoPath = path.join(rootDir, 'src-tauri', 'Cargo.toml');
+    assert(fs.existsSync(cargoPath), 'src-tauri/Cargo.toml must exist');
+    const cargoContent = fs.readFileSync(cargoPath, 'utf8');
+
+    const prohibitedCrates = [
+      'async-openai',
+      'ollama-rs',
+      'anthropic',
+      'groq',
+      'google-generativeai'
+    ];
+
+    for (const crate of prohibitedCrates) {
+      const crateRegex = new RegExp(`^\\s*${crate}\\s*=`, 'm');
+      assert(!crateRegex.test(cargoContent), `Prohibited Rust AI crate '${crate}' detected in Cargo.toml!`);
+    }
+  });
+
+  runTest('SOURCE-CONTRACT', 'Zero direct AI API endpoints across all source, build, workflow, extension & config files', () => {
+    const scanRoots = [
       path.join(rootDir, 'src'),
       path.join(rootDir, 'src-tauri', 'src'),
       path.join(rootDir, 'chrome-extension'),
       path.join(rootDir, 'scripts'),
+      path.join(rootDir, '.github', 'workflows'),
     ];
+
+    const specificFiles = [
+      path.join(rootDir, 'package.json'),
+      path.join(rootDir, 'package-lock.json'),
+      path.join(rootDir, 'vite.config.ts'),
+      path.join(rootDir, 'tsconfig.json'),
+      path.join(rootDir, 'tsconfig.node.json'),
+      path.join(rootDir, 'tailwind.config.js'),
+      path.join(rootDir, 'postcss.config.js'),
+      path.join(rootDir, 'index.html'),
+      path.join(rootDir, 'src-tauri', 'Cargo.toml'),
+      path.join(rootDir, 'src-tauri', 'Cargo.lock'),
+      path.join(rootDir, 'src-tauri', 'tauri.conf.json'),
+      path.join(rootDir, 'src-tauri', 'build.rs'),
+    ];
+
+    // Check environment template files if present
+    const envCandidates = ['.env', '.env.example', '.env.template', '.env.local'];
+    for (const envFile of envCandidates) {
+      const p = path.join(rootDir, envFile);
+      if (fs.existsSync(p)) specificFiles.push(p);
+    }
 
     const forbiddenPatterns = [
-      /api\.openai\.com/i,
-      /generativelanguage\.googleapis\.com/i,
-      /api\.anthropic\.com/i,
-      /api\.groq\.com/i,
-      /localhost:11434/i,
-      /apiKey\s*\?:/i,
-      /OPENAI_API_KEY/i,
-      /GEMINI_API_KEY/i,
-      /ANTHROPIC_API_KEY/i,
+      { name: 'OpenAI API Endpoint', regex: /api\.openai\.com/i },
+      { name: 'Gemini GenerativeLanguage Endpoint', regex: /generativelanguage\.googleapis\.com/i },
+      { name: 'Anthropic API Endpoint', regex: /api\.anthropic\.com/i },
+      { name: 'Groq API Endpoint', regex: /api\.groq\.com/i },
+      { name: 'Ollama Local Daemon Inference Endpoint', regex: /(localhost|127\.0\.0\.1):11434/i },
+      { name: 'API Key Configuration Field', regex: /apiKey\s*\?:/i },
+      { name: 'OpenAI API Key Env Var', regex: /OPENAI_API_KEY/i },
+      { name: 'Gemini API Key Env Var', regex: /GEMINI_API_KEY/i },
+      { name: 'Anthropic API Key Env Var', regex: /ANTHROPIC_API_KEY/i },
+      { name: 'Groq API Key Env Var', regex: /GROQ_API_KEY/i },
     ];
 
-    let filesChecked = 0;
+    let filesAudited = 0;
+    const auditedList = [];
+    const excludedDirs = ['node_modules', 'dist', 'target', '.git', 'bin'];
 
-    function walkDir(dir) {
+    function auditFile(filePath) {
+      if (!fs.existsSync(filePath)) return;
+      filesAudited++;
+      auditedList.push(path.relative(rootDir, filePath));
+      const content = fs.readFileSync(filePath, 'utf8');
+
+      for (const { name, regex } of forbiddenPatterns) {
+        assert(!regex.test(content), `Prohibited pattern '${name}' detected in file: ${filePath}`);
+      }
+    }
+
+    function walkDirectory(dir) {
       if (!fs.existsSync(dir)) return;
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          if (entry.name !== 'node_modules' && entry.name !== 'dist' && entry.name !== 'target') {
-            walkDir(fullPath);
+          if (!excludedDirs.includes(entry.name)) {
+            walkDirectory(fullPath);
           }
-        } else if (/\.(ts|tsx|js|cjs|rs|json)$/.test(entry.name)) {
-          filesChecked++;
-          const content = fs.readFileSync(fullPath, 'utf8');
-          for (const pattern of forbiddenPatterns) {
-            assert(!pattern.test(content), `Prohibited AI API pattern ${pattern} detected in ${fullPath}`);
-          }
+        } else if (/\.(ts|tsx|js|cjs|rs|json|yml|yaml|html|css|toml|ps1)$/.test(entry.name)) {
+          auditFile(fullPath);
         }
       }
     }
 
-    for (const dir of scanDirs) {
-      walkDir(dir);
+    for (const dir of scanRoots) {
+      walkDirectory(dir);
     }
 
-    assert(filesChecked > 50, `Expected at least 50 source files to be audited, got ${filesChecked}`);
+    for (const file of specificFiles) {
+      const rel = path.relative(rootDir, file);
+      if (!auditedList.includes(rel)) {
+        auditFile(file);
+      }
+    }
+
+    // Verify that legitimate browser website URLs are permitted and present without flagging
+    const workspaceFile = path.join(rootDir, 'src', 'features', 'aivideo', 'AIVideoWorkspace.tsx');
+    const workspaceContent = fs.readFileSync(workspaceFile, 'utf8');
+    assert(workspaceContent.includes('chatgpt.com'), 'Normal browser URL chatgpt.com must be permitted');
+    assert(workspaceContent.includes('gemini.google.com'), 'Normal browser URL gemini.google.com must be permitted');
+    assert(workspaceContent.includes('claude.ai'), 'Normal browser URL claude.ai must be permitted');
+
+    const manifestFile = path.join(rootDir, 'chrome-extension', 'manifest.json');
+    const manifestContent = fs.readFileSync(manifestFile, 'utf8');
+    assert(manifestContent.includes('chatgpt.com'), 'Normal browser URL chatgpt.com must be permitted in manifest');
+    assert(manifestContent.includes('gemini.google.com'), 'Normal browser URL gemini.google.com must be permitted in manifest');
+    assert(manifestContent.includes('claude.ai'), 'Normal browser URL claude.ai must be permitted in manifest');
+
+    assert(filesAudited >= 70, `Expected at least 70 configuration and source files audited, got ${filesAudited}`);
+    console.log(`       ↳ Expanded Audit Complete: ${filesAudited} files audited across 5 roots + 12 specific configs (0 prohibited SDKs/endpoints).`);
   });
 
   runTest('SOURCE-CONTRACT', 'BrowserAgentDispatcher interface declared with supported AI websites', () => {
