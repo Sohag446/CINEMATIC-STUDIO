@@ -44,20 +44,23 @@ public class Win32PrintWindow {
 }
 "@
 
-$proc = Start-Process -FilePath "C:\Users\Sohag Hossen\AppData\Local\Cinematic Studio\cinematic-studio.exe" -PassThru
-Write-Host "Started PID: $($proc.Id)"
-Start-Sleep -Seconds 4
+$proc = Get-Process -Name 'cinematic-studio' -ErrorAction SilentlyContinue | Select-Object -First 1
+if (!$proc) {
+    $proc = Start-Process -FilePath "C:\Users\Sohag Hossen\AppData\Local\Cinematic Studio\cinematic-studio.exe" -PassThru
+    Start-Sleep -Seconds 4
+}
 
-$p = Get-Process -Id $proc.Id -ErrorAction SilentlyContinue
-if ($p) {
-    $hwnd = $p.MainWindowHandle
-    Write-Host "HWND: $hwnd | Title: $($p.MainWindowTitle)"
-    $bmp = [Win32PrintWindow]::CaptureWindow($hwnd)
+Write-Host "Target PID: $($proc.Id) | Title: $($proc.MainWindowTitle) | HWND: $($proc.MainWindowHandle)"
+if ($proc.MainWindowHandle -ne [IntPtr]::Zero) {
+    $bmp = [Win32PrintWindow]::CaptureWindow($proc.MainWindowHandle)
     if ($bmp) {
         $outPath = "C:\Users\Sohag Hossen\Documents\video agent\docs\screenshots\cinematic_studio_v4_window.png"
         $bmp.Save($outPath, [System.Drawing.Imaging.ImageFormat]::Png)
         $bmp.Dispose()
-        Write-Host "Captured via PrintWindow to $outPath"
+        Write-Host "SUCCESS: Captured via PrintWindow to $outPath ($((Get-Item $outPath).Length) bytes)"
+    } else {
+        Write-Error "Failed to capture window bitmap"
     }
-    Stop-Process -Id $proc.Id -Force
+} else {
+    Write-Error "MainWindowHandle is Zero"
 }

@@ -112,22 +112,26 @@ Tested across all 12 GUI lifecycle operations via [`scripts/test_editor_gui_oper
 ## 5. Release Verification & Deliverables Audit
 
 ### Commit & Tag Resolution
-- **Erroneous Reference Corrected:** The stale string `13d5cb9` found in early drafts has been resolved.
-- **True Commit SHA:** `5c2295918d2bdf79e455a28a77ed9baf78338249`
-- **Tag:** `v4.0.1` (`refs/tags/v4.0.1` pushed and verified on GitHub remote)
+- **Erroneous Reference Corrected:** Stale draft commit strings have been resolved.
+- **Published Release Commit SHA:** `efb276d61e6b1ac8ef43eaf972b40418a439ac3b`
+- **Release Tag:** `v4.0.1` (`refs/tags/v4.0.1` verified on GitHub remote)
+- **CI Build Run:** [Run 43606723751](https://github.com/Sohag446/CINEMATIC-STUDIO/actions/runs/43606723751) (100% Success)
 - **Release URL:** [https://github.com/Sohag446/CINEMATIC-STUDIO/releases/tag/v4.0.1](https://github.com/Sohag446/CINEMATIC-STUDIO/releases/tag/v4.0.1)
 
 ### Official Deliverables & Packaging Specs
 | Deliverable | Filename | Size / Type | Scope & Distribution |
 | :--- | :--- | :---: | :--- |
-| **Windows Desktop Setup** | `Cinematic Studio_4.0.1_x64-setup.exe` | ~62 MB (NSIS) | Single-user installation (`%LOCALAPPDATA%\Cinematic Studio\`), zero UAC prompt |
-| **Windows Enterprise Installer** | `Cinematic Studio_4.0.1_x64_en-US.msi` | ~65 MB (WiX MSI) | Standard MSI package with stable upgrade code |
-| **Chrome Extension (MV3)** | `cinematic-studio-chrome-extension.zip` | 65.4 KB (ZIP) | Manifest V3 Extension with fixed RSA key for side-loading (`chrome://extensions`) |
-| **Native Messaging Host** | `cinematic-studio-host.exe` | 2.34 MB (PE x64) | Chrome native messaging IPC host binary |
-| **Cryptographic Checksums** | `SHA256SUMS.txt` | Text (UTF-8) | SHA-256 hashes of all release packages |
+| **Windows Desktop Setup** | `Cinematic.Studio_4.0.1_x64-setup.exe` | 62,215,796 B (59.3 MB) | Single-user installation (`%LOCALAPPDATA%\Cinematic Studio\`), zero UAC prompt |
+| **Windows Enterprise Installer** | `Cinematic.Studio_4.0.1_x64_en-US.msi` | 87,457,792 B (83.4 MB) | Standard MSI package with stable upgrade code |
+| **Chrome Extension (MV3)** | `cinematic-studio-chrome-extension.zip` | 45,095 B (44.0 KB) | Manifest V3 Extension with fixed RSA key for side-loading (`chrome://extensions`) |
+| **Native Messaging Host** | `cinematic-studio-host.exe` | 2,341,376 B (2.23 MB) | Chrome native messaging IPC host binary |
+| **Cryptographic Checksums** | `SHA256SUMS.txt` | 406 B (UTF-8) | SHA-256 hashes of all release packages |
 
-### Verified Local SHA-256 Checksums
-- `dist/cinematic-studio-chrome-extension.zip`: `0B65A04449909B03C8A1A56BDB3E857475C9B23FF09CE89279E9E38B478966A9`
+### Verified Official SHA-256 Checksums
+- `Cinematic.Studio_4.0.1_x64_en-US.msi`: `437D558E9CBFB3ADB0BD715B5D31CF2856DED1287AE380B65358222ECDC02563`
+- `Cinematic.Studio_4.0.1_x64-setup.exe`: `6ADF0D39065291450412520E893C9202B7EF45E75D6A0A8ED448DF624AD6296F`
+- `cinematic-studio-chrome-extension.zip`: `90F1DD1F620FCB9781FC3AEDE270CCB30270200EFA16C9A15CD22BD39CCADF5F`
+- `cinematic-studio-host.exe`: `5CAD88427F2380FEA3385AE1A544568B2B367AEECAA6065332BD0FF704DAA696`
 - **Code-Signing Status:** Unsigned / Developer Release. Windows SmartScreen displays "Unknown Publisher" prompt until corporate EV Authenticode signing credentials (`WINDOWS_CSC_LINK`) are configured in repository secrets.
 
 ---
