@@ -136,22 +136,33 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
     handleLaunchOrDockChrome(targetUrl);
   };
 
-  // Synchronize docked Chrome bounds on viewport resize
+  // Synchronize docked Chrome bounds on viewport resize and window movement / display DPI changes
   useEffect(() => {
     if (!browserViewportRef.current || !dockedChromeHwnd) return;
-    const observer = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const rect = entry.target.getBoundingClientRect();
-        syncDockedBounds(
-          Math.max(0, Math.round(rect.left)),
-          Math.max(0, Math.round(rect.top)),
-          Math.max(300, Math.round(rect.width)),
-          Math.max(200, Math.round(rect.height))
-        );
-      }
+
+    const syncCurrentBounds = () => {
+      if (!browserViewportRef.current) return;
+      const rect = browserViewportRef.current.getBoundingClientRect();
+      syncDockedBounds(
+        Math.max(0, Math.round(rect.left)),
+        Math.max(0, Math.round(rect.top)),
+        Math.max(300, Math.round(rect.width)),
+        Math.max(200, Math.round(rect.height))
+      );
+    };
+
+    const observer = new ResizeObserver(() => {
+      syncCurrentBounds();
     });
     observer.observe(browserViewportRef.current);
-    return () => observer.disconnect();
+
+    // Also listen to window resize events to handle multi-monitor drag and DPI switches
+    window.addEventListener('resize', syncCurrentBounds);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncCurrentBounds);
+    };
   }, [dockedChromeHwnd, syncDockedBounds]);
 
   // Synchronize docked visibility with active tab

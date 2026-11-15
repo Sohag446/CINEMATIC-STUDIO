@@ -57,6 +57,13 @@ jobs:
           node tests/final_rendering_regression_suite.cjs
           node tests/option_a_chrome_embedding_suite.cjs
           node tests/v4_ultimate_rebuild_suite.cjs
+          node tests/milestone1_mock_elimination_suite.cjs
+          node tests/sha256_streaming_verification.cjs
+          node tests/milestone_a_docking_and_no_api_suite.cjs
+
+      - name: Execute Native Rust Test Suite
+        working-directory: src-tauri
+        run: cargo test --verbose -- --nocapture
 
       - name: Build Frontend Production Bundle
         run: npm run build

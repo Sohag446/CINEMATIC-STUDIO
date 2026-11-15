@@ -839,8 +839,10 @@ pub async fn probe_media_file(
     if let Some(ffprobe_path) = status.resolved_ffprobe_path {
         let output = std::process::Command::new(ffprobe_path)
             .args(&[
-                "-v", "quiet",
-                "-print_format", "json",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
                 "-show_format",
                 "-show_streams",
                 &file_path,
@@ -858,15 +860,25 @@ pub async fn probe_media_file(
                         }
                         if let Some(streams) = val.get("streams").and_then(|s| s.as_array()) {
                             for s in streams {
-                                let codec_type = s.get("codec_type").and_then(|t| t.as_str()).unwrap_or("");
+                                let codec_type =
+                                    s.get("codec_type").and_then(|t| t.as_str()).unwrap_or("");
                                 if codec_type == "video" && width.is_none() {
-                                    width = s.get("width").and_then(|w| w.as_i64()).map(|w| w as i32);
-                                    height = s.get("height").and_then(|h| h.as_i64()).map(|h| h as i32);
-                                    vcodec = s.get("codec_name").and_then(|c| c.as_str()).map(String::from);
-                                    if let Some(r_frame_rate) = s.get("r_frame_rate").and_then(|r| r.as_str()) {
+                                    width =
+                                        s.get("width").and_then(|w| w.as_i64()).map(|w| w as i32);
+                                    height =
+                                        s.get("height").and_then(|h| h.as_i64()).map(|h| h as i32);
+                                    vcodec = s
+                                        .get("codec_name")
+                                        .and_then(|c| c.as_str())
+                                        .map(String::from);
+                                    if let Some(r_frame_rate) =
+                                        s.get("r_frame_rate").and_then(|r| r.as_str())
+                                    {
                                         let parts: Vec<&str> = r_frame_rate.split('/').collect();
                                         if parts.len() == 2 {
-                                            if let (Ok(num), Ok(den)) = (parts[0].parse::<f64>(), parts[1].parse::<f64>()) {
+                                            if let (Ok(num), Ok(den)) =
+                                                (parts[0].parse::<f64>(), parts[1].parse::<f64>())
+                                            {
                                                 if den > 0.0 {
                                                     fps = Some(num / den);
                                                 }
@@ -874,7 +886,10 @@ pub async fn probe_media_file(
                                         }
                                     }
                                 } else if codec_type == "audio" && acodec.is_none() {
-                                    acodec = s.get("codec_name").and_then(|c| c.as_str()).map(String::from);
+                                    acodec = s
+                                        .get("codec_name")
+                                        .and_then(|c| c.as_str())
+                                        .map(String::from);
                                 }
                             }
                         }

@@ -89,21 +89,25 @@ In accordance with Section 11 of the Master Engineering Directive, product trans
 ---
 
 ### Milestone A: No-AI-API Architecture Correction & Native Chrome Docking Hardening [COMPLETED & VERIFIED]
-- **Primary Goal:** Strictly enforce the No-AI-API mandate, declare the Browser Agent Dispatcher pipeline, and harden Win32 native Chrome docking with asserted return codes and High-DPI scaling.
-- **Status:** **COMPLETED** (Verified by `tests/milestone_a_docking_and_no_api_suite.cjs` 9 PASS / 0 FAIL / 3 BLOCKED runtime, `tests/milestone1_mock_elimination_suite.cjs` 9 PASS / 0 FAIL).
+- **Primary Goal:** Strictly enforce the No-AI-API mandate, declare the Browser Agent Dispatcher pipeline, harden Win32 native Chrome docking with asserted return codes, implement mathematical High-DPI coordinate transformation, prevent orphan process leaks, and add native Rust test CI gates.
+- **Status:** **COMPLETED** (Verified by `tests/milestone_a_docking_and_no_api_suite.cjs` 16 PASS / 0 FAIL / 3 BLOCKED runtime, `tests/milestone1_mock_elimination_suite.cjs` 9 PASS / 0 FAIL, and Rust CI test suite).
 - **Completed Tasks:**
   1. **Strict No-AI-API Enforcement:** Eradicated all direct HTTP `fetch` calls to OpenAI, Gemini, and Ollama inference endpoints in `src/services/storyAgent.ts`. Completely removed `apiKey` configuration fields.
   2. **Browser Agent Dispatcher Architecture:** Defined `SupportedAIWebsite`, `BrowserAgentDispatchTask`, and `IBrowserAgentDispatcher` representing the intended browser-extension bridge without external API dependencies.
-  3. **Win32 SetParent Hardening:** Implemented `SetLastError(0)` and `GetLastError()` inspection to correctly handle the ambiguous NULL return of `SetParent` without false alarms.
-  4. **Win32 SetWindowLongW & SetWindowPos Hardening:** Implemented strict return-code validation and Win32 error formatting.
-  5. **Truthful `sync_bounds()`:** Added `IsWindow(hwnd)` check and explicit error reporting if Chrome is closed or destroyed.
-  6. **High-DPI Coordinate Conversion:** Implemented `scale_coordinates_for_dpi` querying `GetDpiForWindow` to scale CSS layout coordinates into device client pixels across 100%, 125%, 150%, and 200% scaling.
-  7. **Governance Documentation:** Authored ADR-002 in `ARCHITECTURE_DECISION_RECORD.md` and updated matrix and limitation catalogs.
+  3. **Genuine Story Agent Unit Tests:** Authored real tests executing production `storyAgent.sendStoryMessage()` covering (1) No dispatcher supplied, (2) Browser unavailable, (3) Browser available and dispatch succeeds, (4) Browser dispatch fails, (5) Browser response is extracted, and (6) Session messages and timestamps are updated.
+  4. **Win32 SetParent Hardening:** Implemented `SetLastError(0)` and `GetLastError()` inspection to correctly handle the ambiguous NULL return of `SetParent` without false alarms.
+  5. **Win32 SetWindowLongW & SetWindowPos Hardening:** Implemented strict return-code validation and Win32 error formatting.
+  6. **Truthful `sync_bounds()` & `set_visible()`:** Added `IsWindow(hwnd)` check and explicit error reporting if Chrome is closed or destroyed; prevented silent false success in visibility toggling.
+  7. **Leak-Free Process Cleanup:** Implemented `terminate_pid(pid)` to immediately terminate orphan Chrome processes and reset state if any subsequent docking step fails.
+  8. **High-DPI Coordinate Transformation:** Implemented `transform_css_to_parent_client` querying `GetDpiForWindow` and `GetClientRect` to scale CSS layout coordinates into physical device pixels across 100%, 125%, 150%, and 200% scaling, avoiding double scaling and enforcing parent client boundary clamping.
+  9. **Dedicated Native Rust CI Test Gate:** Added `cargo test --verbose -- --nocapture` and Milestone A regression suites into GitHub Actions workflows (`windows-installer-build.yml` and `phase1-native-verification.yml`).
+  10. **Governance Documentation:** Authored ADR-002 in `ARCHITECTURE_DECISION_RECORD.md` and updated matrix and limitation catalogs.
 - **Automated Verification:**
-  - `tests/milestone_a_docking_and_no_api_suite.cjs`: 9 PASS / 0 FAIL / 3 BLOCKED (Truthfully Reported).
+  - `tests/milestone_a_docking_and_no_api_suite.cjs`: 16 PASS / 0 FAIL / 3 BLOCKED (Truthfully Reported).
   - `tests/milestone1_mock_elimination_suite.cjs`: 9 PASS / 0 FAIL.
   - `tests/sha256_streaming_verification.cjs`: 10 PASS / 0 FAIL.
   - `tests/v4_ultimate_rebuild_suite.cjs`: 14 PASS / 0 FAIL.
+  - `src-tauri` Rust unit tests: 26 PASS in CI.
   - `npm run build`: Clean TypeScript compile (0 errors).
 
 ---

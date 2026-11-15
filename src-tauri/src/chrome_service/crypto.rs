@@ -218,7 +218,10 @@ mod os_rng {
         if status == 0 {
             Ok(())
         } else {
-            Err(format!("BCryptGenRandom failed with NTSTATUS: 0x{:08X}", status))
+            Err(format!(
+                "BCryptGenRandom failed with NTSTATUS: 0x{:08X}",
+                status
+            ))
         }
     }
 }

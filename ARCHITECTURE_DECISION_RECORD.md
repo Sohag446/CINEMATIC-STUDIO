@@ -135,3 +135,27 @@ Previous drafts and prototype code attempted to integrate direct third-party LLM
 - **Negative / Constraints:**
   - Automation depends on web UI stability; website adapters must declare robust selectors and fallbacks.
   - Native Chrome child-window embedding must be rigorously hardened against High-DPI scaling, resize, and window lifecycle crashes.
+
+## 4. Mathematical Coordinate Transformation & High-DPI Specification
+
+To embed `chrome.exe` (`Chrome_WidgetWin_1`) reliably inside the Tauri desktop window without visual distortion or clipping, coordinates are transformed from the frontend DOM to native Win32 device pixels:
+
+1. **Native Parent Window Resolution:** The Tauri window HWND ($H_{parent}$) is queried via `window.hwnd()` in Tauri 2. Both Tauri and Google Chrome operate under Windows Per-Monitor V2 DPI awareness (`DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`).
+2. **DOM Viewport Origin:** In WebView2, `element.getBoundingClientRect()` yields coordinates in CSS logical pixels relative to the DOM viewport. Because the WebView2 control begins at client coordinate $(0, 0)$ of $H_{parent}$, the DOM viewport origin aligns with the native parent client origin.
+3. **Single DPI Scaling Factor:** Monitor DPI is queried dynamically from Windows via `GetDpiForWindow(parent_hwnd)`. The scale factor is $S = \text{DPI} / 96.0$. To prevent double scaling, the frontend transmits raw CSS logical pixels, and the native Rust layer applies scaling once:
+   $$\text{phys\_x} = \text{round}(x_{css} \times S)$$
+   $$\text{phys\_y} = \text{round}(y_{css} \times S)$$
+   $$\text{phys\_w} = \text{round}(w_{css} \times S)$$
+   $$\text{phys\_h} = \text{round}(h_{css} \times S)$$
+4. **Client Boundary Clamping:** Parent client dimensions are queried via `GetClientRect(parent_hwnd)`. The child window is clamped so it never renders outside the client area or with invalid negative dimensions.
+5. **Concrete Example:**
+   - Monitor DPI: 144 (150% scaling, $S = 1.50$).
+   - Parent client size: $1920 \times 1080$ physical pixels.
+   - Frontend DOM rect: $x_{css} = 320, y_{css} = 60, w_{css} = 800, h_{css} = 600$.
+   - Transformation:
+     $X_{phys} = \text{round}(320 \times 1.5) = 480$ px.
+     $Y_{phys} = \text{round}(60 \times 1.5) = 90$ px.
+     $W_{phys} = \text{round}(800 \times 1.5) = 1200$ px.
+     $H_{phys} = \text{round}(600 \times 1.5) = 900$ px.
+   - SetWindowPos bounds: $(480, 90, 1200, 900)$ in parent client space. Fits within $(1920, 1080)$ client area.
+6. **Dynamic DPI & Window Movement:** When the window moves across monitors with different DPIs, Windows sends `WM_DPICHANGED`. The frontend `ResizeObserver` and `window.addEventListener('resize')` trigger `syncDockedBounds`, recalculating bounds dynamically with the new monitor's DPI.

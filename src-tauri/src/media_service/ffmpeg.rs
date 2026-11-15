@@ -497,7 +497,8 @@ impl MediaEngineResolver {
         if !path.exists() {
             return Err(format!("File does not exist: {}", path.display()));
         }
-        let mut file = fs::File::open(path).map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
+        let mut file = fs::File::open(path)
+            .map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
         let mut hasher = crate::chrome_service::crypto::Sha256::new();
         let mut buffer = [0u8; 65536];
         loop {

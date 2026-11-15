@@ -890,8 +890,7 @@ fn test_calculate_sha256_known_vectors_and_avalanche_effect() {
     fs::write(&empty_file, b"").unwrap();
     let empty_hash = FFmpegManager::calculate_sha256(&empty_file).unwrap();
     assert_eq!(
-        empty_hash,
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        empty_hash, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "Empty file SHA-256 must match FIPS vector"
     );
 
@@ -900,8 +899,7 @@ fn test_calculate_sha256_known_vectors_and_avalanche_effect() {
     fs::write(&abc_file, b"abc").unwrap();
     let abc_hash = FFmpegManager::calculate_sha256(&abc_file).unwrap();
     assert_eq!(
-        abc_hash,
-        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        abc_hash, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
         "'abc' SHA-256 must match standard NIST vector"
     );
 
@@ -910,18 +908,20 @@ fn test_calculate_sha256_known_vectors_and_avalanche_effect() {
     fs::write(&fox_file, b"The quick brown fox jumps over the lazy dog").unwrap();
     let fox_hash = FFmpegManager::calculate_sha256(&fox_file).unwrap();
     assert_eq!(
-        fox_hash,
-        "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
+        fox_hash, "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
         "Fox vector must match NIST reference"
     );
 
     // 4. Avalanche effect: single-byte mutation ("The quick brown fox jumps over the lazy dog." - added period)
     let fox_mutated = temp_dir.path().join("fox_mutated.bin");
-    fs::write(&fox_mutated, b"The quick brown fox jumps over the lazy dog.").unwrap();
+    fs::write(
+        &fox_mutated,
+        b"The quick brown fox jumps over the lazy dog.",
+    )
+    .unwrap();
     let fox_mutated_hash = FFmpegManager::calculate_sha256(&fox_mutated).unwrap();
     assert_eq!(
-        fox_mutated_hash,
-        "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c",
+        fox_mutated_hash, "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c",
         "Single byte change must completely alter SHA-256 digest"
     );
     assert_ne!(fox_hash, fox_mutated_hash);
@@ -974,7 +974,11 @@ fn test_calculate_sha256_block_boundaries_and_multi_buffer() {
         let data = vec![0x61u8; size]; // 'a' repeated
         fs::write(&file_path, &data).unwrap();
         let hash = FFmpegManager::calculate_sha256(&file_path).unwrap();
-        assert_eq!(hash.len(), 64, "Hash length must always be 64 hex characters");
+        assert_eq!(
+            hash.len(),
+            64,
+            "Hash length must always be 64 hex characters"
+        );
     }
 
     // Multi-buffer streaming test (131,072 bytes = 2 full 64KB buffers)
@@ -992,8 +996,15 @@ fn test_os_csprng_pairing_secret_properties() {
 
     // 1. Valid 64-char hex format
     let secret = generate_pairing_secret().expect("OS CSPRNG must succeed");
-    assert_eq!(secret.len(), 64, "256-bit secret must be exactly 64 hex chars");
-    assert!(secret.chars().all(|c| c.is_ascii_hexdigit()), "All chars must be valid hex");
+    assert_eq!(
+        secret.len(),
+        64,
+        "256-bit secret must be exactly 64 hex chars"
+    );
+    assert!(
+        secret.chars().all(|c| c.is_ascii_hexdigit()),
+        "All chars must be valid hex"
+    );
 
     // 2. Uniqueness test across 500 generated secrets
     let mut generated = HashSet::new();
@@ -1001,4 +1012,58 @@ fn test_os_csprng_pairing_secret_properties() {
         let s = generate_pairing_secret().expect("OS CSPRNG must succeed");
         assert!(generated.insert(s), "Collision detected in CSPRNG output!");
     }
+}
+
+#[test]
+fn test_docked_chrome_coordinate_transformation_scaling() {
+    use crate::chrome_service::docked_chrome::DockedChromeManager;
+
+    // 100% DPI (96 DPI, scale = 1.0)
+    let (x100, y100, w100, h100) =
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 96, 1920, 1080);
+    assert_eq!((x100, y100, w100, h100), (320, 60, 800, 600));
+
+    // 125% DPI (120 DPI, scale = 1.25)
+    let (x125, y125, w125, h125) =
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 120, 1920, 1080);
+    assert_eq!((x125, y125, w125, h125), (400, 75, 1000, 750));
+
+    // 150% DPI (144 DPI, scale = 1.50)
+    let (x150, y150, w150, h150) =
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 144, 1920, 1080);
+    assert_eq!((x150, y150, w150, h150), (480, 90, 1200, 900));
+
+    // 200% DPI (192 DPI, scale = 2.00)
+    let (x200, y200, w200, h200) =
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 192, 2560, 1440);
+    assert_eq!((x200, y200, w200, h200), (640, 120, 1600, 1200));
+
+    // Parent client boundary clamping:
+    // At 150% DPI, 320 -> 480. If client width is 1000, max width available is 1000 - 480 = 520.
+    let (xc, yc, wc, hc) =
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 144, 1000, 800);
+    assert_eq!(xc, 480);
+    assert_eq!(yc, 90);
+    assert_eq!(wc, 520, "Width must clamp to fit within parent client area");
+    assert_eq!(
+        hc, 710,
+        "Height must clamp to fit within parent client area"
+    );
+}
+
+#[test]
+fn test_docked_chrome_sync_bounds_and_visibility_validation() {
+    use crate::chrome_service::docked_chrome::DockedChromeManager;
+
+    // sync_bounds should fail when no window is active
+    DockedChromeManager::init();
+    let res = DockedChromeManager::sync_bounds(0, 0, 800, 600);
+    assert!(res.is_err(), "sync_bounds must reject missing HWND");
+
+    // set_visible should fail when no window is active
+    let vis_res = DockedChromeManager::set_visible(true);
+    assert!(
+        vis_res.is_err(),
+        "set_visible must reject missing or invalid HWND"
+    );
 }

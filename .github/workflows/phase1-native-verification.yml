@@ -44,6 +44,9 @@ jobs:
       - name: Run Master Verification Simulation Suite
         run: node tests/phase1_validation.cjs
 
+      - name: Execute Milestone A Regression Suite
+        run: node tests/milestone_a_docking_and_no_api_suite.cjs
+
       - name: Rust Formatting Check
         working-directory: src-tauri
         run: cargo fmt --check
