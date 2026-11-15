@@ -198,23 +198,30 @@ runTest('Truthful media probing rejects non-existent and empty 0-byte files', as
 });
 
 // ----------------------------------------------------------------------------
-// TEST 7: Truthful Narrative Story Agent Architecture
+// TEST 7: Strict No-AI-API Architecture & Browser Agent Dispatcher
 // ----------------------------------------------------------------------------
-runTest('StoryAgent requires configuration when no LLM provider is active', () => {
+runTest('StoryAgent enforces No-AI-API architecture and declares Browser Agent Dispatcher', () => {
   const storyAgentPath = path.join(srcDir, 'services', 'storyAgent.ts');
   const content = fs.readFileSync(storyAgentPath, 'utf8');
 
+  // Must NOT contain direct API endpoints or apiKey fields
+  assert(!content.includes('api.openai.com'), 'Must not contain api.openai.com inference endpoint');
+  assert(!content.includes('generativelanguage.googleapis.com'), 'Must not contain generativelanguage inference endpoint');
+  assert(!content.includes('localhost:11434'), 'Must not contain local Ollama inference endpoint');
+  assert(!content.includes('apiKey?: string'), 'Must not contain apiKey configuration field');
+
+  // Must declare Browser Agent Dispatcher interface
   assert(
-    content.includes('export interface LLMProviderConfig'),
-    'Missing LLMProviderConfig interface'
+    content.includes('export interface IBrowserAgentDispatcher'),
+    'Missing IBrowserAgentDispatcher interface'
   );
   assert(
-    content.includes('export interface ConversationalStorySession'),
-    'Missing ConversationalStorySession interface'
+    content.includes('export interface BrowserAgentDispatchTask'),
+    'Missing BrowserAgentDispatchTask interface'
   );
   assert(
-    content.includes('No AI Provider Configured. Please configure your API key'),
-    'Missing truthful configuration requirement feedback'
+    content.includes('WAITING_FOR_BROWSER'),
+    'Missing WAITING_FOR_BROWSER browser requirement feedback'
   );
   assert(
     !content.includes("isRomantic ? 'Aayan Rahman' : isCyberpunk ? 'Elena Vance'"),

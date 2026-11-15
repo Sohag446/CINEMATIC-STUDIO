@@ -89,16 +89,49 @@ While Option B is the recommended path, **we explicitly reject the false claim t
 
 ## 6. Decision & Migration Plan
 
-**Option B (Hybrid Architecture) is approved for Milestone 1 execution, subject to strict evidence gates:**
+**Option B (Hybrid Architecture) is approved for execution, subject to strict evidence gates:**
 
 ```
 [MIGRATION ROADMAP]
 ├── Step 1 (Milestone 1): Purge all fake stubs (A through F), eliminate silent floating Chrome fallback,
 │   and verify real streaming SHA-256 calculation.
-├── Step 2 (Milestone 2): Implement the background Render Worker daemon and real FFmpeg filtergraphs.
-├── Step 3 (Milestone 3): Implement the genuine conversational AI Film Agent with multi-turn LLM loop.
-├── Step 4 (Milestone 4): Formally harden and verify Win32 Chrome docking inside the installed application
-│   with zero silent fallbacks and full error handling.
-└── Step 5 (Milestone 5): Evaluate dedicated C++/D3D11 frame transport overlay if multi-layer 4K timeline
-    scrubbing requires hardware-accelerated presentation beyond HTML5 video.
+├── Step 2 (Milestone A): Strictly enforce No-AI-API mandate, declare Browser Agent Dispatcher,
+│   and harden Win32 native Chrome docking (asserted return codes and High-DPI support).
+├── Step 3 (Milestone B): Complete genuine embedded Chrome lifecycle and website capability registry.
+├── Step 4 (Milestone C): Implement conversational narrative agent via in-workspace browser automation.
+├── Step 5 (Milestone D): Implement Google Flow / Veo video generation and FFprobe media verification.
+├── Step 6 (Milestone E): Polish multitrack NLE timeline and playback monitor.
+└── Step 7 (Milestone F): Implement asynchronous background FFmpeg render daemon.
 ```
+
+---
+
+# Architecture Decision Record 002 (ADR-002)
+
+**Title:** Strict No-AI-API, In-Workspace Browser Automation Architecture
+**Status:** APPROVED & ADOPTED (Milestone A)
+**Date:** 2026-11-15
+**Deciders:** Md. Sohag Hossen (Product Owner), Principal Architect
+
+## 1. Context & Problem Statement
+Previous drafts and prototype code attempted to integrate direct third-party LLM inference endpoints (OpenAI API, Gemini API, Anthropic API, local Ollama server). This introduced:
+1. Hard dependency on external API credentials, API key configuration, and token billing accounts.
+2. Fragile network dependencies on external HTTP inference endpoints.
+3. Violation of the fundamental product vision: CINEMATIC STUDIO must be a professional film-production environment powered by an autonomous agent interacting with AI websites through a genuine embedded Google Chrome browser.
+
+## 2. Decision: Absolute No-AI-API Architecture
+1. **Total Prohibition of Direct AI APIs:** The software will NOT depend on, require, or make direct HTTP calls to OpenAI, Gemini, Anthropic, Groq, Ollama, or any external LLM inference API.
+2. **Visible In-Workspace Chrome Integration:** Genuine `chrome.exe` is hosted as a native child window inside the application's AI Workspace container via Win32 `SetParent`.
+3. **Browser Automation Bridge:** Communication with AI websites (ChatGPT, Gemini, Claude, Google Flow / Veo) is executed strictly via:
+   `CINEMATIC STUDIO Agent -> Tauri IPC -> Native Messaging Host -> Chrome Extension Background -> Website Adapter -> Website DOM -> Response Extraction -> Project State`.
+4. **Autonomous Production Supervisor:** The desktop application maintains the production state machine, prepares production briefs, dispatches tasks, observes web UI progress, captures downloads, probes media files with FFprobe, and assembles the NLE timeline.
+5. **Human Action Gating:** When web anti-bot challenges (CAPTCHA, Cloudflare Turnstile), login expiration, or confirmation prompts occur, the application halts automation, sets status to `HUMAN_ACTION_REQUIRED`, and allows the operator to act directly in the visible embedded Chrome window.
+
+## 3. Consequences
+- **Positive:**
+  - Zero user requirement for paid API keys or developer accounts.
+  - Users leverage their existing browser sessions and subscription tiers on ChatGPT, Gemini, Claude, and Google Flow.
+  - Complete transparency: users see the browser and can inspect or take control at any time.
+- **Negative / Constraints:**
+  - Automation depends on web UI stability; website adapters must declare robust selectors and fallbacks.
+  - Native Chrome child-window embedding must be rigorously hardened against High-DPI scaling, resize, and window lifecycle crashes.

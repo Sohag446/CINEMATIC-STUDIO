@@ -6,8 +6,6 @@ use std::time::{Duration, Instant};
 
 #[cfg(target_os = "windows")]
 mod win32 {
-    use std::ffi::c_void;
-
     pub const GWL_STYLE: i32 = -16;
     pub const WS_VISIBLE: i32 = 0x10000000;
     pub const WS_CHILD: i32 = 0x40000000;
@@ -24,6 +22,12 @@ mod win32 {
 
     const fn unchecked_cast(v: u32) -> i32 {
         v as i32
+    }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        pub fn SetLastError(dwErrCode: u32);
+        pub fn GetLastError() -> u32;
     }
 
     #[link(name = "user32")]
@@ -50,6 +54,8 @@ mod win32 {
         pub fn GetWindowThreadProcessId(hWnd: isize, lpdwProcessId: *mut u32) -> u32;
         pub fn GetClassNameW(hWnd: isize, lpClassName: *mut u16, nMaxCount: i32) -> i32;
         pub fn SetForegroundWindow(hWnd: isize) -> i32;
+        pub fn SetFocus(hWnd: isize) -> isize;
+        pub fn GetDpiForWindow(hWnd: isize) -> u32;
     }
 
     struct EnumContext {
@@ -141,6 +147,33 @@ impl DockedChromeManager {
     }
 
     #[cfg(target_os = "windows")]
+    pub fn scale_coordinates_for_dpi(
+        parent_hwnd: isize,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    ) -> (i32, i32, i32, i32) {
+        // Query monitor DPI for parent window (defaults to standard 96 DPI if unavailable)
+        let dpi = if parent_hwnd != 0 {
+            let d = unsafe { win32::GetDpiForWindow(parent_hwnd) };
+            if d > 0 { d } else { 96 }
+        } else {
+            96
+        };
+
+        // Scale factor: 96 DPI = 1.0, 120 DPI = 1.25, 144 DPI = 1.50, 192 DPI = 2.00
+        let scale = dpi as f64 / 96.0;
+
+        let target_x = (x as f64 * scale).round() as i32;
+        let target_y = (y as f64 * scale).round() as i32;
+        let target_w = (width as f64 * scale).round() as i32;
+        let target_h = (height as f64 * scale).round() as i32;
+
+        (target_x, target_y, target_w, target_h)
+    }
+
+    #[cfg(target_os = "windows")]
     pub fn dock_chrome(
         parent_hwnd_in: isize,
         url: &str,
@@ -218,27 +251,65 @@ impl DockedChromeManager {
             ));
         }
 
-        unsafe {
-            // Reparent Chrome into Studio
-            win32::SetParent(chrome_hwnd, parent_hwnd);
+        // Apply High-DPI coordinate scaling
+        let (target_x, target_y, target_w, target_h) =
+            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height);
 
-            // Strip top-level borders/caption and apply WS_CHILD | WS_VISIBLE
+        unsafe {
+            // 1. Reparent Chrome into Studio
+            // SetParent returns previous parent HWND. NULL return is valid if window had no previous parent.
+            win32::SetLastError(0);
+            let prev_parent = win32::SetParent(chrome_hwnd, parent_hwnd);
+            if prev_parent == 0 {
+                let err = win32::GetLastError();
+                if err != 0 {
+                    return Err(format!(
+                        "Win32 SetParent failed with error code: 0x{:08X} ({})",
+                        err, err
+                    ));
+                }
+            }
+
+            // 2. Strip top-level borders/caption and apply WS_CHILD | WS_VISIBLE
             let style = win32::GetWindowLongW(chrome_hwnd, win32::GWL_STYLE);
             let new_style = (style & !win32::WS_POPUP & !win32::WS_CAPTION & !win32::WS_THICKFRAME)
                 | win32::WS_CHILD
                 | win32::WS_VISIBLE;
-            win32::SetWindowLongW(chrome_hwnd, win32::GWL_STYLE, new_style);
 
-            // Position and resize inside Studio workspace panel
-            win32::SetWindowPos(
+            win32::SetLastError(0);
+            let prev_style = win32::SetWindowLongW(chrome_hwnd, win32::GWL_STYLE, new_style);
+            if prev_style == 0 {
+                let err = win32::GetLastError();
+                if err != 0 {
+                    return Err(format!(
+                        "Win32 SetWindowLongW (GWL_STYLE) failed with error code: 0x{:08X} ({})",
+                        err, err
+                    ));
+                }
+            }
+
+            // 3. Position and resize inside Studio workspace panel
+            win32::SetLastError(0);
+            let pos_ok = win32::SetWindowPos(
                 chrome_hwnd,
                 0,
-                x,
-                y,
-                width,
-                height,
-                win32::SWP_SHOWWINDOW | win32::SWP_FRAMECHANGED,
+                target_x,
+                target_y,
+                target_w,
+                target_h,
+                win32::SWP_SHOWWINDOW | win32::SWP_FRAMECHANGED | win32::SWP_NOACTIVATE,
             );
+            if pos_ok == 0 {
+                let err = win32::GetLastError();
+                return Err(format!(
+                    "Win32 SetWindowPos failed during initial docking with error code: 0x{:08X} ({})",
+                    err, err
+                ));
+            }
+
+            // 4. Ensure window receives focus for direct keyboard/mouse interaction
+            win32::SetForegroundWindow(chrome_hwnd);
+            win32::SetFocus(chrome_hwnd);
         }
 
         Self::init();
@@ -254,24 +325,47 @@ impl DockedChromeManager {
     #[cfg(target_os = "windows")]
     pub fn sync_bounds(x: i32, y: i32, width: i32, height: i32) -> Result<(), String> {
         Self::init();
-        if let Some(mgr) = INSTANCE.lock().unwrap().as_ref() {
-            let hwnd = mgr.active_chrome_hwnd.load(Ordering::SeqCst);
-            if hwnd != 0 && unsafe { win32::IsWindow(hwnd) } != 0 {
-                unsafe {
-                    win32::SetWindowPos(
-                        hwnd,
-                        0,
-                        x,
-                        y,
-                        width,
-                        height,
-                        win32::SWP_NOZORDER
-                            | win32::SWP_NOACTIVATE
-                            | win32::SWP_FRAMECHANGED
-                            | win32::SWP_SHOWWINDOW,
-                    );
-                }
-                return Ok(());
+        let mgr_guard = INSTANCE.lock().unwrap();
+        let mgr = mgr_guard
+            .as_ref()
+            .ok_or_else(|| "DockedChromeManager not initialized".to_string())?;
+
+        let hwnd = mgr.active_chrome_hwnd.load(Ordering::SeqCst);
+        if hwnd == 0 {
+            return Err("Cannot sync bounds: No active docked Chrome HWND recorded".to_string());
+        }
+
+        if unsafe { win32::IsWindow(hwnd) } == 0 {
+            return Err(format!(
+                "Cannot sync bounds: Chrome window handle 0x{:X} is no longer valid (window was closed or crashed)",
+                hwnd
+            ));
+        }
+
+        let parent_hwnd = mgr.parent_hwnd.load(Ordering::SeqCst);
+        let (target_x, target_y, target_w, target_h) =
+            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height);
+
+        unsafe {
+            win32::SetLastError(0);
+            let res = win32::SetWindowPos(
+                hwnd,
+                0,
+                target_x,
+                target_y,
+                target_w,
+                target_h,
+                win32::SWP_NOZORDER
+                    | win32::SWP_NOACTIVATE
+                    | win32::SWP_FRAMECHANGED
+                    | win32::SWP_SHOWWINDOW,
+            );
+            if res == 0 {
+                let err = win32::GetLastError();
+                return Err(format!(
+                    "Win32 SetWindowPos failed during sync_bounds with error code: 0x{:08X} ({})",
+                    err, err
+                ));
             }
         }
         Ok(())
@@ -280,19 +374,22 @@ impl DockedChromeManager {
     #[cfg(target_os = "windows")]
     pub fn set_visible(visible: bool) -> Result<(), String> {
         Self::init();
-        if let Some(mgr) = INSTANCE.lock().unwrap().as_ref() {
-            let hwnd = mgr.active_chrome_hwnd.load(Ordering::SeqCst);
-            if hwnd != 0 && unsafe { win32::IsWindow(hwnd) } != 0 {
-                unsafe {
-                    win32::ShowWindow(
-                        hwnd,
-                        if visible {
-                            win32::SW_SHOW
-                        } else {
-                            win32::SW_HIDE
-                        },
-                    );
-                }
+        let mgr_guard = INSTANCE.lock().unwrap();
+        let mgr = mgr_guard
+            .as_ref()
+            .ok_or_else(|| "DockedChromeManager not initialized".to_string())?;
+
+        let hwnd = mgr.active_chrome_hwnd.load(Ordering::SeqCst);
+        if hwnd != 0 && unsafe { win32::IsWindow(hwnd) } != 0 {
+            unsafe {
+                win32::ShowWindow(
+                    hwnd,
+                    if visible {
+                        win32::SW_SHOW
+                    } else {
+                        win32::SW_HIDE
+                    },
+                );
             }
         }
         Ok(())
@@ -310,7 +407,7 @@ impl DockedChromeManager {
                 }
             }
             if pid != 0 {
-                // Kill process tree for this instance
+                // Terminate process tree for this instance
                 let _ = Command::new("taskkill")
                     .args(&["/F", "/T", "/PID", &pid.to_string()])
                     .output();
@@ -334,7 +431,7 @@ impl DockedChromeManager {
 
     #[cfg(not(target_os = "windows"))]
     pub fn sync_bounds(_: i32, _: i32, _: i32, _: i32) -> Result<(), String> {
-        Ok(())
+        Err("Docked Chrome is only supported on Windows".to_string())
     }
 
     #[cfg(not(target_os = "windows"))]

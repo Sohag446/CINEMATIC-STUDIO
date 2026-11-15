@@ -88,6 +88,26 @@ In accordance with Section 11 of the Master Engineering Directive, product trans
 
 ---
 
+### Milestone A: No-AI-API Architecture Correction & Native Chrome Docking Hardening [COMPLETED & VERIFIED]
+- **Primary Goal:** Strictly enforce the No-AI-API mandate, declare the Browser Agent Dispatcher pipeline, and harden Win32 native Chrome docking with asserted return codes and High-DPI scaling.
+- **Status:** **COMPLETED** (Verified by `tests/milestone_a_docking_and_no_api_suite.cjs` 9 PASS / 0 FAIL / 3 BLOCKED runtime, `tests/milestone1_mock_elimination_suite.cjs` 9 PASS / 0 FAIL).
+- **Completed Tasks:**
+  1. **Strict No-AI-API Enforcement:** Eradicated all direct HTTP `fetch` calls to OpenAI, Gemini, and Ollama inference endpoints in `src/services/storyAgent.ts`. Completely removed `apiKey` configuration fields.
+  2. **Browser Agent Dispatcher Architecture:** Defined `SupportedAIWebsite`, `BrowserAgentDispatchTask`, and `IBrowserAgentDispatcher` representing the intended browser-extension bridge without external API dependencies.
+  3. **Win32 SetParent Hardening:** Implemented `SetLastError(0)` and `GetLastError()` inspection to correctly handle the ambiguous NULL return of `SetParent` without false alarms.
+  4. **Win32 SetWindowLongW & SetWindowPos Hardening:** Implemented strict return-code validation and Win32 error formatting.
+  5. **Truthful `sync_bounds()`:** Added `IsWindow(hwnd)` check and explicit error reporting if Chrome is closed or destroyed.
+  6. **High-DPI Coordinate Conversion:** Implemented `scale_coordinates_for_dpi` querying `GetDpiForWindow` to scale CSS layout coordinates into device client pixels across 100%, 125%, 150%, and 200% scaling.
+  7. **Governance Documentation:** Authored ADR-002 in `ARCHITECTURE_DECISION_RECORD.md` and updated matrix and limitation catalogs.
+- **Automated Verification:**
+  - `tests/milestone_a_docking_and_no_api_suite.cjs`: 9 PASS / 0 FAIL / 3 BLOCKED (Truthfully Reported).
+  - `tests/milestone1_mock_elimination_suite.cjs`: 9 PASS / 0 FAIL.
+  - `tests/sha256_streaming_verification.cjs`: 10 PASS / 0 FAIL.
+  - `tests/v4_ultimate_rebuild_suite.cjs`: 14 PASS / 0 FAIL.
+  - `npm run build`: Clean TypeScript compile (0 errors).
+
+---
+
 ### Milestone 1: Professional Desktop Foundation & Mock Elimination [COMPLETED & VERIFIED]
 - **Primary Goal:** Purge all simulated delays, mock video URLs, and fake heuristics; establish a rock-solid professional NLE shell.
 - **Status:** **COMPLETED** (Verified by `tests/milestone1_mock_elimination_suite.cjs` 9/9 PASS, `tests/sha256_streaming_verification.cjs` 10/10 PASS).

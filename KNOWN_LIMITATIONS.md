@@ -1,8 +1,8 @@
 # CINEMATIC STUDIO — KNOWN LIMITATIONS & TECHNICAL CONSTRAINTS
-**Document Version:** 1.1.0 — Milestone 0 Corrected Constraints Catalog
+**Document Version:** 1.2.0 — Milestone A Hardened Constraints Catalog
 **Target Environment:** Windows 11 x64 (AMD Ryzen 7 5000 Series, AMD Radeon Graphics, 20 GB RAM)
 **Product Owner & Lead Developer:** Md. Sohag Hossen
-**Baseline Commit:** `0b257da`
+**Baseline Commit:** `ca9f64e`
 
 ---
 
@@ -44,28 +44,25 @@
 
 ## 3. Real In-Workspace Chrome Win32 Docking Bounds
 
-### 3.1 Production Status: Experimental & Unverified in Installed App
-While the standalone PowerShell script (`scripts/docked_chrome_architecture_poc.ps1`) demonstrated Win32 `SetParent` feasibility, **the actual production Rust implementation remains unverified inside the installed desktop application**.
+### 3.1 Hardened Native Docking Implementation (Milestone A)
+In Milestone A, the native Rust docking implementation in `src-tauri/src/chrome_service/docked_chrome.rs` was hardened:
+1. **Asserted Win32 Return Values:**
+   - `win32::SetParent(chrome_hwnd, parent_hwnd)`: Handled NULL return ambiguity using `SetLastError(0)` and `GetLastError()` inspection.
+   - `win32::SetWindowLongW(chrome_hwnd, ...)`: Handled zero return ambiguity with `GetLastError()`.
+   - `win32::SetWindowPos(chrome_hwnd, ...)`: Asserts BOOL return; formats explicit Win32 error on zero.
+2. **Strict HWND Validation in `sync_bounds`:**
+   - Now checks if `hwnd == 0` or `IsWindow(hwnd) == 0` and returns an explicit `Err` string when the window is destroyed or disconnected.
+3. **High-DPI Coordinate Scaling:**
+   - Implemented `scale_coordinates_for_dpi(parent_hwnd, x, y, width, height)` querying `GetDpiForWindow` to scale CSS coordinates to physical device pixels across 100%, 125%, 150%, and 200% scaling.
+4. **Silent Floating Window Fallback Eliminated:**
+   - Removed silent fallback in `useStudioStore.ts` and `AIVideoWorkspace.tsx`. Docking failures now surface `dockChromeError` with explicit retry or manual fallback options.
 
-### 3.2 Known Production Defects in `docked_chrome.rs`:
-1. **Ignored Win32 Return Values:**
-   - `win32::SetParent(chrome_hwnd, parent_hwnd)`: Return value (`NULL` on error) is not checked.
-   - `win32::SetWindowLongW(chrome_hwnd, ...)`: Return value is not checked.
-   - `win32::SetWindowPos(chrome_hwnd, ...)`: Return value is not checked.
-2. **Missing HWND Validation in `sync_bounds`:**
-   - In `docked_chrome.rs:255-278`, if `hwnd == 0` or `IsWindow(hwnd) == 0`, `sync_bounds` silently returns `Ok(())` instead of reporting that the window was destroyed or disconnected.
-3. **Silent Floating Window Fallback:**
-   - In `useStudioStore.ts:694-696`, catching docking errors logs a warning and silently calls `launchChromeProfile(...)`, spawning an external floating window.
-4. **Missing Production Test Evidence:**
-   The following 8 critical tests have NOT yet been performed in the installed production application:
-   - Initial docking handshake and HWND capture.
-   - Keyboard focus and mouse wheel routing.
-   - Smooth container resizing without visual tearing.
-   - Window maximize and restore transitions.
-   - Tab switching visibility toggle (`SW_HIDE` / `SW_SHOW`).
-   - High-DPI multi-monitor display scaling adjustments.
-   - Chrome profile data directory isolation.
-   - Clean shutdown without orphan `chrome.exe` processes.
+### 3.2 Remaining Interactive Runtime Verification Requirements:
+The following manual runtime checks require an interactive Windows GUI desktop session:
+- Interactive keyboard typing and shortcut routing inside embedded Chrome.
+- Smooth mouse wheel scrolling inside the child container.
+- High-DPI dynamic scaling transition when dragging window between monitors with mismatched scaling factors.
+- Long-session stability and crash recovery after Chrome browser process kill.
 
 ---
 

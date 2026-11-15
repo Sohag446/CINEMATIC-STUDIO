@@ -1,13 +1,32 @@
 import { CameraFraming, CameraMovement, CameraAngle, SceneContinuityRecord } from '../types';
 
-export type LLMProviderType = 'gemini' | 'openai' | 'anthropic' | 'ollama' | 'custom';
+export type SupportedAIWebsite = 'chatgpt' | 'gemini' | 'claude' | 'google_flow';
 
-export interface LLMProviderConfig {
-  provider: LLMProviderType;
-  apiKey?: string;
-  endpoint?: string;
-  model?: string;
-  temperature?: number;
+/**
+ * ARCHITECTURAL MANDATE (Milestone A / ADR-002):
+ * CINEMATIC STUDIO uses NO direct AI APIs, NO API keys, and NO external inference endpoints.
+ * All AI capabilities are orchestrated through genuine Google Chrome interacting with
+ * supported AI website interfaces via the Native Messaging Host and Chrome Extension.
+ */
+export interface BrowserAgentDispatchTask {
+  projectId: string;
+  targetWebsite: SupportedAIWebsite;
+  prompt: string;
+  contextBrief?: string;
+}
+
+export interface BrowserAgentDispatchResult {
+  success: boolean;
+  taskId?: string;
+  status: 'WAITING_FOR_BROWSER' | 'HUMAN_ACTION_REQUIRED' | 'SUBMITTED' | 'COMPLETED' | 'FAILED';
+  message?: string;
+  extractedResponse?: string;
+  error?: string;
+}
+
+export interface IBrowserAgentDispatcher {
+  isBrowserAvailable(): boolean;
+  dispatchToBrowser(task: BrowserAgentDispatchTask): Promise<BrowserAgentDispatchResult>;
 }
 
 export interface StoryChatMessage {
@@ -20,6 +39,7 @@ export interface StoryChatMessage {
 export interface ConversationalStorySession {
   id: string;
   projectId: string;
+  targetWebsite: SupportedAIWebsite;
   messages: StoryChatMessage[];
   productionBible?: ProductionPackage;
   isLocked: boolean;
@@ -32,7 +52,8 @@ export interface StoryDialogueResponse {
   clarificationNeeded: boolean;
   clarificationQuestions?: string[];
   productionBible?: ProductionPackage;
-  requiresConfiguration?: boolean;
+  requiresBrowser?: boolean;
+  status?: string;
 }
 
 export interface ProductionPackage {
@@ -164,12 +185,14 @@ export const storyAgent = {
 
   /**
    * Creates a new conversational narrative session for multi-turn story development
+   * using the in-workspace browser automation bridge.
    */
-  createSession(projectId: string): ConversationalStorySession {
+  createSession(projectId: string, targetWebsite: SupportedAIWebsite = 'chatgpt'): ConversationalStorySession {
     const now = Date.now();
     return {
       id: `session_${now}_${Math.random().toString(36).substring(2, 9)}`,
       projectId,
+      targetWebsite,
       messages: [],
       isLocked: false,
       created_at: now,
@@ -178,14 +201,14 @@ export const storyAgent = {
   },
 
   /**
-   * Multi-turn narrative dialogue with provider-independent LLM adapter.
-   * If no provider or credentials are configured, truthfully informs the operator
-   * rather than fabricating mock responses.
+   * Multi-turn narrative dialogue interface.
+   * STRICT NO-AI-API ARCHITECTURE: Dispatches prompts strictly through the embedded
+   * Chrome browser automation bridge. Does not make direct HTTP requests to LLM inference endpoints.
    */
   async sendStoryMessage(
     session: ConversationalStorySession,
     userPrompt: string,
-    config?: LLMProviderConfig
+    dispatcher?: IBrowserAgentDispatcher
   ): Promise<StoryDialogueResponse> {
     const now = Date.now();
     session.messages.push({
@@ -196,9 +219,9 @@ export const storyAgent = {
     });
     session.updated_at = now;
 
-    // Truthful check: Is an LLM provider configured?
-    if (!config || (!config.apiKey && config.provider !== 'ollama')) {
-      const responseText = 'No AI Provider Configured. Please configure your API key (Gemini, OpenAI, Claude) or local Ollama endpoint in Settings > AI Providers to engage the Narrative Agent.';
+    // Truthful architectural gate: If embedded browser is not active, report browser requirement
+    if (!dispatcher || !dispatcher.isBrowserAvailable()) {
+      const responseText = 'Embedded Chrome is not currently connected. CINEMATIC STUDIO uses in-workspace browser automation with ChatGPT, Gemini, or Claude rather than direct AI APIs. Please launch the in-workspace Chrome browser in the AI Workspace.';
       session.messages.push({
         id: `msg_a_${Date.now()}`,
         role: 'assistant',
@@ -208,94 +231,52 @@ export const storyAgent = {
       return {
         reply: responseText,
         clarificationNeeded: false,
-        requiresConfiguration: true
+        requiresBrowser: true,
+        status: 'WAITING_FOR_BROWSER'
       };
     }
 
     try {
-      if (config.provider === 'ollama') {
-        const endpoint = config.endpoint || 'http://localhost:11434';
-        const model = config.model || 'llama3.2';
-        const res = await fetch(`${endpoint}/api/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model,
-            prompt: userPrompt,
-            stream: false
-          })
-        });
-        if (!res.ok) {
-          throw new Error(`Ollama request failed with status: ${res.status} ${res.statusText}`);
-        }
-        const data = await res.json();
-        const reply = data.response || 'No response returned by Ollama.';
-        session.messages.push({
-          id: `msg_a_${Date.now()}`,
-          role: 'assistant',
-          content: reply,
-          timestamp: Date.now()
-        });
-        return { reply, clarificationNeeded: false };
-      }
-
-      if (config.provider === 'gemini') {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || 'gemini-1.5-flash'}:generateContent?key=${config.apiKey}`;
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: userPrompt }] }]
-          })
-        });
-        if (!res.ok) {
-          throw new Error(`Gemini request failed: ${res.status} ${res.statusText}`);
-        }
-        const data = await res.json();
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini.';
-        session.messages.push({
-          id: `msg_a_${Date.now()}`,
-          role: 'assistant',
-          content: reply,
-          timestamp: Date.now()
-        });
-        return { reply, clarificationNeeded: false };
-      }
-
-      // Generic OpenAI-compatible endpoint (OpenAI, Claude proxy, etc.)
-      const endpoint = config.endpoint || 'https://api.openai.com/v1/chat/completions';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.apiKey}`
-        },
-        body: JSON.stringify({
-          model: config.model || 'gpt-4o',
-          messages: session.messages.map(m => ({ role: m.role, content: m.content }))
-        })
+      // Dispatch task through Native Messaging / Extension bridge
+      const dispatchResult = await dispatcher.dispatchToBrowser({
+        projectId: session.projectId,
+        targetWebsite: session.targetWebsite,
+        prompt: userPrompt
       });
-      if (!res.ok) {
-        throw new Error(`AI Provider request failed: ${res.status} ${res.statusText}`);
+
+      if (!dispatchResult.success) {
+        const errorText = dispatchResult.error || 'Failed to dispatch prompt to embedded browser.';
+        session.messages.push({
+          id: `msg_a_${Date.now()}`,
+          role: 'assistant',
+          content: errorText,
+          timestamp: Date.now()
+        });
+        return { reply: errorText, clarificationNeeded: false, status: dispatchResult.status };
       }
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || 'No response returned from provider.';
+
+      const reply = dispatchResult.extractedResponse || 'Task dispatched to browser. Awaiting response extraction from website.';
       session.messages.push({
         id: `msg_a_${Date.now()}`,
         role: 'assistant',
         content: reply,
         timestamp: Date.now()
       });
-      return { reply, clarificationNeeded: false };
+
+      return {
+        reply,
+        clarificationNeeded: false,
+        status: dispatchResult.status
+      };
     } catch (err: any) {
-      const errorMsg = `AI Provider Error: ${err?.message || String(err)}`;
+      const errorMsg = `Browser Agent Error: ${err?.message || String(err)}`;
       session.messages.push({
         id: `msg_a_${Date.now()}`,
         role: 'assistant',
         content: errorMsg,
         timestamp: Date.now()
       });
-      return { reply: errorMsg, clarificationNeeded: false };
+      return { reply: errorMsg, clarificationNeeded: false, status: 'FAILED' };
     }
   },
 
