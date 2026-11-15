@@ -138,24 +138,34 @@ Previous drafts and prototype code attempted to integrate direct third-party LLM
 
 ## 4. Mathematical Coordinate Transformation & High-DPI Specification
 
-To embed `chrome.exe` (`Chrome_WidgetWin_1`) reliably inside the Tauri desktop window without visual distortion or clipping, coordinates are transformed from the frontend DOM to native Win32 device pixels:
+To embed `chrome.exe` (`Chrome_WidgetWin_1`) reliably inside the Tauri desktop window without visual distortion, clipping, or boundary overflow, coordinates are transformed from the frontend DOM to native Win32 device pixels:
 
-1. **Native Parent Window Resolution:** The Tauri window HWND ($H_{parent}$) is queried via `window.hwnd()` in Tauri 2. Both Tauri and Google Chrome operate under Windows Per-Monitor V2 DPI awareness (`DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`).
-2. **DOM Viewport Origin:** In WebView2, `element.getBoundingClientRect()` yields coordinates in CSS logical pixels relative to the DOM viewport. Because the WebView2 control begins at client coordinate $(0, 0)$ of $H_{parent}$, the DOM viewport origin aligns with the native parent client origin.
-3. **Single DPI Scaling Factor:** Monitor DPI is queried dynamically from Windows via `GetDpiForWindow(parent_hwnd)`. The scale factor is $S = \text{DPI} / 96.0$. To prevent double scaling, the frontend transmits raw CSS logical pixels, and the native Rust layer applies scaling once:
-   $$\text{phys\_x} = \text{round}(x_{css} \times S)$$
-   $$\text{phys\_y} = \text{round}(y_{css} \times S)$$
-   $$\text{phys\_w} = \text{round}(w_{css} \times S)$$
-   $$\text{phys\_h} = \text{round}(h_{css} \times S)$$
-4. **Client Boundary Clamping:** Parent client dimensions are queried via `GetClientRect(parent_hwnd)`. The child window is clamped so it never renders outside the client area or with invalid negative dimensions.
-5. **Concrete Example:**
-   - Monitor DPI: 144 (150% scaling, $S = 1.50$).
-   - Parent client size: $1920 \times 1080$ physical pixels.
-   - Frontend DOM rect: $x_{css} = 320, y_{css} = 60, w_{css} = 800, h_{css} = 600$.
-   - Transformation:
-     $X_{phys} = \text{round}(320 \times 1.5) = 480$ px.
-     $Y_{phys} = \text{round}(60 \times 1.5) = 90$ px.
-     $W_{phys} = \text{round}(800 \times 1.5) = 1200$ px.
-     $H_{phys} = \text{round}(600 \times 1.5) = 900$ px.
-   - SetWindowPos bounds: $(480, 90, 1200, 900)$ in parent client space. Fits within $(1920, 1080)$ client area.
-6. **Dynamic DPI & Window Movement:** When the window moves across monitors with different DPIs, Windows sends `WM_DPICHANGED`. The frontend `ResizeObserver` and `window.addEventListener('resize')` trigger `syncDockedBounds`, recalculating bounds dynamically with the new monitor's DPI.
+1. **Window Hierarchy & Coordinate Origin:**
+   - The Tauri 2 main window HWND ($H_{parent}$) is queried via `window.hwnd()`.
+   - On Windows, WebView2 creates a child window that fills the entire client area of $H_{parent}$ from origin $(0, 0)$ to $(client\_width, client\_height)$ with no offset menus or borders outside the webview.
+   - Therefore, CSS logical coordinates from DOM `element.getBoundingClientRect()` map directly 1:1 to logical client coordinates of $H_{parent}$.
+   - Both Tauri and Google Chrome operate under Windows Per-Monitor V2 DPI awareness (`DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`).
+
+2. **DPI Scaling Factor:**
+   - Monitor DPI is queried dynamically from Windows via `GetDpiForWindow(parent_hwnd)`.
+   - The scale factor is $S = \text{DPI} / 96.0$. To prevent double scaling, the frontend transmits raw CSS logical pixels, and the native Rust layer applies scaling once:
+     $$\text{phys\_x} = \text{round}(x_{css} \times S)$$
+     $$\text{phys\_y} = \text{round}(y_{css} \times S)$$
+     $$\text{phys\_w} = \text{round}(w_{css} \times S)$$
+     $$\text{phys\_h} = \text{round}(h_{css} \times S)$$
+
+3. **Strict Boundary Clamping & Sub-100px Invariants:**
+   - Parent client dimensions are queried via `GetClientRect(parent_hwnd)`.
+   - Strict invariants enforced by `transform_css_to_parent_client`:
+     - If $client\_width \le 0$ or $client\_height \le 0$, return explicit `Err`.
+     - If $phys\_x \ge client\_width$ or $phys\_y \ge client\_height$, return explicit `Err`.
+     - Clamped origin: $target\_x = \max(0, phys\_x)$, $target\_y = \max(0, phys\_y)$.
+     - Available remaining client space: $remaining\_w = client\_width - target\_x$, $remaining\_h = client\_height - target\_y$.
+     - Clamped dimensions: $target\_w = \min(phys\_w, remaining\_w)$, $target\_h = \min(phys\_h, remaining\_h)$.
+     - Strict bound: $target\_w$ and $target\_h$ NEVER exceed $remaining\_w$ or $remaining\_h$. If remaining space is sub-100px (e.g. 50px), the child window is clamped strictly to 50px and never artificially inflated to 100px (preventing boundary overflow).
+     - If calculated $target\_w \le 0$ or $target\_h \le 0$, return explicit `Err`.
+
+4. **Dynamic DPI Transitions, Monitor Migration & Event Deduplication:**
+   - When the user drags the window across monitors with different DPI scalings (e.g. 100% to 150%), Windows dispatches `WM_DPICHANGED`.
+   - In WebView2, `window.matchMedia('(resolution: ...)')` fires on DPI change and `window.addEventListener('resize')` fires on window movement. In addition, `ResizeObserver` detects container panel adjustments, and `document.visibilitychange` detects restoration from minimized state.
+   - All dynamic transition events are deduplicated via `requestAnimationFrame` with pending frame cancellation (`cancelAnimationFrame`), ensuring at most 1 IPC bounds synchronization call per frame and eliminating visual tearing.

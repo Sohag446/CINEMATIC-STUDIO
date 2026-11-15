@@ -69,17 +69,55 @@ const { storyAgent, parseRequestedDuration } = storyModule.exports;
 
 async function executeAllTests() {
   // ----------------------------------------------------------------------------
-  // 1. ABSOLUTE NO-AI-API ARCHITECTURE CONTRACTS
+  // 1. ABSOLUTE NO-AI-API ARCHITECTURE CONTRACTS (REPOSITORY-WIDE)
   // ----------------------------------------------------------------------------
 
-  runTest('SOURCE-CONTRACT', 'Zero direct AI API endpoints in src/ (OpenAI, Gemini, Ollama, Groq)', () => {
-    const content = storyAgentSource;
+  runTest('SOURCE-CONTRACT', 'Zero direct AI API inference endpoints across entire repository', () => {
+    const scanDirs = [
+      path.join(rootDir, 'src'),
+      path.join(rootDir, 'src-tauri', 'src'),
+      path.join(rootDir, 'chrome-extension'),
+      path.join(rootDir, 'scripts'),
+    ];
 
-    assert(!content.includes('api.openai.com'), 'Must not contain api.openai.com');
-    assert(!content.includes('generativelanguage.googleapis.com'), 'Must not contain generativelanguage.googleapis.com');
-    assert(!content.includes('localhost:11434'), 'Must not contain localhost:11434 (Ollama)');
-    assert(!content.includes('groq.com'), 'Must not contain groq.com');
-    assert(!content.includes('apiKey?: string'), 'Must not contain apiKey field');
+    const forbiddenPatterns = [
+      /api\.openai\.com/i,
+      /generativelanguage\.googleapis\.com/i,
+      /api\.anthropic\.com/i,
+      /api\.groq\.com/i,
+      /localhost:11434/i,
+      /apiKey\s*\?:/i,
+      /OPENAI_API_KEY/i,
+      /GEMINI_API_KEY/i,
+      /ANTHROPIC_API_KEY/i,
+    ];
+
+    let filesChecked = 0;
+
+    function walkDir(dir) {
+      if (!fs.existsSync(dir)) return;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== 'node_modules' && entry.name !== 'dist' && entry.name !== 'target') {
+            walkDir(fullPath);
+          }
+        } else if (/\.(ts|tsx|js|cjs|rs|json)$/.test(entry.name)) {
+          filesChecked++;
+          const content = fs.readFileSync(fullPath, 'utf8');
+          for (const pattern of forbiddenPatterns) {
+            assert(!pattern.test(content), `Prohibited AI API pattern ${pattern} detected in ${fullPath}`);
+          }
+        }
+      }
+    }
+
+    for (const dir of scanDirs) {
+      walkDir(dir);
+    }
+
+    assert(filesChecked > 50, `Expected at least 50 source files to be audited, got ${filesChecked}`);
   });
 
   runTest('SOURCE-CONTRACT', 'BrowserAgentDispatcher interface declared with supported AI websites', () => {
@@ -267,36 +305,70 @@ async function executeAllTests() {
     assert(content.includes('Timed out waiting for Chrome window to initialize (PID: {}). Cleaned up instance.'), 'Must log cleanup on timeout');
   });
 
-  runTest('NATIVE-CONTRACT', 'High-DPI coordinate transformation links GetDpiForWindow & GetClientRect', () => {
+  runTest('NATIVE-CONTRACT', 'High-DPI coordinate transformation links GetDpiForWindow & GetClientRect with Result return', () => {
     const dockedFile = path.join(rustDir, 'chrome_service', 'docked_chrome.rs');
     const content = fs.readFileSync(dockedFile, 'utf8');
 
     assert(content.includes('pub fn transform_css_to_parent_client'), 'Must declare transform_css_to_parent_client');
+    assert(content.includes('-> Result<(i32, i32, i32, i32), String>'), 'transform_css_to_parent_client must return Result');
     assert(content.includes('pub fn scale_coordinates_for_dpi'), 'Must declare scale_coordinates_for_dpi');
     assert(content.includes('GetDpiForWindow'), 'Must link and query GetDpiForWindow');
     assert(content.includes('GetClientRect'), 'Must query parent client bounds via GetClientRect');
+    assert(content.includes('phys_w.min(remaining_w)'), 'Width must strictly clamp to remaining available space');
+    assert(content.includes('phys_h.min(remaining_h)'), 'Height must strictly clamp to remaining available space');
+  });
+
+  runTest('NATIVE-CONTRACT', 'Frontend AIVideoWorkspace deduplicates bounds synchronization via requestAnimationFrame & handles DPI transitions', () => {
+    const workspaceFile = path.join(srcDir, 'features', 'aivideo', 'AIVideoWorkspace.tsx');
+    const content = fs.readFileSync(workspaceFile, 'utf8');
+
+    assert(content.includes('requestAnimationFrame'), 'Must deduplicate bounds sync with requestAnimationFrame');
+    assert(content.includes('cancelAnimationFrame'), 'Must cancel redundant animation frames');
+    assert(content.includes('ResizeObserver'), 'Must observe panel resizing');
+    assert(content.includes('resolution:'), 'Must watch dynamic DPI changes via matchMedia');
+    assert(content.includes('visibilitychange'), 'Must sync bounds when restoring from minimized state');
   });
 
   // ----------------------------------------------------------------------------
   // 4. MATHEMATICAL COORDINATE TRANSFORMATION TESTS
   // ----------------------------------------------------------------------------
 
-  runTest('UNIT-MATH', 'transform_css_to_parent_client scales and clamps across 100%, 125%, 150%, 200% brackets', () => {
+  runTest('UNIT-MATH', 'transform_css_to_parent_client scales, strictly clamps, and handles sub-100px boundaries', () => {
     function transformCssToParentClient(cssX, cssY, cssW, cssH, dpi, clientW, clientH) {
-      const scale = dpi / 96.0;
+      if (clientW <= 0 || clientH <= 0) {
+        throw new Error(`Parent client area has invalid dimensions: ${clientW}x${clientH}`);
+      }
+      if (cssW <= 0 || cssH <= 0) {
+        throw new Error(`Requested dimensions must be positive: ${cssW}x${cssH}`);
+      }
+
+      const effectiveDpi = dpi > 0 ? dpi : 96;
+      const scale = effectiveDpi / 96.0;
+
       const physX = Math.round(cssX * scale);
       const physY = Math.round(cssY * scale);
       const physW = Math.round(cssW * scale);
       const physH = Math.round(cssH * scale);
 
+      if (physX >= clientW) {
+        throw new Error(`Requested x coordinate (${physX}) is beyond parent client width (${clientW})`);
+      }
+      if (physY >= clientH) {
+        throw new Error(`Requested y coordinate (${physY}) is beyond parent client height (${clientH})`);
+      }
+
       const targetX = Math.max(0, physX);
       const targetY = Math.max(0, physY);
 
-      const maxW = clientW > 0 ? Math.max(100, clientW - targetX) : physW;
-      const maxH = clientH > 0 ? Math.max(100, clientH - targetY) : physH;
+      const remainingW = clientW - targetX;
+      const remainingH = clientH - targetY;
 
-      const targetW = clientW > 0 ? Math.max(100, Math.min(physW, maxW)) : Math.max(100, physW);
-      const targetH = clientH > 0 ? Math.max(100, Math.min(physH, maxH)) : Math.max(100, physH);
+      if (remainingW <= 0 || remainingH <= 0) {
+        throw new Error('Insufficient client area remaining');
+      }
+
+      const targetW = Math.min(physW, remainingW);
+      const targetH = Math.min(physH, remainingH);
 
       return { x: targetX, y: targetY, w: targetW, h: targetH };
     }
@@ -317,12 +389,39 @@ async function executeAllTests() {
     const at200 = transformCssToParentClient(320, 60, 800, 600, 192, 2560, 1440);
     assert.deepStrictEqual(at200, { x: 640, y: 120, w: 1600, h: 1200 });
 
-    // Clamping: When panel would exceed parent client width / height
+    // Strict Clamping: When panel would exceed parent client width / height
     const clamped = transformCssToParentClient(320, 60, 800, 600, 144, 1000, 800);
     assert.strictEqual(clamped.x, 480);
     assert.strictEqual(clamped.y, 90);
     assert.strictEqual(clamped.w, 520, 'Width must clamp to fit within parent client area');
     assert.strictEqual(clamped.h, 710, 'Height must clamp to fit within parent client area');
+    assert(clamped.x + clamped.w <= 1000, 'Child must never exceed parent width');
+    assert(clamped.y + clamped.h <= 800, 'Child must never exceed parent height');
+
+    // Remaining width below 100 px (e.g. 50 px)
+    const sub100w = transformCssToParentClient(450, 10, 300, 300, 96, 500, 500);
+    assert.strictEqual(sub100w.x, 450);
+    assert.strictEqual(sub100w.w, 50, 'Width must clamp to 50 px and not force minimum 100 px');
+    assert(sub100w.x + sub100w.w <= 500);
+
+    // Remaining height below 100 px (e.g. 40 px)
+    const sub100h = transformCssToParentClient(10, 460, 300, 300, 96, 500, 500);
+    assert.strictEqual(sub100h.y, 460);
+    assert.strictEqual(sub100h.h, 40, 'Height must clamp to 40 px and not force minimum 100 px');
+    assert(sub100h.y + sub100h.h <= 500);
+
+    // Negative coordinates clamped to 0
+    const neg = transformCssToParentClient(-50, -30, 400, 300, 96, 1000, 800);
+    assert.strictEqual(neg.x, 0);
+    assert.strictEqual(neg.y, 0);
+    assert.strictEqual(neg.w, 400);
+    assert.strictEqual(neg.h, 300);
+
+    // Boundary rejection tests
+    assert.throws(() => transformCssToParentClient(1920, 100, 400, 300, 96, 1920, 1080), /beyond parent client width/);
+    assert.throws(() => transformCssToParentClient(100, 1080, 400, 300, 96, 1920, 1080), /beyond parent client height/);
+    assert.throws(() => transformCssToParentClient(100, 100, 400, 300, 96, 0, 0), /invalid dimensions/);
+    assert.throws(() => transformCssToParentClient(100, 100, 0, 300, 96, 1920, 1080), /must be positive/);
   });
 
   // ----------------------------------------------------------------------------

@@ -119,8 +119,8 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
       const rect = browserViewportRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.round(rect.left));
       const y = Math.max(0, Math.round(rect.top));
-      const w = Math.max(300, Math.round(rect.width));
-      const h = Math.max(200, Math.round(rect.height));
+      const w = Math.max(10, Math.round(rect.width));
+      const h = Math.max(10, Math.round(rect.height));
       try {
         await dockChrome(targetUrl, userDir, key, x, y, w, h);
       } catch (err: any) {
@@ -136,32 +136,67 @@ Elena slips through sliding blast doors into the central server cavern. Pulsing 
     handleLaunchOrDockChrome(targetUrl);
   };
 
-  // Synchronize docked Chrome bounds on viewport resize and window movement / display DPI changes
+  // Synchronize docked Chrome bounds on viewport resize, window movement, monitor migration / DPI transitions, and window restore
   useEffect(() => {
     if (!browserViewportRef.current || !dockedChromeHwnd) return;
 
-    const syncCurrentBounds = () => {
-      if (!browserViewportRef.current) return;
-      const rect = browserViewportRef.current.getBoundingClientRect();
-      syncDockedBounds(
-        Math.max(0, Math.round(rect.left)),
-        Math.max(0, Math.round(rect.top)),
-        Math.max(300, Math.round(rect.width)),
-        Math.max(200, Math.round(rect.height))
-      );
+    let rafId: number | null = null;
+
+    const scheduleSyncBounds = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (!browserViewportRef.current) return;
+        const rect = browserViewportRef.current.getBoundingClientRect();
+        syncDockedBounds(
+          Math.max(0, Math.round(rect.left)),
+          Math.max(0, Math.round(rect.top)),
+          Math.max(10, Math.round(rect.width)),
+          Math.max(10, Math.round(rect.height))
+        );
+      });
     };
 
+    // 1. Observe panel/DOM layout resizing
     const observer = new ResizeObserver(() => {
-      syncCurrentBounds();
+      scheduleSyncBounds();
     });
     observer.observe(browserViewportRef.current);
 
-    // Also listen to window resize events to handle multi-monitor drag and DPI switches
-    window.addEventListener('resize', syncCurrentBounds);
+    // 2. Window resize events (resizing main application window)
+    window.addEventListener('resize', scheduleSyncBounds);
+
+    // 3. Dynamic DPI transitions & monitor migration via resolution matchMedia
+    let currentDpiQuery: MediaQueryList | null = null;
+    const registerDpiWatcher = () => {
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        currentDpiQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+        const onDpiChange = () => {
+          scheduleSyncBounds();
+          registerDpiWatcher(); // Re-register for subsequent DPI changes
+        };
+        currentDpiQuery.addEventListener('change', onDpiChange, { once: true });
+      }
+    };
+    registerDpiWatcher();
+
+    // 4. Restore from minimized state or window activation
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        scheduleSyncBounds();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       observer.disconnect();
-      window.removeEventListener('resize', syncCurrentBounds);
+      window.removeEventListener('resize', scheduleSyncBounds);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [dockedChromeHwnd, syncDockedBounds]);
 

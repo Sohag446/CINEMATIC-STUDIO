@@ -1020,28 +1020,33 @@ fn test_docked_chrome_coordinate_transformation_scaling() {
 
     // 100% DPI (96 DPI, scale = 1.0)
     let (x100, y100, w100, h100) =
-        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 96, 1920, 1080);
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 96, 1920, 1080)
+            .expect("100% DPI transform must succeed");
     assert_eq!((x100, y100, w100, h100), (320, 60, 800, 600));
 
     // 125% DPI (120 DPI, scale = 1.25)
     let (x125, y125, w125, h125) =
-        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 120, 1920, 1080);
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 120, 1920, 1080)
+            .expect("125% DPI transform must succeed");
     assert_eq!((x125, y125, w125, h125), (400, 75, 1000, 750));
 
     // 150% DPI (144 DPI, scale = 1.50)
     let (x150, y150, w150, h150) =
-        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 144, 1920, 1080);
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 144, 1920, 1080)
+            .expect("150% DPI transform must succeed");
     assert_eq!((x150, y150, w150, h150), (480, 90, 1200, 900));
 
     // 200% DPI (192 DPI, scale = 2.00)
     let (x200, y200, w200, h200) =
-        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 192, 2560, 1440);
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 192, 2560, 1440)
+            .expect("200% DPI transform must succeed");
     assert_eq!((x200, y200, w200, h200), (640, 120, 1600, 1200));
 
     // Parent client boundary clamping:
     // At 150% DPI, 320 -> 480. If client width is 1000, max width available is 1000 - 480 = 520.
     let (xc, yc, wc, hc) =
-        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 144, 1000, 800);
+        DockedChromeManager::transform_css_to_parent_client(320, 60, 800, 600, 144, 1000, 800)
+            .expect("Clamped transform must succeed");
     assert_eq!(xc, 480);
     assert_eq!(yc, 90);
     assert_eq!(wc, 520, "Width must clamp to fit within parent client area");
@@ -1049,6 +1054,93 @@ fn test_docked_chrome_coordinate_transformation_scaling() {
         hc, 710,
         "Height must clamp to fit within parent client area"
     );
+    assert!(xc + wc <= 1000, "Child window must never exceed parent client width");
+    assert!(yc + hc <= 800, "Child window must never exceed parent client height");
+}
+
+#[test]
+fn test_docked_chrome_strict_boundary_clamping_and_sub_100px_dimensions() {
+    use crate::chrome_service::docked_chrome::DockedChromeManager;
+
+    // Remaining width below 100 px:
+    // Client width is 500, x is 450, requested width is 300.
+    // Available remaining width is 500 - 450 = 50 px.
+    // Under strict clamping, target_w must be 50 (never forced to 100 which would overflow to 550).
+    let (x, y, w, h) =
+        DockedChromeManager::transform_css_to_parent_client(450, 10, 300, 300, 96, 500, 500)
+            .expect("Transform with sub-100px remaining width must succeed");
+    assert_eq!(x, 450);
+    assert_eq!(y, 10);
+    assert_eq!(w, 50, "Target width must be strictly 50 px and not exceed client area");
+    assert_eq!(h, 300);
+    assert!(x + w <= 500, "Strict boundary invariant violated: x + w > client_width");
+
+    // Remaining height below 100 px:
+    // Client height is 500, y is 460, requested height is 300.
+    // Available remaining height is 500 - 460 = 40 px.
+    let (x, y, w, h) =
+        DockedChromeManager::transform_css_to_parent_client(10, 460, 300, 300, 96, 500, 500)
+            .expect("Transform with sub-100px remaining height must succeed");
+    assert_eq!(x, 10);
+    assert_eq!(y, 460);
+    assert_eq!(w, 300);
+    assert_eq!(h, 40, "Target height must be strictly 40 px and not exceed client area");
+    assert!(y + h <= 500, "Strict boundary invariant violated: y + h > client_height");
+
+    // Negative coordinates safely clamped to client area origin (0, 0)
+    let (x, y, w, h) =
+        DockedChromeManager::transform_css_to_parent_client(-50, -30, 400, 300, 96, 1000, 800)
+            .expect("Transform with negative coordinates must clamp to 0 and succeed");
+    assert_eq!(x, 0, "Negative x must be clamped to 0");
+    assert_eq!(y, 0, "Negative y must be clamped to 0");
+    assert_eq!(w, 400);
+    assert_eq!(h, 300);
+}
+
+#[test]
+fn test_docked_chrome_boundary_rejection_and_error_handling() {
+    use crate::chrome_service::docked_chrome::DockedChromeManager;
+
+    // Reject coordinates beyond right client boundary
+    let res_x_edge =
+        DockedChromeManager::transform_css_to_parent_client(1920, 100, 400, 300, 96, 1920, 1080);
+    assert!(res_x_edge.is_err(), "Must reject x exactly equal to client width");
+
+    let res_x_beyond =
+        DockedChromeManager::transform_css_to_parent_client(2500, 100, 400, 300, 96, 1920, 1080);
+    assert!(res_x_beyond.is_err(), "Must reject x beyond client width");
+
+    // Reject coordinates beyond bottom client boundary
+    let res_y_edge =
+        DockedChromeManager::transform_css_to_parent_client(100, 1080, 400, 300, 96, 1920, 1080);
+    assert!(res_y_edge.is_err(), "Must reject y exactly equal to client height");
+
+    let res_y_beyond =
+        DockedChromeManager::transform_css_to_parent_client(100, 1500, 400, 300, 96, 1920, 1080);
+    assert!(res_y_beyond.is_err(), "Must reject y beyond client height");
+
+    // Reject zero-sized or negative client areas
+    let res_zero_client =
+        DockedChromeManager::transform_css_to_parent_client(100, 100, 400, 300, 96, 0, 0);
+    assert!(res_zero_client.is_err(), "Must reject zero-sized client area");
+
+    let res_neg_client =
+        DockedChromeManager::transform_css_to_parent_client(100, 100, 400, 300, 96, -100, 800);
+    assert!(res_neg_client.is_err(), "Must reject negative client width");
+
+    // Reject non-positive requested dimensions
+    let res_zero_dim =
+        DockedChromeManager::transform_css_to_parent_client(100, 100, 0, 300, 96, 1920, 1080);
+    assert!(res_zero_dim.is_err(), "Must reject zero requested width");
+
+    let res_neg_dim =
+        DockedChromeManager::transform_css_to_parent_client(100, 100, 400, -50, 96, 1920, 1080);
+    assert!(res_neg_dim.is_err(), "Must reject negative requested height");
+
+    // Guard against astronomical coordinate inputs / integer overflow
+    let res_overflow =
+        DockedChromeManager::transform_css_to_parent_client(i32::MAX, 100, 400, 300, 192, 1920, 1080);
+    assert!(res_overflow.is_err(), "Must safely reject extreme coordinate values without panicking");
 }
 
 #[test]

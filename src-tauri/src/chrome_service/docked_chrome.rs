@@ -182,7 +182,13 @@ impl DockedChromeManager {
     }
 
     /// Pure mathematical coordinate transformation from CSS logical pixels to native parent client device pixels.
-    /// Handles display scaling across 100%, 125%, 150%, 200% brackets and bounds clamping to parent client area.
+    /// Handles display scaling across 100%, 125%, 150%, 200% brackets and strict bounds clamping to parent client area.
+    ///
+    /// # Safety and Invariants:
+    /// - Never allows width or height to exceed remaining available client dimensions (`client_width - target_x`, `client_height - target_y`).
+    /// - Returns explicit `Err` if parent client dimensions are non-positive or if the requested coordinates fall entirely outside the visible client area.
+    /// - Safely handles negative origins by clamping them to 0.
+    /// - Safely guards against integer overflow on extreme coordinate inputs.
     pub fn transform_css_to_parent_client(
         css_x: i32,
         css_y: i32,
@@ -191,33 +197,87 @@ impl DockedChromeManager {
         dpi: u32,
         client_width: i32,
         client_height: i32,
-    ) -> (i32, i32, i32, i32) {
+    ) -> Result<(i32, i32, i32, i32), String> {
+        if client_width <= 0 || client_height <= 0 {
+            return Err(format!(
+                "Parent client area has invalid dimensions: {}x{}",
+                client_width, client_height
+            ));
+        }
+
+        if css_width <= 0 || css_height <= 0 {
+            return Err(format!(
+                "Requested dimensions must be positive: {}x{}",
+                css_width, css_height
+            ));
+        }
+
         let effective_dpi = if dpi > 0 { dpi } else { 96 };
         let scale = effective_dpi as f64 / 96.0;
 
-        let phys_x = (css_x as f64 * scale).round() as i32;
-        let phys_y = (css_y as f64 * scale).round() as i32;
-        let phys_w = (css_width as f64 * scale).round() as i32;
-        let phys_h = (css_height as f64 * scale).round() as i32;
+        let phys_x_f = (css_x as f64 * scale).round();
+        let phys_y_f = (css_y as f64 * scale).round();
+        let phys_w_f = (css_width as f64 * scale).round();
+        let phys_h_f = (css_height as f64 * scale).round();
 
+        // Integer overflow safety checks
+        if phys_x_f > (i32::MAX - 10000) as f64
+            || phys_x_f < (i32::MIN + 10000) as f64
+            || phys_y_f > (i32::MAX - 10000) as f64
+            || phys_y_f < (i32::MIN + 10000) as f64
+            || phys_w_f > (i32::MAX - 10000) as f64
+            || phys_w_f <= 0.0
+            || phys_h_f > (i32::MAX - 10000) as f64
+            || phys_h_f <= 0.0
+        {
+            return Err("Requested coordinates or dimensions exceed valid integer limits".to_string());
+        }
+
+        let phys_x = phys_x_f as i32;
+        let phys_y = phys_y_f as i32;
+        let phys_w = phys_w_f as i32;
+        let phys_h = phys_h_f as i32;
+
+        // If starting coordinate is beyond the client area, child window cannot be placed inside
+        if phys_x >= client_width {
+            return Err(format!(
+                "Requested x coordinate ({}) is beyond parent client width ({})",
+                phys_x, client_width
+            ));
+        }
+        if phys_y >= client_height {
+            return Err(format!(
+                "Requested y coordinate ({}) is beyond parent client height ({})",
+                phys_y, client_height
+            ));
+        }
+
+        // Clamp negative start coordinates to 0 (top-left of client area)
         let target_x = phys_x.max(0);
         let target_y = phys_y.max(0);
 
-        let target_w = if client_width > 0 {
-            let max_w = (client_width - target_x).max(100);
-            phys_w.min(max_w).max(100)
-        } else {
-            phys_w.max(100)
-        };
+        let remaining_w = client_width - target_x;
+        let remaining_h = client_height - target_y;
 
-        let target_h = if client_height > 0 {
-            let max_h = (client_height - target_y).max(100);
-            phys_h.min(max_h).max(100)
-        } else {
-            phys_h.max(100)
-        };
+        if remaining_w <= 0 || remaining_h <= 0 {
+            return Err(format!(
+                "Insufficient client area remaining for child window: remaining {}x{}",
+                remaining_w, remaining_h
+            ));
+        }
 
-        (target_x, target_y, target_w, target_h)
+        // Strictly clamp width and height to remaining dimensions; NEVER exceed remaining_w / remaining_h
+        let target_w = phys_w.min(remaining_w);
+        let target_h = phys_h.min(remaining_h);
+
+        if target_w <= 0 || target_h <= 0 {
+            return Err(format!(
+                "Clamped child dimensions are non-positive: {}x{}",
+                target_w, target_h
+            ));
+        }
+
+        Ok((target_x, target_y, target_w, target_h))
     }
 
     #[cfg(target_os = "windows")]
@@ -227,19 +287,21 @@ impl DockedChromeManager {
         y: i32,
         width: i32,
         height: i32,
-    ) -> (i32, i32, i32, i32) {
-        let (dpi, client_w, client_h) = if parent_hwnd != 0 {
-            let d = unsafe { win32::GetDpiForWindow(parent_hwnd) };
-            let mut rect = win32::RECT::default();
-            let _ = unsafe { win32::GetClientRect(parent_hwnd, &mut rect) };
-            let cw = rect.right - rect.left;
-            let ch = rect.bottom - rect.top;
-            (if d > 0 { d } else { 96 }, cw, ch)
-        } else {
-            (96, 0, 0)
-        };
+    ) -> Result<(i32, i32, i32, i32), String> {
+        if parent_hwnd == 0 {
+            return Err("Parent window handle is null (0)".to_string());
+        }
+        let dpi = unsafe { win32::GetDpiForWindow(parent_hwnd) };
+        let mut rect = win32::RECT::default();
+        let res = unsafe { win32::GetClientRect(parent_hwnd, &mut rect) };
+        if res == 0 {
+            return Err("Failed to retrieve client rect for parent window".to_string());
+        }
+        let cw = rect.right - rect.left;
+        let ch = rect.bottom - rect.top;
+        let effective_dpi = if dpi > 0 { dpi } else { 96 };
 
-        Self::transform_css_to_parent_client(x, y, width, height, dpi, client_w, client_h)
+        Self::transform_css_to_parent_client(x, y, width, height, effective_dpi, cw, ch)
     }
 
     #[cfg(target_os = "windows")]
@@ -323,7 +385,14 @@ impl DockedChromeManager {
 
         // Apply High-DPI coordinate scaling & parent client clamping
         let (target_x, target_y, target_w, target_h) =
-            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height);
+            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height)
+                .map_err(|e| {
+                    Self::terminate_pid(pid);
+                    format!(
+                        "Coordinate scaling/clamping failed during docking: {}. Cleaned up instance.",
+                        e
+                    )
+                })?;
 
         unsafe {
             // 1. Reparent Chrome into Studio
@@ -424,7 +493,7 @@ impl DockedChromeManager {
 
         let parent_hwnd = mgr.parent_hwnd.load(Ordering::SeqCst);
         let (target_x, target_y, target_w, target_h) =
-            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height);
+            Self::scale_coordinates_for_dpi(parent_hwnd, x, y, width, height)?;
 
         unsafe {
             win32::SetLastError(0);
